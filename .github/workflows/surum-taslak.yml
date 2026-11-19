@@ -1,0 +1,67 @@
+name: Sürüm taslağı (AppImage + Windows kurulum + install.sh)
+
+# TASLAK — ihsan onayı olmadan etiket atılmaz. Etiket (v*) itilince üç çıktı derlenir ve
+# GitHub'da YAYINLANMAMIŞ (draft) bir Release'e eklenir; yayınlamak elle "Publish" ister.
+# Elle tetiklemede (workflow_dispatch) Release açılmaz, çıktılar yalnız iş artifact'ı olur.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: bash scripts/linux-derle.sh
+      - run: python3 scripts/test_appimage_paket.py --paket
+      - run: python3 scripts/test_install_betigi.py
+      - name: Kaynak arşivi + install.sh + SHA256
+        run: |
+          mkdir -p cikti
+          cp electron/dist/*.AppImage scripts/install.sh cikti/
+          git archive --prefix=yuki-oss/ --format=tar.gz HEAD -o cikti/yuki-oss-kaynak.tar.gz
+      - uses: actions/upload-artifact@v4
+        with: { name: linux, path: cikti/*, retention-days: 7 }
+
+  windows:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: astral-sh/setup-uv@v5
+      - name: Çapraz derleme araçları
+        run: |
+          sudo dpkg --add-architecture i386 && sudo apt-get update -qq
+          sudo apt-get install -y -qq wine64 xvfb p7zip-full perl
+      - run: bash scripts/windows-derle.sh
+      - run: python3 scripts/test_windows_paket.py --paket
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            electron/dist/Yuki-Setup-*.exe
+            electron/dist/Yuki-*-win-x64-lite.zip
+          retention-days: 7
+
+  taslak-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, windows]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: cikti, merge-multiple: true }
+      - name: SHA256SUMS
+        run: cd cikti && sha256sum * > SHA256SUMS.txt
+      - name: Draft Release (yayınlanmaz)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" cikti/* --repo "$GITHUB_REPOSITORY" --draft --title "Yuki $GITHUB_REF_NAME" --notes "Taslak — yayınlamadan önce CHANGELOG'dan not ekle."
