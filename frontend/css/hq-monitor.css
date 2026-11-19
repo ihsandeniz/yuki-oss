@@ -1,0 +1,257 @@
+/* ══ HQ → SİSTEM paneli (Dalga 3, 2026-09-10) ═══════════════════════════════
+ * Kişisel Alice'in `css/hq-monitor.css`'inden TAŞINDI — ama kopyalanmadı,
+ * ÇEVRİLDİ.
+ *
+ * 🔴 **Neden verbatim kopya olmuyor:** kişisel dosya `--border-card`,
+ * `--surface-1`, `--c-ink`, `--c-data`, `--series-1` sözlüğünü kullanıyor.
+ * Bu adların **hiçbiri üründe tanımlı değil** (ölçüldü: `css/tokens.css`
+ * `--kenar` / `--yuzey-1` / `--ink-1` / `--cyan` diyor). Kopyalansaydı her
+ * `var()` boşa düşer, panel şeffaf ve renksiz çizilirdi — sınıflar doğru,
+ * piksel yanlış. (Duvar kâğıdı turunun dersinin aynısı.)
+ *
+ * 🔴 **Üründe AÇIK TEMA var** (`tokens.css` `[data-tema="acik"]`). Kişiselde
+ * yok. Bu yüzden ne burada ne `intro-sequences.js`'te sabit renk YAZILMAZ —
+ * çizim JS'i de renkleri buradan okur (`_monRenk`). Tek kaynak: aşağıdaki
+ * `--mon-*` sözlüğü. Yeni bir renk lazımsa buraya eklenir, JS'e değil.
+ *
+ * 🔴 **Bu dosyadaki İLK satır zorunlu, süs değil.** `hq.css:1024`
+ * `#tab-hq .hq-panel{display:none !important}` diyor; her panel kendi
+ * `#tab-hq[data-hq="X"] #hq-panel-X{display:flex !important}` satırıyla
+ * açılıyor. Unutulursa panelin içeriği çizilir ama ekranda **hiçbir şey
+ * görünmez** (`duvar.css:113`'teki uyarının aynısı — orada bizzat yaşandı).
+ */
+#tab-hq[data-hq="sistem"] #hq-panel-sistem { display: flex !important; }
+
+/* ── Renk sözlüğü — JS ve CSS'in ORTAK kaynağı ────────────────────────────
+ * Panel kapsamında tanımlı: `:root`'a yazmak bu üç seriyi tüm uygulamanın
+ * sözlüğüne sokardı, oysa yalnız bu panel kullanıyor. */
+#hq-panel-sistem {
+  --mon-veri:        var(--cyan);        /* canlı veri (üründe mor-ink)   */
+  --mon-veri-soluk:  var(--cyan-mid);
+  --mon-iyi:         var(--yesil-ink);
+  --mon-uyari:       var(--altin-ink);
+  --mon-kritik:      var(--kirmizi-ink);
+  --mon-halka-iz:    var(--kenar);       /* halkanın boş yayı             */
+  --mon-halka-yazi:  var(--ink-1);       /* halkanın ortasındaki yüzde    */
+  --mon-seri-1:      var(--cyan);        /* CPU · ↓                       */
+  --mon-seri-2:      var(--altin-ink);   /* RAM · ↑                       */
+  --mon-seri-3:      var(--yesil-ink);   /* GPU                           */
+}
+
+/* ── MAKİNE (2026-09-27) ──────────────────────────────────────────────────
+ * Bilgisayar ŞEMA olarak: çekirdek kareleri (parlaklık = doluluk), bellek ve
+ * VRAM hücreleri (1 hücre = N GB), disk yuvaları, gerçek ağ bağlantıları.
+ * Kişisel a1a54ae'deki seçilen tasarımın ürün karşılığı; renkler yalnız --mon-*
+ * ve tema token'larından (açık/orta/koyu üçünde de okunur). */
+.mon-govde { display: flex; flex-direction: column; gap: 14px; }
+
+/* Üst şerit: kim + ne kadar açık + sağlık mührü (tek yer) */
+.mon-ust { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.mon-kimlik { font: 700 13px var(--font-hud); letter-spacing: 1.5px; color: var(--ink-1); text-transform: uppercase; overflow-wrap: anywhere; }
+.mon-meta { font: 11px var(--font-hud); color: var(--ink-2); margin-top: 4px; }
+.mon-meta-oge { white-space: nowrap; }
+/* Telefonda satır kırılınca "·" ayıracı satır sonunda asılı kalıyordu (goz 11-13, 2. bakış):
+   dar ekranda öğeler boşlukla sarılır, ayıraç çizilmez. */
+@media (max-width: 720px) {
+  .mon-meta { display: flex; flex-wrap: wrap; column-gap: 14px; row-gap: 2px; }
+  .mon-meta > .mon-nokta { display: none; }
+}
+.mon-nokta { color: var(--ink-3); margin: 0 4px; }
+.mon-muhur {
+  display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0;
+  padding: 5px 14px 5px 5px; border: 1px solid var(--kenar); border-radius: 999px; background: var(--yuzey-1);
+}
+.mon-muhur-skor {
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 13px var(--font-hud); color: var(--bg-base); background: var(--mon-iyi);
+}
+.mon-muhur[data-durum="uyari"] .mon-muhur-skor { background: var(--mon-uyari); }
+.mon-muhur[data-durum="kritik"] .mon-muhur-skor { background: var(--mon-kritik); }
+.mon-muhur[data-durum="yok"] .mon-muhur-skor { background: var(--yuzey-3); color: var(--ink-2); }
+.mon-muhur-metin { font: 11px var(--font-hud); letter-spacing: 1px; color: var(--ink-2); text-transform: uppercase; }
+.mon-alerts { display: flex; gap: 6px; flex-wrap: wrap; }
+.mon-alert { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-family: var(--font-hud); }
+.mon-alert.warn { background: var(--altin-zemin); color: var(--mon-uyari); border: 1px solid var(--mon-uyari); }
+.mon-alert.crit { background: color-mix(in srgb, var(--mon-kritik) 15%, transparent); color: var(--mon-kritik); border: 1px solid var(--mon-kritik); }
+.mon-doktor {
+  font-size: 12.5px; line-height: 1.6; color: var(--ink-1); padding: 10px 14px;
+  border: 1px solid var(--kenar); border-left: 3px solid var(--mon-veri); border-radius: var(--r-2); background: var(--yuzey-1);
+}
+
+/* Şema ızgarası: masada 3 sütun (işlemci · bellek · ekran kartı / diskler ×2 · ağ) */
+.mon-makine { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.mon-kart {
+  border: 1px solid var(--kenar); border-radius: var(--r-3); background: var(--yuzey-1);
+  padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0;
+}
+.mon-kart-genis { grid-column: span 2; }
+.mon-kart-bas {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  font: 11px var(--font-hud); letter-spacing: 1.5px; color: var(--ink-2); text-transform: uppercase;
+}
+.mon-kart-sag { color: var(--ink-3); letter-spacing: .5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mon-kart-alt { font: 10.5px var(--font-hud); color: var(--ink-3); margin-top: auto; }
+.mon-buyuk { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font: 11px var(--font-hud); color: var(--ink-2); }
+.mon-buyuk b { font: 700 24px var(--font-hud); color: var(--mon-veri); letter-spacing: -.5px; }
+
+/* Çekirdek kareleri — `--d` (0-100) JS'ten; parlaklık color-mix ile */
+.mon-cekirdekler { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.mon-cekirdek {
+  --d: 0; position: relative; aspect-ratio: 2; border-radius: var(--r-1);
+  /* doğrusal .7% eğimde %4 ile %23 çekirdek 1×'te aynı tonda görünüyordu (goz 09-27) → dik eğim + tavan */
+  border: 1px solid color-mix(in srgb, var(--mon-veri) min(90%, calc(20% + var(--d) * 1%)), var(--kenar));
+  background: color-mix(in srgb, var(--mon-veri) min(80%, calc(4% + var(--d) * 1.6%)), var(--yuzey-2));
+  transition: background .5s, border-color .5s;
+}
+.mon-cekirdek b, .mon-cekirdek i { position: absolute; font: 10px var(--font-hud); font-style: normal; }
+.mon-cekirdek b { top: 4px; right: 6px; color: var(--ink-1); font-weight: 600; }
+.mon-cekirdek i { bottom: 4px; left: 6px; color: var(--ink-3); }
+
+/* Bellek / VRAM hücreleri */
+.mon-hucreler { display: grid; grid-template-columns: repeat(auto-fill, minmax(20px, 1fr)); gap: 4px; }
+.mon-hucreler-vram { grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); }
+.mon-hucreler i { display: block; aspect-ratio: 1; border-radius: 3px; background: var(--yuzey-2); border: 1px solid var(--kenar); }
+.mon-hucreler-vram i { aspect-ratio: 1.8; }
+.mon-hucreler i.h-dolu, .mon-lejant i.h-dolu { background: var(--mon-veri); border-color: var(--mon-veri); }
+.mon-hucreler i.h-onbellek, .mon-lejant i.h-onbellek { background: color-mix(in srgb, var(--mon-veri) 28%, var(--yuzey-2)); border-color: color-mix(in srgb, var(--mon-veri) 45%, var(--kenar)); }
+.mon-lejant { display: flex; gap: 12px; flex-wrap: wrap; font: 10.5px var(--font-hud); color: var(--ink-3); }
+.mon-lejant > span { display: inline-flex; align-items: center; gap: 5px; }
+.mon-lejant i { width: 9px; height: 9px; border-radius: 2px; background: var(--yuzey-2); border: 1px solid var(--kenar); display: inline-block; }
+
+/* Ağ: yalnız gerçek bağlantılar (kablo · kablosuz · VPN), sanal köprüler süzülür */
+.mon-ag { display: flex; flex-direction: column; gap: 8px; }
+.mon-ag-satir { display: flex; align-items: baseline; gap: 10px; font: 11px var(--font-hud); color: var(--ink-2); }
+.mon-ag-ad { color: var(--ink-1); min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mon-ag-hiz { white-space: nowrap; }
+.mon-ag-hiz.inen { color: var(--mon-seri-1); }
+.mon-ag-hiz.giden { color: var(--mon-seri-2); }
+.mon-ag-hiz[data-durum="iyi"] { color: var(--mon-iyi); }
+.mon-ag-hiz[data-durum="uyari"] { color: var(--mon-uyari); }
+.mon-ag-hiz[data-durum="kotu"] { color: var(--mon-kritik); }
+.mon-spark { width: 100%; height: 36px; display: block; margin-top: auto; }
+.mon-bar { flex: 1; height: 8px; border-radius: 5px; background: var(--yuzey-2); box-shadow: inset 0 0 0 1px var(--kenar); overflow: hidden; }
+.mon-bar-fill { height: 100%; width: 0; border-radius: 5px; background: linear-gradient(90deg, var(--mon-veri-soluk), var(--mon-veri)); transition: width .4s; }
+.mon-bar-fill.warn { background: linear-gradient(90deg, color-mix(in srgb, var(--mon-uyari) 45%, transparent), var(--mon-uyari)); }
+.mon-bar-fill.crit { background: linear-gradient(90deg, color-mix(in srgb, var(--mon-kritik) 55%, transparent), var(--mon-kritik)); }
+
+/* NE YİYOR? + GÜN ÖZETİ */
+.mon-alt-ikili { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+.mon-bolum { min-width: 0; }
+.mon-bolum-bas {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 10px;
+  font: 700 11px var(--font-hud); letter-spacing: 1.5px; color: var(--ink-1);
+}
+.mon-yiyen-satir { padding: 7px 0 10px; border-bottom: 1px solid var(--kenar); }
+.mon-yiyen-ust { display: flex; align-items: baseline; gap: 10px; font: 12px var(--font-hud); color: var(--ink-1); }
+.mon-yiyen-ad { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mon-yiyen-ad small { color: var(--ink-3); margin-left: 4px; }
+.mon-yiyen-cpu { color: var(--mon-veri); width: 58px; text-align: right; }
+.mon-yiyen-ram { color: var(--ink-2); width: 62px; text-align: right; }
+.mon-yiyen-iz { height: 2px; margin-top: 6px; border-radius: 2px; background: var(--mon-veri); transition: width .5s; }
+.mon-tepeler { display: flex; gap: 22px; flex-wrap: wrap; margin-bottom: 12px; }
+.mon-tepe span { display: block; font: 10px var(--font-hud); letter-spacing: 1px; color: var(--ink-3); }
+.mon-tepe b { font: 700 20px var(--font-hud); color: var(--ink-1); }
+
+/* Katlı bölümler */
+.mon-katli { border: 1px solid var(--kenar); border-radius: var(--r-3); background: var(--yuzey-1); padding: 0 14px; }
+.mon-katli > summary {
+  cursor: pointer; list-style: none; min-height: 44px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font: 11px var(--font-hud); letter-spacing: 1.5px; color: var(--ink-2);
+}
+.mon-katli > summary::-webkit-details-marker { display: none; }
+.mon-katli > summary::before { content: "▸"; color: var(--ink-3); transition: transform .2s; }
+.mon-katli[open] > summary::before { transform: rotate(90deg); }
+.mon-katli[open] { padding-bottom: 14px; }
+.mon-ag-gecmis-bas { margin-top: 10px; }
+.mon-hd-sub { font-weight: normal; color: var(--ink-3); letter-spacing: .5px; }
+
+/* ── Diskler ──────────────────────────────────────────────────────────── */
+/* Satırlar tek ızgarada (display:contents) — sütunlar ortak, çubuklar aynı boyda ve hizada.
+   Satır başına flex'te ray sağdaki metnin uzunluğuna göre kısalıyordu (goz 09-27). */
+#mon-disks { display: grid; grid-template-columns: auto auto minmax(48px, 1fr) auto; align-items: center; gap: 9px 10px; font-size: 11px; font-family: var(--font-hud); }
+.mon-disk { display: contents; }
+#mon-disks > .mon-rep-empty { grid-column: 1 / -1; }
+#mon-disks .mon-badge { justify-self: start; }
+#mon-amd { display: block; }
+#mon-amd:empty { display: none; }
+.mon-disk-name { width: 130px; color: var(--text-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mon-badge { font-size: 9px; padding: 1px 6px; border-radius: 4px; background: var(--yuzey-2); color: var(--ink-2); text-transform: uppercase; }
+.mon-disk-io { flex-shrink: 0; text-align: right; color: var(--ink-2); white-space: nowrap; padding-left: 10px; font-size: 10px; }
+
+/* ── Geçmiş grafikleri ────────────────────────────────────────────────── */
+.mon-hist-ctl { display: flex; gap: 10px; align-items: center; font-weight: normal; flex-wrap: wrap; }
+.mon-rbtns { display: inline-flex; gap: 3px; }
+/* ⚠️ Dokunma hedefi: yükseklik 24px'in altına inmez (`--hedef-min`, WCAG 2.5.8).
+   Yan yana duran düğmeler → `::after` ile hayalet büyütme YASAK (komşunun
+   tıklamasını yutar); kutu gerçekten büyütülüyor. */
+.mon-rbtn, .mon-rep-navbtn {
+  background: transparent; border: 1px solid var(--kenar); color: var(--ink-2);
+  border-radius: 5px; min-height: var(--hedef-min, 24px); padding: 2px 10px;
+  font: 10px var(--font-hud); cursor: pointer;
+}
+.mon-rbtn:hover, .mon-rep-navbtn:hover { border-color: var(--kenar-guclu); color: var(--altin-ink); }
+.mon-rbtn.active { background: var(--altin); color: var(--bg-base); border-color: var(--altin); }
+.mon-rep-navbtn:disabled { opacity: .35; cursor: default; pointer-events: none; }
+.mon-leg { display: inline-flex; gap: 5px; align-items: center; font: 9px var(--font-hud); color: var(--ink-2); }
+.mon-leg i { width: 10px; height: 3px; display: inline-block; border-radius: 2px; }
+#mon-hist-main, #mon-hist-net { width: 100%; display: block; }
+
+/* ── Günlük rapor ─────────────────────────────────────────────────────── */
+.mon-rep-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.mon-rep-h { font: bold 10px var(--font-hud); letter-spacing: .5px; color: var(--ink-2); margin-bottom: 6px; }
+.mon-rep-h span { font-weight: normal; color: var(--ink-3); }
+.mon-rep-row { display: flex; align-items: center; gap: 8px; font: 11px var(--font-hud); color: var(--ink-2); margin-bottom: 5px; }
+.mon-rep-name { width: 96px; color: var(--text-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mon-rep-bar { flex: 1; height: 7px; border-radius: 4px; background: var(--yuzey-2); overflow: hidden; }
+.mon-rep-bar > div { height: 100%; border-radius: 4px; transition: width .4s; }
+.mon-rep-val { width: 64px; text-align: right; color: var(--text-bright); }
+.mon-rep-nav { display: inline-flex; gap: 3px; margin-left: 8px; font-weight: normal; }
+.mon-rep-empty { font: 11px var(--font-hud); color: var(--ink-3); }
+
+/* ── Süreç tablosu ────────────────────────────────────────────────────── */
+.mon-proc-wrap { max-height: 360px; overflow: auto; border-radius: 8px; }
+table.mon-proc { width: 100%; border-collapse: collapse; font-family: var(--font-hud); font-size: 11px; }
+.mon-proc thead th {
+  position: sticky; top: 0; background: var(--bg-panel); color: var(--ink-2);
+  text-align: left; padding: 6px 8px; font-size: 10px; letter-spacing: .5px;
+  border-bottom: 1px solid var(--kenar); white-space: nowrap;
+}
+.mon-proc th[data-sort] { cursor: pointer; user-select: none; }
+.mon-proc th[data-sort]:hover { color: var(--text-bright); }
+.mon-proc th.active { color: var(--altin-ink); }
+.mon-proc th.num, .mon-proc td.num { text-align: right; }
+.mon-proc tbody td { padding: 4px 8px; border-bottom: 1px solid var(--kenar); color: var(--ink-2); white-space: nowrap; }
+.mon-proc tbody tr { cursor: pointer; }
+.mon-proc tbody tr:hover { background: var(--altin-zemin); }
+.mon-pname { color: var(--text-bright); }
+.mon-cmd { max-width: 360px; overflow: hidden; text-overflow: ellipsis; color: var(--ink-3); }
+.mon-proc td.num.warm { color: var(--mon-uyari); }
+.mon-proc td.num.hot { color: var(--mon-kritik); font-weight: bold; }
+.mon-vbadge { font-size: 9px; color: var(--mon-iyi); margin-left: 4px; }
+.mon-detail-row td { background: var(--altin-zemin); }
+.mon-detail { padding: 8px 10px; font-size: 11px; color: var(--ink-2); font-family: var(--font-hud); line-height: 1.65; }
+.mon-cmd-full { color: var(--ink-3); word-break: break-all; white-space: normal; }
+.mon-foot { font-size: 10px; color: var(--ink-3); font-family: var(--font-hud); text-align: right; }
+
+/* ── Dar ekran ────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .mon-makine { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mon-kart-islemci { grid-column: span 2; }
+}
+@media (max-width: 700px) {
+  .mon-makine, .mon-alt-ikili { grid-template-columns: minmax(0, 1fr); }
+  .mon-kart-genis, .mon-kart-islemci { grid-column: auto; }
+  .mon-disk-name { width: auto; max-width: 96px; }
+  /* dar ekranda ayrıntı çubuğun altına iner — yan yana çubuğu 40px'e eziyordu */
+  #mon-disks { grid-template-columns: auto auto minmax(0, 1fr); row-gap: 3px; }
+  .mon-disk-io { grid-column: 1 / -1; text-align: left; padding-left: 0; margin-bottom: 6px; }
+  .mon-disk-io { font-size: 9.5px; }
+  .mon-katli .mon-hist-ctl .mon-leg { display: none; }
+  /* 9 sütun 390px'e sığmıyordu: CPU/BELLEK/SÜRE ve ✕ ekran dışında kalıyordu (goz 09-27).
+     Telefonda PID · KOMUT · THR · KULLANICI gizlenir; tam komut satıra dokununca açılan ayrıntıda durur. */
+  .mon-proc th:nth-child(1), .mon-proc td:nth-child(1), .mon-proc th:nth-child(3), .mon-proc td:nth-child(3),
+  .mon-proc th:nth-child(6), .mon-proc td:nth-child(6), .mon-proc th:nth-child(7), .mon-proc td:nth-child(7) { display: none; }
+  .mon-proc td.mon-pname { max-width: 104px; overflow: hidden; text-overflow: ellipsis; }
+  .mon-proc .mon-vbadge { display: none; }
+  .mon-proc tbody td { padding: 4px 5px; }
+}

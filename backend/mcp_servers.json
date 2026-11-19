@@ -1,0 +1,32 @@
+{
+  "_comment": "Faz 23 — MCP sunucu köprüsü. enabled:true yapıp kimlik bilgisini .env'e koy, sonra /alice-restart. Kimlik gerektiren sunucular env_keys ile .env'den değer alır. Node tabanlılar için npx (Node kurulu olmalı); Python tabanlılar için ilgili pip paketi.",
+  "servers": [
+    {
+      "name": "fetch",
+      "enabled": false,
+      "_note": "Kimlik GEREKTİRMEZ. Kanıt/başlangıç için ideal. Kurulum: venv/bin/python -m pip install mcp-server-fetch",
+      "command": "python",
+      "args": ["-m", "mcp_server_fetch"],
+      "env_keys": [],
+      "timeout": 25
+    },
+    {
+      "name": "github",
+      "enabled": false,
+      "_note": "GitHub repo/issue/PR. .env → GITHUB_PERSONAL_ACCESS_TOKEN. Node gerekir (npx).",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env_keys": ["GITHUB_PERSONAL_ACCESS_TOKEN"],
+      "timeout": 30
+    },
+    {
+      "name": "notion",
+      "enabled": false,
+      "_note": "Notion sayfa/DB. .env → NOTION_API_KEY (Notion entegrasyon token'ı). Node gerekir (npx).",
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env_keys": ["NOTION_API_KEY", "OPENAPI_MCP_HEADERS"],
+      "timeout": 30
+    }
+  ]
+}

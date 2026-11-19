@@ -1,0 +1,2485 @@
+/* ============================================================================
+   YUKI · SOHBET
+   FAZ 3 chat katmanı. Eski style.css FAZ 6'ya kadar yüklü kalacağı için bu dosya
+   yalnız chat yüzeyini son katmanda geçersiz kılar. HUD Halka modu bilinçli olarak
+   bu katmanın dışındadır.
+   ========================================================================== */
+
+/* ═══ SOHBET — style.css'ten devralınan katman (/3); sohbet.css'in KENDİ kuralları bunu bilerek ezer ═══ */
+#chat-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* `flex:1` kutuyu tam kapsayıcı boyuna kilitliyordu → dar/kısa ekranda alttaki
+     iki kart sessizce composer'ın ARKASINDA kalıyordu (ölçüldü 420×820: 3. ve 4.
+     kart görünmüyor). `1 0 auto` ile içerik büyüyünce #messages kaydırabiliyor. */
+  flex: 1 0 auto;
+  gap: 8px;
+  padding: 20px 20px 28px;
+  color: var(--accent);
+  font-family: var(--font-hud, monospace);
+  letter-spacing: 0.06em;
+  user-select: none;
+  /* pointer-events:none KALDIRILDI (2026-08-03) — kartlar tıklanabilir.
+     Bırakılsaydı kartlar görünür ama ölü olurdu; tam olarak "çalışıyor gibi
+     duran ama çalışmayan arayüz" sınıfı. */
+}
+#chat-empty-state .empty-title {
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  color: var(--text, #e8f4fa);
+  opacity: 0.95;
+}
+#chat-empty-state .empty-sub {
+  font-size: 12px;
+  opacity: 0.5;
+  margin-bottom: 6px;
+}
+#chat-empty-state .empty-icon { font-size: 28px; opacity: 0.7; }
+
+
+/* ═══ SOHBET — gruplu seçiciler (/4) ═══ */
+@media (max-width: 800px) and (orientation: portrait) {
+  /* Touch-friendly buttons */
+    #mic-btn, #send-btn { width: 44px; height: 44px; flex-shrink: 0; }
+}
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 500px) {
+  /* Touch-friendly buttons */
+    #mic-btn, #send-btn { width: 44px; height: 44px; flex-shrink: 0; }
+}
+
+
+/* ═══ AVATAR — style.css'ten devralınan katman (/1); sohbet.css'in KENDİ kuralları bunu bilerek ezer ═══ */
+/* ── Avatar Pane ── */
+#avatar-pane {
+  position: relative;
+  flex: 0 0 clamp(280px, 42%, 460px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: flex-basis 0.35s cubic-bezier(.4,0,.2,1), opacity 0.35s;
+  border-right: 1px solid var(--border-dim);
+}
+#yuki-video {
+  /* 2026-08-08: <video> → <img> oldu. img satır-içi varsayılanı baseline boşluğu
+     bırakıyor → block. (Eleman ID'si korundu ki mevcut selektörler bozulmasın.) */
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 15%;
+  transition: opacity 0.15s var(--e-out,cubic-bezier(.25,1,.4,1)), transform 0.3s var(--e-out,cubic-bezier(.25,1,.4,1));
+}
+#yuki-canvas {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* 2026-08-08: eski çok-klipli sprite sistemi (#fb-anim-btns + davranışa göre
+   video seçimi) kaldırıldı. Geriye TEK klip kaldı: tam boy bekleme döngüsü.
+   2026-10-04: ayrı tam boy <img> ve TAM BOY modu kalktı; klip SOHBET
+   sahnesinin VİDEO kipinde açılır (modes/sohbet-sahne.css).
+   Klip PNG'nin ÜSTÜNE biner ve yalnız gerçekten oynamaya başlayınca (`.on`)
+   görünür olur — böylece yüklenemezse/autoplay reddedilirse altındaki PNG
+   görünür kalır, siyah kutu oluşmaz. */
+#yuki-fb-video {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  background: transparent;
+  opacity: 0;
+  transition: opacity .45s ease;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Hareket azaltma açıksa klibi hiç gösterme — durağan PNG kalsın */
+    #yuki-fb-video { display: none !important; }
+}
+/* ── Karakter şeridi — klasik sohbette karakter değiştirici (2026-08-08) ──
+   chat-modes.js `_buildCharBar` onu #avatar-hud'un İLK satırı yapar; liste
+   CHARACTERS dizisinden türer (tek kaynak). hud-ring modunda pane display:none
+   olduğu için şerit de kendiliğinden kaybolur.
+   Ürün P1: Yuki dışındaki dördü kilitli önizleme (.locked).
+   🔴 2026-09-25 (geliştirici): üstte yüzü kapatıyordu — sol üst de orta da denendi,
+   portrenin yüzü hep üst bantta. Artık akışta, "UNIT // YUKI"nin üstünde;
+   mutlak konum yok → ☰ ile çakışma ve piksel payı hesabı da yok. */
+#char-bar {
+  align-self: flex-start;    /* #avatar-hud flex sütunu (temel) */
+  justify-self: start;       /* #avatar-hud grid (sohbet düzeni) */
+  display: flex;
+  gap: 6px;
+  padding: 5px 7px;
+  border-radius: var(--r-xl, 999px);
+  /* Sabit siyah alfaydı: açık temada beyaz portre üstünde koyu bir leke,
+     içindeki koyu metinle 1.9:1 (ölçüldü 08-27). Tema yüzeyine bağlandı. */
+  background: oklch(from var(--yuzey-1) l c h / 0.82);
+  border: 1px solid var(--border-dim);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+#char-bar .char-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  font-family: var(--font-hud, monospace);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-dim, #9aa);
+  background: var(--yuzey-2);
+  border: 1px solid transparent;
+  transition: color .15s, background .15s, border-color .15s, transform .15s;
+}
+#char-bar .char-btn:hover { background: var(--yuzey-3); color: var(--text, #e8eef5); }
+#char-bar .char-btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--mor-zemin);
+  box-shadow: 0 0 10px -2px var(--accent);
+}
+/* Kilitli (Pro) karakter — görünür ama sönük; tık toast verir, geçiş yapmaz.
+   `cursor: not-allowed` DEĞİL: düğme tıklanabilir olmalı, çünkü tıklama
+   "Pro'da açılır" mesajını gösteren satış yüzeyinin kendisi. */
+#char-bar .char-btn.locked { opacity: .45; }
+#char-bar .char-btn.locked:hover { opacity: .7; }
+#char-bar .char-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Floating mode toggle — sadece mobilde göster */
+#mode-toggle-fab {
+  display: none;
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  z-index: 10;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid var(--border-dim);
+  color: var(--muted);
+  font-family: var(--font-hud);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  padding: 5px 9px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all var(--transition);
+}
+#mode-toggle-fab:hover, #mode-toggle-fab:active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* ── Avatar HUD Overlay ── */
+#avatar-hud {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 22px 14px 14px;
+  /* 2026-08-03: gradyan %40'a kadar SAYDAMDI, ilk satır (`UNIT // YUKI`) tam o
+     bölgede duruyordu → avatarın beyaz elbisesinin üstünde okunmuyordu (dar
+     ekranda yarısı kesik görünüyordu). Karartma artık ilk satırdan ÖNCE başlıyor. */
+  background: linear-gradient(transparent,
+                              rgba(0,8,20,0.62) 22%,
+                              rgba(0,8,20,0.94) 55%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.av-unit-id {
+  font-family: var(--font-hud);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  opacity: 0.7;
+  text-transform: uppercase;
+}
+.av-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.av-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-hud);
+  font-size: 10px;
+}
+.av-stat-label {
+  color: var(--muted);
+  min-width: 42px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.av-stat-val {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  min-width: 60px;
+}
+.av-stat-bar {
+  flex: 1;
+  height: 2px;
+  background: rgba(96,165,250,0.15);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.av-stat-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--p-cyan-600), var(--p-cyan-500));
+  border-radius: 1px;
+  transition: width 0.5s var(--e-out,cubic-bezier(.25,1,.4,1));
+  box-shadow: 0 0 6px var(--p-cyan-500);
+}
+/* ── Waveform HUD ── */
+#waveform-hud {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.wf-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 32px;
+}
+.wv-bar {
+  flex: 1;
+  height: 3px;
+  min-height: 3px;
+  background: var(--accent);
+  border-radius: 1px;
+  opacity: 0.7;
+  transition: height 0.05s linear;
+  animation: wvIdle var(--dur, 0.8s) ease-in-out infinite alternate;
+}
+@media (max-width: 800px) {
+  #avatar-pane {
+      flex: 0 0 42vh;
+      border-right: none;
+      border-bottom: 1px solid var(--border-dim);
+    }
+  /* Karakter şeridi — parmakla basılabilir hedef (30px masaüstünde küçük kalıyor).
+       Alt bilgi bloğunda yatay durur; yüz üst bantta olduğu için kapanmaz. */
+    #char-bar { gap: 8px; padding: 6px 8px; }
+  #char-bar .char-btn { width: 42px; height: 42px; font-size: 14px; }
+  #mode-toggle-fab { display: block; }
+}
+@media (max-width: 800px) and (orientation: portrait) {
+  /* ── CHAT TAB ── */
+    #avatar-pane { flex: 0 0 44vh; }
+  /* `#yuki-video { object-position: center top }` BURADAN KALDIRILDI 2026-08-31:
+       kural ÖLÜYDÜ — css/sohbet.css'teki `body:not(.hud-ring-mode) #yuki-video`
+       hem daha yüksek özgüllükte hem sonra yükleniyor, bunu hiç uygulatmıyordu.
+       Ölü hâliyle durması "dar ekran kadrajı çözülmüş" izlenimi veriyordu; oysa
+       420px'te yüz tamamen kesiliyordu. Yaşayan kural artık sohbet.css'te. */
+    /* HUD kompakt — sadece tek satır, waveform ve stats gizli */
+    #avatar-hud { padding: 6px 10px 8px; gap: 4px; }
+  #waveform-hud { display: none; }
+  .av-stats { display: none; }
+}
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 500px) {
+  #avatar-pane { flex: 0 0 35%; }
+}
+
+
+body:not(.hud-ring-mode) #app {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--yuzey-1);
+  color: var(--ink-2);
+}
+
+body:not(.hud-ring-mode) #app svg {
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body:not(.hud-ring-mode) #app button,
+body:not(.hud-ring-mode) #app input,
+body:not(.hud-ring-mode) #app textarea {
+  -webkit-app-region: no-drag;
+}
+
+/* --------------------------------------------------------------------------
+   Avatar bölmesi
+   ----------------------------------------------------------------------- */
+
+body:not(.hud-ring-mode) #avatar-pane {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex: 0 0 34%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 0;
+  border-inline-end: 1px solid var(--kenar);
+  background: var(--yuzey-2);
+  transition:
+    flex-basis var(--sure-4) var(--egri),
+    opacity var(--sure-3) var(--egri);
+}
+
+body:not(.hud-ring-mode) #avatar-pane.collapsed {
+  flex-basis: 0;
+  width: 0;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Kullanıcı tercihi data-avatar-ayar'da kalır. Mini genişlikteki Büyük → Küçük
+   düşürmesi aşağıdaki @container bloğunda ayrıca CSS ile yapılır. */
+/* Avatar gizliyken sohbet üst çubuğu sol kenara dayanır → ☰ yer açar (goz 11-15: "Yuki" adı ☰ altındaydı). */
+body:not(.hud-ring-mode) #app[data-avatar-ayar="gizli"] #header { padding-inline-start: var(--nav-bosluk, 60px); }
+body:not(.hud-ring-mode) #app[data-avatar-ayar="gizli"] #avatar-pane {
+  flex-basis: 0;
+  width: 0;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+body:not(.hud-ring-mode) #yuki-video,
+body:not(.hud-ring-mode) #yuki-fb-video,
+body:not(.hud-ring-mode) #yuki-canvas,
+body:not(.hud-ring-mode) #yuki-fal-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+body:not(.hud-ring-mode) #yuki-video {
+  display: block;
+  object-fit: cover;
+  object-position: center 15%;
+}
+
+/* Dar/sütun düzende (≤800px) avatar bölmesi yatay bir şeride döner ve `cover`
+   kırpması YÜZÜ TAMAMEN KESİYORDU. Ölçüldü 2026-08-31 @420px: kutu 396×179,
+   kadraj görselin %9,9–%43,8'ini gösteriyor; yüz ise %2,8–%12,7 bandında
+   (gözler %9) → ekranda yalnız çene ve omuz kalıyordu.
+   ⚠️ Bunu düzelten kural style.css'te (`@media ≤800px and portrait`) ZATEN
+   VARDI ama ÖLÜYDÜ: yukarıdaki `body:not(…) #yuki-video` hem daha yüksek
+   özgüllükte hem sohbet.css style.css'ten SONRA yükleniyor. Kural bu yüzden
+   burada, aynı özgüllükte duruyor — "önek ekleyip güçlendirme", sıra=kaskad. */
+@media (max-width: 800px) {
+  body:not(.hud-ring-mode) #yuki-video { object-position: center top; }
+}
+
+body:not(.hud-ring-mode) #yuki-fal-overlay {
+  z-index: var(--z-yuksek);
+  object-fit: cover;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--sure-2) var(--egri);
+}
+
+body:not(.hud-ring-mode) #avatar-pane[data-fal-durum="devre-disi"] #yuki-fal-overlay {
+  display: none;
+}
+
+/* `.fal-durum` ("Mikro animasyon şu anda kullanılamıyor") 2026-09-25'te
+   KALDIRILDI (geliştirici): fal.ai anahtarı olmayan HER müşteride her açılışta
+   yüzün üstünde duruyordu — isteğe bağlı bir özelliğin yokluğu, hata değil.
+   Katman yine kapanır (`data-fal-durum="devre-disi"` → overlay gizli); durum
+   SAĞLIK panelinin işi, portrenin değil. */
+
+body:not(.hud-ring-mode) #avatar-hud {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: var(--z-yuksek);
+  display: grid;
+  gap: var(--b-4);
+  padding: var(--b-9) var(--b-5) var(--b-5);
+  border: 0;
+  background: linear-gradient(
+    color-mix(in oklab, var(--bg) 76%, transparent),
+    var(--bg) 58%
+  );
+  color: var(--ink-2);
+}
+
+body:not(.hud-ring-mode) .av-unit-id,
+body:not(.hud-ring-mode) .av-stats,
+body:not(.hud-ring-mode) .av-stat-row,
+body:not(.hud-ring-mode) .av-stat-label,
+body:not(.hud-ring-mode) .av-stat-val,
+body:not(.hud-ring-mode) .wf-label {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  font-weight: var(--ag-orta);
+  letter-spacing: 0.08em;
+  line-height: var(--satir-sik);
+}
+
+body:not(.hud-ring-mode) .av-unit-id,
+body:not(.hud-ring-mode) .wf-label {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: normal;
+}
+
+body:not(.hud-ring-mode) .av-stats,
+body:not(.hud-ring-mode) .av-stat-row,
+body:not(.hud-ring-mode) #waveform-hud { min-width: 0; }
+
+body:not(.hud-ring-mode) .av-stat-label {
+  min-width: 0;
+  flex: 0 1 42px;
+}
+
+body:not(.hud-ring-mode) .av-stat-val {
+  min-width: 0;
+  flex: 0 1 60px;
+}
+
+body:not(.hud-ring-mode) .av-stat-val { font-weight: var(--ag-orta); }
+body:not(.hud-ring-mode) .av-stat-bar { background: var(--yuzey-3); }
+body:not(.hud-ring-mode) .av-stat-fill,
+body:not(.hud-ring-mode) .wv-bar {
+  background: var(--ink-3);
+  box-shadow: none;
+}
+
+body:not(.hud-ring-mode) #mode-toggle-fab {
+  position: absolute;
+  inset-inline-end: var(--b-4);
+  inset-block-end: var(--b-4);
+  z-index: var(--z-yuksek);
+  min-width: var(--hedef);
+  min-height: var(--hedef);
+  padding-inline: var(--b-4);
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-2);
+  background: var(--yuzey-3);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+}
+
+/* Küçük avatar gerçek bir üst-bar rozeti: sohbet kolonundan yer çalmaz. */
+body:not(.hud-ring-mode) #app[data-avatar-ayar="kucuk"] #avatar-pane {
+  position: absolute;
+  inset-block-start: var(--b-4);
+  inset-inline-start: var(--nav-bosluk, var(--b-5));   /* ☰'ın sağında */
+  z-index: var(--z-cekmece);
+  display: block;
+  flex: none;
+  width: var(--hedef-dar);
+  height: var(--hedef-dar);
+  min-width: var(--hedef-dar);
+  min-height: var(--hedef-dar);
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-tam);
+  background: var(--yuzey-2);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ROZET KADRAJI — 40px yuvarlakta tam boy görsel gösterilemez.
+   Ölçüldü 2026-08-31: `cover` + `object-position` yalnız KIRPAR, yakınlaştırmaz;
+   768×1024'lük tam boy görsel 40px'e sığdırılınca yüz ~6px kalıyor ve rozet
+   "kimin olduğu anlaşılmayan açık renkli bir leke"ye dönüyordu. object-position'ı
+   oynatmak bunu ÇÖZMEZ (kare kutuda kafa matematiksel olarak hep tepede kalır).
+   Çözüm: görseli 4× büyüt, üstten hizala, yatayda ortala → rozet baş-omuz
+   kadrajı gösterir. Kırpmayı #avatar-pane yapar (overflow:hidden + r-tam).
+   ⚠️ Karaktere duyarsız: sabit bir "yüz %şu kadarında" sayısı YAZILMADI —
+   5 karakterin görselinde baş konumu birebir aynı değil (sera'da taç, kira'da
+   kulak var). Üstten hizalama hepsinde baş-omzu verir. */
+body:not(.hud-ring-mode) #app[data-avatar-ayar="kucuk"] #avatar-pane #yuki-video {
+  display: block;
+  inset: auto;
+  top: 0;
+  left: 50%;
+  width: 400%;
+  height: auto;
+  /* ⚠️ `max-width: none` ŞART — css/temel.css:54'teki `img { max-width: 100% }`
+     reset'i 400%'ü sessizce 100%'e kırpıyor (ölçüldü: width 400% yazılı, computed
+     30px). Kural uygulanmış görünür, etkisi olmaz. */
+  max-width: none;
+  transform: translateX(-50%);
+  border-radius: 0;
+  object-fit: fill;
+}
+
+body:not(.hud-ring-mode) #app[data-avatar-ayar="kucuk"] #avatar-pane #yuki-canvas,
+body:not(.hud-ring-mode) #app[data-avatar-ayar="kucuk"] #avatar-pane #yuki-fb-video,
+body:not(.hud-ring-mode) #app[data-avatar-ayar="kucuk"] #avatar-pane #yuki-fal-overlay,
+body:not(.hud-ring-mode) #app[data-avatar-ayar="kucuk"] #avatar-pane #avatar-hud,
+body:not(.hud-ring-mode) #app[data-avatar-ayar="kucuk"] #avatar-pane #mode-toggle-fab,
+body:not(.hud-ring-mode) #app[data-avatar-ayar="kucuk"] #avatar-pane #char-bar {
+  display: none;
+}
+
+body:not(.hud-ring-mode) #app[data-avatar-ayar="kucuk"] #header {
+  padding-inline-start: calc(var(--nav-bosluk, var(--b-5)) + var(--hedef-dar) + var(--b-4));
+}
+
+/* --------------------------------------------------------------------------
+   Chat kolon iskeleti + sürüklenebilir üst bar
+   ----------------------------------------------------------------------- */
+
+body:not(.hud-ring-mode) #chat-pane {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--yuzey-1);
+}
+
+body:not(.hud-ring-mode) #header {
+  position: relative;
+  z-index: var(--z-yapisik);
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--b-4);
+  min-width: 0;
+  min-height: calc(var(--hedef) + var(--b-5));
+  padding: var(--b-4) var(--b-5);
+  border: 0;
+  border-block-end: 1px solid var(--kenar);
+  background: var(--yuzey-1);
+  box-shadow: none;
+  -webkit-app-region: drag;
+}
+
+body:not(.hud-ring-mode) .hud-status-bar {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--b-4);
+  min-width: var(--hedef);
+  min-height: var(--hedef);
+  padding: 0 var(--b-4);
+  border: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  background-image: none;
+  cursor: move;
+  -webkit-app-region: drag;
+}
+
+body:not(.hud-ring-mode) #state-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--b-3);
+  min-height: var(--hedef-min);
+  color: var(--ink-2);
+}
+
+body:not(.hud-ring-mode) #state-dot,
+body:not(.hud-ring-mode) #ws-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: var(--r-tam);
+  background: var(--ink-3);
+  box-shadow: none;
+}
+
+body:not(.hud-ring-mode) #state-badge::after {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  font-weight: var(--ag-orta);
+  letter-spacing: 0.06em;
+}
+
+body:not(.hud-ring-mode) #state-badge.state-idle #state-dot { background: var(--mor-ink); }
+
+body:not(.hud-ring-mode) #ws-pill.online #ws-dot {
+  background: var(--ink-2);
+  box-shadow: none;
+}
+
+body:not(.hud-ring-mode) #state-badge.state-listening #state-dot,
+body:not(.hud-ring-mode) #state-badge.state-thinking #state-dot,
+body:not(.hud-ring-mode) #state-badge.state-talking #state-dot { background: var(--altin); }
+
+body:not(.hud-ring-mode) #state-badge.state-busy #state-dot { background: var(--kirmizi-ink); }
+
+body:not(.hud-ring-mode) #ws-pill.offline #ws-dot {
+  background: var(--kirmizi-ink);
+  box-shadow: none;
+  animation: none;
+}
+
+body:not(.hud-ring-mode) #header-actions {
+  min-width: 0;
+  -webkit-app-region: no-drag;
+}
+
+body:not(.hud-ring-mode) .header-actions-toggle {
+  display: none;
+  width: var(--hedef);
+  min-width: var(--hedef);
+  height: var(--hedef);
+  min-height: var(--hedef);
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-2);
+  appearance: none;
+  background: var(--yuzey-2);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+body:not(.hud-ring-mode) .header-actions-toggle::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='5' cy='12' r='1.5'/%3E%3Ccircle cx='12' cy='12' r='1.5'/%3E%3Ccircle cx='19' cy='12' r='1.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+body:not(.hud-ring-mode) .header-actions-toggle:hover,
+body:not(.hud-ring-mode) .header-actions-toggle:checked {
+  border-color: var(--kenar-guclu);
+  background: var(--yuzey-3);
+  color: var(--ink-1);
+}
+
+body:not(.hud-ring-mode) .header-actions-toggle:focus-visible {
+  outline: var(--odak-kalinlik) solid var(--mor-ink);
+  outline-offset: var(--odak-offset);
+}
+
+body:not(.hud-ring-mode) .hud-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--b-2);
+  min-width: 0;
+  -webkit-app-region: no-drag;
+}
+
+body:not(.hud-ring-mode) #ws-pill,
+body:not(.hud-ring-mode) .hud-mem-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--b-3);
+  min-height: var(--hedef);
+  padding: 0 var(--b-5);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-tam);
+  background: var(--yuzey-2);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  font-weight: var(--ag-orta);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+body:not(.hud-ring-mode) #ws-pill.online { border-color: var(--kenar); color: var(--ink-2); }
+body:not(.hud-ring-mode) #ws-pill.offline { border-color: var(--kirmizi-ink); color: var(--kirmizi-ink); }
+body:not(.hud-ring-mode) #ws-pill.anahtar-yok { border-color: var(--altin); color: var(--altin); }
+body:not(.hud-ring-mode) #ws-pill.anahtar-yok #ws-dot { background: var(--altin); }
+/* Tur 2 (göz 10-04): MEM altın metindeydi — açık temada zeytin, soluk; ayrıca
+   altın "nadir vurgu", bir sayaç vurgu değil. Etiket ikincil, sayı birincil. */
+body:not(.hud-ring-mode) .hud-mem-badge { color: var(--ink-2); }
+body:not(.hud-ring-mode) .hud-mem-badge #mem-num { color: var(--ink-1); }
+
+body:not(.hud-ring-mode) #vol-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--b-3);
+  min-height: var(--hedef);
+}
+
+body:not(.hud-ring-mode) #vol-icon,
+body:not(.hud-ring-mode) #theme-btn,
+body:not(.hud-ring-mode) #avatar-toggle {
+  flex: 0 0 auto;
+  font-size: 0;
+}
+
+body:not(.hud-ring-mode) #vol-icon::before,
+body:not(.hud-ring-mode) #theme-btn::before,
+body:not(.hud-ring-mode) #avatar-toggle::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  background: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+body:not(.hud-ring-mode) #avatar-toggle[data-avatar-etkin="kucuk"]::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='3'/%3E%3Cpath d='M6.5 20a5.5 5.5 0 0 1 11 0'/%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3C/svg%3E");
+}
+
+body:not(.hud-ring-mode) #avatar-toggle[data-avatar-etkin="gizli"]::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 4.2A10.8 10.8 0 0 1 12 4c5.5 0 9 5 9 8a9.8 9.8 0 0 1-2 3.5M6.6 6.6C4.3 8 3 10.2 3 12c0 3 3.5 8 9 8a10 10 0 0 0 3.4-.6'/%3E%3C/svg%3E");
+}
+
+body:not(.hud-ring-mode) #avatar-toggle.active {
+  color: var(--mor-ink);
+}
+
+body:not(.hud-ring-mode) #vol-icon::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='11 5 6 9 2 9 2 15 6 15 11 19 11 5'/%3E%3Cpath d='M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14'/%3E%3C/svg%3E");
+}
+
+body:not(.hud-ring-mode) #theme-btn::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9'/%3E%3C/svg%3E");
+}
+
+body:not(.hud-ring-mode) #avatar-toggle::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2'/%3E%3Cpath d='M9 3v18m6-6-3-3 3-3'/%3E%3C/svg%3E");
+}
+
+body:not(.hud-ring-mode) #vol-icon > svg,
+body:not(.hud-ring-mode) #theme-btn > svg,
+body:not(.hud-ring-mode) #avatar-toggle > svg { display: none; }
+
+body:not(.hud-ring-mode) #vol-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 72px;
+  min-width: var(--hedef);
+  height: var(--hedef);
+  border: 0;
+  background: transparent;
+  accent-color: var(--mor-ink);
+  cursor: pointer;
+}
+
+body:not(.hud-ring-mode) #vol-slider::-webkit-slider-runnable-track {
+  height: var(--b-2);
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-tam);
+  background: var(--mor-zemin);
+}
+
+body:not(.hud-ring-mode) #vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-block-start: -6px;
+  border: 1px solid var(--mor-ink);
+  border-radius: var(--r-tam);
+  background: var(--mor-ink);
+  box-shadow: 0 0 0 var(--b-1) var(--yuzey-1);
+  transition:
+    border-color var(--sure-2) var(--egri),
+    background-color var(--sure-2) var(--egri);
+}
+
+body:not(.hud-ring-mode) #vol-slider:hover::-webkit-slider-thumb {
+  border-color: var(--mor-ink-hov);
+  background: var(--mor-ink-hov);
+}
+
+/* Tur 2 (göz 10-04): üst şeritte üç hap üç biçimdeydi (BAĞLANTI yuvarlak,
+   MEM daire, SOHBET köşeli). Görünüm düğmesi de aynı hap: tam yuvarlak, aynı
+   yükseklik, aynı iç boşluk ve yazı. Tıklanabilir olduğunu hover anlatır. */
+body:not(.hud-ring-mode) #mode-toggle {
+  min-width: 58px;
+  min-height: var(--hedef);
+  padding-inline: var(--b-5);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-tam);
+  background: var(--yuzey-2);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  font-weight: var(--ag-orta);
+  letter-spacing: 0.04em;
+}
+body:not(.hud-ring-mode) #mode-toggle:hover {
+  border-color: var(--kenar-guclu);
+  background: var(--yuzey-3);
+  color: var(--ink-1);
+}
+
+/* --------------------------------------------------------------------------
+   Mesaj akışı + öğretici boş durum
+   ----------------------------------------------------------------------- */
+
+body:not(.hud-ring-mode) #messages {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--b-5);
+  min-width: 0;
+  min-height: 0;
+  padding: var(--b-6);
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--yuzey-1);
+  scrollbar-color: var(--kenar-guclu) transparent;
+}
+
+body:not(.hud-ring-mode) #chat-empty-state {
+  flex: 1 0 auto;
+  justify-content: center;
+  min-height: min-content;
+  gap: var(--b-4);
+  padding: var(--b-8) var(--b-6);
+  color: var(--ink-2);
+  font-family: var(--font);
+  letter-spacing: 0;
+  user-select: text;
+}
+
+body:not(.hud-ring-mode) #chat-empty-state.hidden { display: none; }
+
+body:not(.hud-ring-mode) #chat-empty-state .empty-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--mor-ink);
+  opacity: 1;
+}
+
+body:not(.hud-ring-mode) #chat-empty-state .empty-title {
+  color: var(--ink-1);
+  font-size: var(--yazi-19);
+  font-weight: var(--ag-kalin);
+  letter-spacing: -0.011em;
+}
+
+body:not(.hud-ring-mode) #chat-empty-state .empty-sub {
+  max-width: 46ch;
+  margin: 0 0 var(--b-4);
+  color: var(--ink-3);
+  font-size: var(--yazi-13);
+  line-height: var(--satir-orta);
+  opacity: 1;
+}
+
+
+
+
+
+
+
+body:not(.hud-ring-mode) .msg-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--b-4);
+  max-width: 100%;
+  animation: sohbet-mesaj-gir var(--sure-3) var(--egri) both;
+}
+
+@keyframes sohbet-mesaj-gir {
+  from { opacity: 0; translate: 0 var(--b-4); }
+}
+
+body:not(.hud-ring-mode) .msg-row.yuki { align-self: flex-start; }
+body:not(.hud-ring-mode) .msg-row.user { align-self: flex-end; flex-direction: row-reverse; }
+
+/* 🔴 `min-width: 0` DEĞİL. Ölçüldü (2026-08-21, 960px): flex item'ın min-content sınırını
+   kaldırınca balon içeriğine göre değil KARDEŞİNE göre daralıyordu — sarmalayıcının
+   genişliğini "COPY" düğmesi belirliyor, balon da 54px'e sıkışıp "selam"ı üç satıra
+   bölüyordu. `min-content` balonun en uzun kelimesinden dar olmasını engeller;
+   taşmayı `max-width` zaten tutuyor, ikinci bir bariyere gerek yok. */
+body:not(.hud-ring-mode) .msg-row > div:not(.msg-avatar) {
+  min-width: min-content;
+  max-width: 85%;
+}
+
+body:not(.hud-ring-mode) .msg-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-2);
+  background: var(--yuzey-2);
+  color: var(--mor-ink);
+  font-size: 0;
+}
+
+body:not(.hud-ring-mode) .msg-avatar::before {
+  content: '';
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2v20M4.93 6l14.14 12M4.93 18 19.07 6M2 12h20M7 3.34l5 2.89 5-2.89M7 20.66l5-2.89 5 2.89M3.34 7l2.89 5-2.89 5M20.66 7l-2.89 5 2.89 5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+body:not(.hud-ring-mode) .msg-bubble {
+  max-width: 100%;
+  padding: var(--b-4) var(--b-5);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-3);
+  background: var(--yuzey-2);
+  color: var(--ink-1);
+  clip-path: none;
+  font-size: var(--yazi-14);
+  line-height: var(--satir-genis);
+  /* 🔴 `anywhere` DEĞİL, `break-word`. Fark görünmez ama yıkıcı: `anywhere` soft-wrap
+     fırsatlarını min-content hesabına KATAR → flex item'ın asgari genişliği tek karaktere
+     düşer → balon içeriğe göre değil, sıkışmaya göre daralır. Ölçüldü (2026-08-21, 960px):
+     "selam" balonu 54px'e inip "sela/m" diye kırılıyordu. `break-word` min-content'i
+     etkilemez; uzun URL'yi yine kırar ama normal kelimeyi bölmez.
+
+     🔴 İKİ ÖZELLİK AYNI İŞİ YAPIYOR — birini düzeltmek yetmedi. `overflow-wrap`
+     düzeltildikten sonra balon hâlâ 54px kaldı; ölçünce görüldü ki eski `style.css`
+     (satır 985/1186) `word-break: break-word` yazıyor ve sohbet.css bu özelliği hiç
+     yazmadığı için eski kural kazanıyordu. Ölçüm: "selam" gerçek genişliği 36px,
+     balonun olması gereken 62px, olduğu 54px. */
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+body:not(.hud-ring-mode) .msg-row.yuki .msg-bubble {
+  border-color: var(--kenar);
+  background: var(--yuzey-2);
+  color: var(--ink-1);
+  clip-path: none;
+}
+
+body:not(.hud-ring-mode) .msg-row.user .msg-bubble {
+  border-color: var(--mor-yuzey);
+  background: var(--mor-zemin);
+  color: var(--ink-1);
+  clip-path: none;
+}
+
+body:not(.hud-ring-mode) .msg-ts {
+  display: block;
+  margin-block-start: var(--b-2);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  letter-spacing: 0;
+  opacity: 1;
+}
+
+body:not(.hud-ring-mode) .msg-row.user .msg-ts { text-align: end; }
+
+body:not(.hud-ring-mode) .code-copy-btn {
+  position: relative;
+  inset: auto;
+  align-self: flex-start;
+  min-width: var(--hedef-min);
+  min-height: var(--hedef-min);
+  margin-block-start: var(--b-2);
+  padding: var(--b-2) var(--b-4);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-1);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  opacity: 0.72;
+  cursor: pointer;
+  transition:
+    background-color var(--sure-2) var(--egri),
+    color var(--sure-2) var(--egri),
+    opacity var(--sure-2) var(--egri);
+}
+
+/* Mesaj kopyalama eylemi meta satırında sessiz durur; ayrı bir kutu gibi balonu
+   sıkıştırmaz. Opaklık yalnız hover ile değil focus-within ile de açılır. */
+body:not(.hud-ring-mode) .msg-ts {
+  display: flex;
+  align-items: center;
+  min-height: var(--hedef-min);
+}
+
+body:not(.hud-ring-mode) .msg-row.user .msg-ts { justify-content: flex-end; }
+
+body:not(.hud-ring-mode) .msg-copy-btn {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-end: 0;
+  min-width: var(--hedef-min);
+  min-height: var(--hedef-min);
+  margin: 0;
+  padding: var(--b-1) var(--b-3);
+  border: 1px solid transparent;
+  border-radius: var(--r-1);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition:
+    background-color var(--sure-2) var(--egri),
+    border-color var(--sure-2) var(--egri),
+    color var(--sure-2) var(--egri),
+    opacity var(--sure-2) var(--egri);
+}
+
+body:not(.hud-ring-mode) .msg-row.user .msg-copy-btn {
+  inset-inline: 0 auto;
+}
+
+body:not(.hud-ring-mode) .msg-row:hover .msg-copy-btn,
+body:not(.hud-ring-mode) .msg-row:focus-within .msg-copy-btn,
+body:not(.hud-ring-mode) .msg-copy-btn:focus,
+body:not(.hud-ring-mode) .msg-copy-btn:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body:not(.hud-ring-mode) .msg-copy-btn:hover,
+body:not(.hud-ring-mode) .code-copy-btn:hover,
+body:not(.hud-ring-mode) .msg-copy-btn:focus-visible,
+body:not(.hud-ring-mode) .code-copy-btn:focus-visible {
+  border-color: var(--kenar-guclu);
+  background: var(--yuzey-3);
+  color: var(--ink-1);
+  opacity: 1;
+}
+
+body:not(.hud-ring-mode) .msg-copy-btn.copied,
+body:not(.hud-ring-mode) .code-copy-btn.copied { color: var(--mor-ink); border-color: var(--mor-ink); }
+
+body:not(.hud-ring-mode) .md-rendered pre {
+  position: relative;
+  margin-block: var(--b-4);
+  padding: var(--b-5);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-2);
+  background: var(--bg);
+  overflow-x: auto;
+}
+
+body:not(.hud-ring-mode) .md-rendered blockquote {
+  margin-block: var(--b-4);
+  padding: var(--b-4) var(--b-5);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-2);
+  background: var(--yuzey-1);
+  color: var(--ink-2);
+}
+
+body:not(.hud-ring-mode) .md-rendered h1,
+body:not(.hud-ring-mode) .md-rendered h2,
+body:not(.hud-ring-mode) .md-rendered h3 {
+  margin: var(--b-5) 0 var(--b-3);
+  color: var(--ink-1);
+  font-family: var(--font);
+  font-size: var(--yazi-16);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* --------------------------------------------------------------------------
+   Giriş çubuğu — üç birincil eylem + tek mevcut taşma menüsü
+   ----------------------------------------------------------------------- */
+
+body:not(.hud-ring-mode) #input-area {
+  position: relative;
+  z-index: var(--z-yapisik);
+  flex: 0 0 auto;
+  padding: var(--b-4) var(--b-5) var(--b-5);
+  border: 0;
+  border-block-start: 1px solid var(--kenar);
+  background: var(--yuzey-1);
+}
+
+body:not(.hud-ring-mode) #input-container {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--hedef) minmax(0, 1fr) var(--hedef) var(--hedef);
+  align-items: end;
+  gap: var(--b-3);
+  min-width: 0;
+  padding: var(--b-3);
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-3);
+  background: var(--yuzey-1);
+  background-image: none;
+  box-shadow: none;
+}
+
+body:not(.hud-ring-mode) #mic-container {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--hedef);
+  height: var(--hedef);
+  flex: 0 0 auto;
+}
+
+body:not(.hud-ring-mode) #mic-btn,
+body:not(.hud-ring-mode) #send-btn,
+body:not(.hud-ring-mode) #input-more-btn,
+body:not(.hud-ring-mode) #stop-audio-btn {
+  width: var(--hedef);
+  min-width: var(--hedef);
+  height: var(--hedef);
+  min-height: var(--hedef);
+  padding: 0;
+  border-radius: var(--r-2);
+}
+
+body:not(.hud-ring-mode) #mic-btn {
+  position: relative;
+  z-index: var(--z-yuksek);
+}
+
+body:not(.hud-ring-mode) #mic-btn svg,
+body:not(.hud-ring-mode) #send-btn svg,
+body:not(.hud-ring-mode) #input-more-btn svg,
+body:not(.hud-ring-mode) #stop-audio-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+body:not(.hud-ring-mode) #mic-btn.recording {
+  border-color: var(--kirmizi-ink);
+  background: var(--kirmizi-zemin);
+  color: var(--kirmizi-ink);
+}
+
+body:not(.hud-ring-mode) #mic-level-ring {
+  position: absolute;
+  inset: -4px;
+  z-index: var(--z-taban);
+  display: block;
+  width: 52px;
+  height: 52px;
+  pointer-events: none;
+  overflow: visible;
+}
+
+body:not(.hud-ring-mode) #mic-level-ring .ring-bg {
+  fill: none;
+  stroke: var(--kenar);
+  stroke-width: 1.5;
+}
+
+body:not(.hud-ring-mode) #mic-level-ring .ring-level {
+  fill: none;
+  stroke: var(--mor-ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+body:not(.hud-ring-mode) #mic-timer {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-end: calc(-1 * var(--b-6));
+  z-index: var(--z-yuksek);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  opacity: 0;
+  translate: -50% 0;
+}
+
+body:not(.hud-ring-mode) #mic-container.active #mic-timer { opacity: 1; }
+
+body:not(.hud-ring-mode) #msg-input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--hedef);
+  max-height: 132px;
+  padding: var(--b-4) var(--b-3);
+  border: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--ink-1);
+  caret-color: var(--mor-ink);
+  font-family: var(--font);
+  font-size: var(--yazi-14);
+  line-height: var(--satir-orta);
+  outline: none;
+  overflow-y: auto;
+  resize: none;
+}
+
+body:not(.hud-ring-mode) #msg-input::placeholder { color: var(--ink-3); font-size: var(--yazi-14); opacity: 1; }
+
+body:not(.hud-ring-mode) #msg-input:focus-visible {
+  outline: var(--odak-kalinlik) solid var(--mor-ink);
+  outline-offset: calc(-1 * var(--odak-kalinlik));
+}
+
+body:not(.hud-ring-mode) #input-more-btn[aria-expanded="true"] {
+  border-color: var(--mor-ink);
+  background: var(--mor-zemin);
+  color: var(--mor-ink);
+}
+
+body:not(.hud-ring-mode) #stop-audio-btn {
+  display: none;
+  border-color: var(--kirmizi-ink);
+  background: var(--kirmizi-zemin);
+  color: var(--kirmizi-ink);
+}
+
+body:not(.hud-ring-mode) #send-btn {
+  border-color: transparent;
+  background: var(--mor-yuzey);
+  color: var(--ink-1);
+}
+
+body:not(.hud-ring-mode) #send-btn:hover { background: var(--mor-yuzey-hov); box-shadow: none; }
+
+body:not(.hud-ring-mode) #input-secondary-btns {
+  position: absolute;
+  inset-inline-end: var(--b-3);
+  inset-inline-start: auto;
+  inset-block-end: calc(100% + var(--b-3));
+  z-index: var(--z-acilir);
+  display: none;
+  flex-direction: column;
+  gap: var(--b-1);
+  width: min(292px, calc(100cqw - (var(--b-5) * 2)));
+  /* 540px tavanı 14 satırlık menüyü (582px) 1440×900'de bile kaydırıyordu, son
+     satır ("Arayüz dili") ipucusuz görünmez kalıyordu. Tavan ekrana
+     göre: kısa ekranda (≤~720px) yer gerçekten yok, orada kaydırma kalır. */
+  max-height: min(calc(100dvh - 140px), 620px);
+  padding: var(--b-3);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-4);
+  background: var(--yuzey-3);
+  box-shadow: var(--golge-3);
+  overflow-y: auto;
+}
+
+body:not(.hud-ring-mode) #input-secondary-btns.acik { display: flex; }
+
+body:not(.hud-ring-mode) .more-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--b-4);
+  width: 100%;
+  min-height: var(--hedef);
+  padding: var(--b-4) var(--b-5);
+  border: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font);
+  font-size: var(--yazi-13);
+  text-align: start;
+  cursor: pointer;
+  transition:
+    background-color var(--sure-2) var(--egri),
+    color var(--sure-2) var(--egri);
+}
+
+body:not(.hud-ring-mode) .more-item:hover,
+body:not(.hud-ring-mode) .more-item:focus-visible {
+  background: var(--yuzey-2);
+  color: var(--ink-1);
+}
+
+body:not(.hud-ring-mode) .more-item.active,
+body:not(.hud-ring-mode) .more-item.on { color: var(--altin-ink); }
+
+body:not(.hud-ring-mode) .more-item .mi-ico {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  color: var(--mor-ink);
+  text-align: center;
+}
+
+body:not(.hud-ring-mode) .mi-kilit {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-inline-start: auto;
+  color: var(--ink-3);
+}
+
+body:not(.hud-ring-mode) .mi-kilit svg { width: 16px; height: 16px; }
+
+body:not(.hud-ring-mode) .more-sep {
+  height: 1px;
+  margin: var(--b-2) var(--b-4);
+  background: var(--kenar);
+}
+
+body:not(.hud-ring-mode) #model-selector-wrap {
+  order: 0;
+  width: 100%;
+}
+
+body:not(.hud-ring-mode) #model-selector-btn {
+  max-width: none;
+  height: auto;
+  color: var(--ink-2);
+  letter-spacing: 0;
+}
+
+body:not(.hud-ring-mode) #model-selector-btn > #model-label {
+  min-width: 0;
+  margin-inline-start: auto;
+  color: var(--mor-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:not(.hud-ring-mode) #lang-flag {
+  display: inline-block;
+  font-size: 0;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+body:not(.hud-ring-mode) #cmd-palette {
+  position: absolute;
+  inset-inline: var(--b-3);
+  inset-block-end: calc(100% + var(--b-3));
+  z-index: var(--z-acilir);
+  display: none;
+  max-height: min(70vh, 540px);
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-3);
+  background: var(--yuzey-3);
+  box-shadow: var(--golge-3);
+  overflow-y: auto;
+}
+
+body:not(.hud-ring-mode) #cmd-palette.open { display: flex; }
+
+body:not(.hud-ring-mode) #wake-word-banner {
+  position: fixed;
+  inset-inline-start: 50%;
+  inset-block-end: calc(var(--hedef) + var(--b-9));
+  z-index: var(--z-bildirim);
+  display: none;
+  align-items: center;
+  gap: var(--b-4);
+  min-height: var(--hedef);
+  max-width: calc(100vw - (var(--b-5) * 2));
+  padding: var(--b-3) var(--b-4);
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-3);
+  background: var(--yuzey-3);
+  box-shadow: var(--golge-2);
+  color: var(--ink-2);
+  font-size: var(--yazi-13);
+  translate: -50% 0;
+  transform: none;
+  white-space: nowrap;
+}
+
+body:not(.hud-ring-mode) #wake-word-banner.visible { display: flex; }
+
+body:not(.hud-ring-mode) #wake-word-secim button {
+  min-height: var(--hedef);
+  padding: var(--b-3) var(--b-4);
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-2);
+  background: var(--yuzey-2);
+  color: var(--ink-2);
+  font-size: var(--yazi-12);
+}
+body:not(.hud-ring-mode) #wake-word-secim { display: flex; gap: var(--b-2); }
+body:not(.hud-ring-mode) #wake-word-secim[hidden] { display: none; }
+body:not(.hud-ring-mode) #wake-word-secim button[aria-checked="true"] { background: var(--mor-zemin); color: var(--mor-ink); }
+body:not(.hud-ring-mode) #wake-word-secim button:hover { background: var(--yuzey-1); color: var(--ink-1); }
+body:not(.hud-ring-mode) #wake-word-secim button:focus-visible { outline: var(--odak-kalinlik) solid var(--mor-ink); outline-offset: var(--odak-offset); }
+
+/* #model-overlay + #model-dropdown-sheet kuralları KALDIRILDI (FAZ 4): iki kanca
+   da artık DOM'da yok, model seçici popover oldu. Bkz. dosya sonu § MODEL SEÇİCİ. */
+
+body:not(.hud-ring-mode) #input-break { display: none; }
+
+body:not(.hud-ring-mode) #scroll-btn {
+  position: absolute;
+  inset-inline-end: var(--b-5);
+  inset-block-end: calc(var(--hedef) + var(--b-9));
+  z-index: var(--z-yapisik);
+  display: none;
+}
+
+body:not(.hud-ring-mode) #scroll-btn.visible { display: inline-flex; }
+
+/* --------------------------------------------------------------------------
+   Konteyner eşikleri — daralan işlev kaybolmaz, tek taşma menüsüne geçer.
+   ----------------------------------------------------------------------- */
+
+@container kabuk (max-width: 1399px) {
+  body:not(.hud-ring-mode) #header-actions {
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--b-2);
+  }
+
+  body:not(.hud-ring-mode) .header-actions-toggle {
+    display: grid;
+    place-items: center;
+    order: 2;
+  }
+
+  body:not(.hud-ring-mode) .header-actions-toggle:not(:checked) + .hud-controls > * { display: none; }
+
+  body:not(.hud-ring-mode) .header-actions-toggle:checked + .hud-controls {
+    position: absolute;
+    inset-inline-end: 0;
+    inset-block-start: calc(100% + var(--b-3));
+    z-index: var(--z-acilir);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--b-3);
+    width: min(320px, calc(100cqw - (var(--b-6) * 2)));
+    padding: var(--b-4);
+    border: 1px solid var(--kenar);
+    border-radius: var(--r-4);
+    background: var(--yuzey-3);
+    box-shadow: var(--golge-3);
+  }
+
+  body:not(.hud-ring-mode) #header-actions-toggle:checked + #header-actions-menu > * {
+    display: flex;
+    width: 100%;
+  }
+
+  body:not(.hud-ring-mode) .header-actions-toggle:checked + .hud-controls #vol-wrap,
+  body:not(.hud-ring-mode) .header-actions-toggle:checked + .hud-controls #ws-pill {
+    grid-column: 1 / -1;
+  }
+
+  body:not(.hud-ring-mode) #header-actions-toggle:checked + #header-actions-menu #vol-slider {
+    display: block;
+    flex: 1 1 auto;
+    width: auto;
+  }
+
+  body:not(.hud-ring-mode) #header-actions-toggle:checked + #header-actions-menu #ws-label {
+    display: inline;
+  }
+}
+
+@container kabuk (max-width: 619px) {
+  body:not(.hud-ring-mode) #app { flex-direction: column; }
+
+  body:not(.hud-ring-mode) #avatar-pane {
+    flex: 0 0 160px;
+    width: 100%;
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--kenar);
+  }
+
+  body:not(.hud-ring-mode) #avatar-pane.collapsed { flex-basis: 0; }
+
+  body:not(.hud-ring-mode) .header-actions-toggle:not(:checked) + .hud-controls {
+    display: flex;
+    order: 1;
+  }
+
+  body:not(.hud-ring-mode) .header-actions-toggle:not(:checked) + .hud-controls > #ws-pill,
+  body:not(.hud-ring-mode) .header-actions-toggle:not(:checked) + .hud-controls > #mode-toggle,
+  body:not(.hud-ring-mode) .header-actions-toggle:not(:checked) + .hud-controls > #avatar-toggle {
+    display: inline-flex;
+  }
+
+  /* Ses ⋯ menüsüne gider (620+ bloğu onu açıkça başlıkta tutar, bu blok tutmaz).
+     `> *` gizlemesi yetmiyordu: `body:not() #vol-wrap { display:flex }` id
+     özgüllüğüyle eziyordu → başlık 390px'de ☰ payıyla 26px taştı (ölçüldü). */
+  body:not(.hud-ring-mode) #header-actions-toggle:not(:checked) + #header-actions-menu > #vol-wrap { display: none; }
+
+  body:not(.hud-ring-mode) #ws-pill { max-width: 112px; overflow: hidden; text-overflow: ellipsis; }
+}
+
+@container kabuk (min-width: 620px) and (max-width: 1399px) {
+  body:not(.hud-ring-mode) .header-actions-toggle:not(:checked) + .hud-controls {
+    display: flex;
+    flex-wrap: wrap;
+    order: 1;
+  }
+
+  body:not(.hud-ring-mode) .header-actions-toggle:not(:checked) + .hud-controls > #ws-pill,
+  body:not(.hud-ring-mode) .header-actions-toggle:not(:checked) + .hud-controls > #vol-wrap,
+  body:not(.hud-ring-mode) .header-actions-toggle:not(:checked) + .hud-controls > .hud-mem-badge,
+  body:not(.hud-ring-mode) .header-actions-toggle:not(:checked) + .hud-controls > #mode-toggle,
+  body:not(.hud-ring-mode) .header-actions-toggle:not(:checked) + .hud-controls > #avatar-toggle {
+    display: inline-flex;
+  }
+}
+
+@container kabuk (min-width: 380px) and (max-width: 619px) {
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #avatar-pane {
+    flex-basis: 180px;
+  }
+
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #char-bar {
+    flex-direction: row;
+    gap: var(--b-2);
+    padding: var(--b-2);
+  }
+
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #char-bar .char-btn {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+    font-size: var(--yazi-12);
+  }
+
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #avatar-hud {
+    display: grid;
+    gap: var(--b-2);
+    padding: var(--b-7) var(--b-5) var(--b-4);
+  }
+
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] .av-stats,
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #waveform-hud {
+    display: flex;
+    gap: var(--b-1);
+  }
+
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] .av-stat-row {
+    gap: var(--b-2);
+  }
+
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] .wf-bars {
+    height: var(--b-4);
+  }
+}
+
+@container kabuk (max-width: 379px) {
+  /* Büyük tercih mini kabukta yalnız uygulamada Küçük'e düşer. Bu seçiciler
+     localStorage'daki data-avatar-ayar="buyuk" değerini değiştirmez. */
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #avatar-pane {
+    position: absolute;
+    inset-block-start: var(--b-2);
+    inset-inline-start: var(--nav-bosluk, var(--b-3));
+    z-index: var(--z-cekmece);
+    display: block;
+    flex: none;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    border: 1px solid var(--kenar-guclu);
+    border-radius: var(--r-tam);
+    background: var(--yuzey-2);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Mini kabukta Büyük tercihi de 32px rozete düşüyor → yukarıdaki "kucuk"
+     rozetiyle AYNI kadraj sorunu (bkz. § ROZET KADRAJI). Aynı çözüm. */
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #avatar-pane #yuki-video {
+    display: block;
+    inset: auto;
+    top: 0;
+    left: 50%;
+    width: 400%;
+    height: auto;
+    max-width: none;   /* temel.css:54 img reset'i yoksa 400%'ü 100%'e kırpar */
+    transform: translateX(-50%);
+    border-radius: 0;
+    object-fit: fill;
+  }
+
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #avatar-pane #yuki-canvas,
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #avatar-pane #yuki-fb-video,
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #avatar-pane #yuki-fal-overlay,
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #avatar-pane #avatar-hud,
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #avatar-pane #mode-toggle-fab,
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #avatar-pane #char-bar {
+    display: none;
+  }
+
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #header,
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="kucuk"] #header {
+    padding-inline-start: calc(var(--nav-bosluk, var(--b-3)) + 32px + var(--b-3));
+  }
+
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="kucuk"] #avatar-pane {
+    inset-block-start: var(--b-2);
+    inset-inline-start: var(--nav-bosluk, var(--b-3));
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  body:not(.hud-ring-mode) #mode-toggle-fab { display: none; }
+
+  body:not(.hud-ring-mode) #header {
+    min-height: calc(var(--hedef-dar) + var(--b-4));
+    padding: var(--b-2) var(--b-3);
+  }
+
+  body:not(.hud-ring-mode) .hud-status-bar {
+    min-height: var(--hedef-dar);
+    padding-inline: var(--b-3);
+  }
+
+  body:not(.hud-ring-mode) .header-actions-toggle:not(:checked) + .hud-controls { display: none; }
+
+  body:not(.hud-ring-mode) .header-actions-toggle:checked + .hud-controls {
+    width: min(288px, calc(100cqw - (var(--b-5) * 2)));
+  }
+
+  body:not(.hud-ring-mode) #messages { padding: var(--b-4); }
+
+  body:not(.hud-ring-mode) #chat-empty-state {
+    justify-content: flex-start;
+    gap: var(--b-3);
+    padding: var(--b-5) var(--b-3);
+  }
+
+  body:not(.hud-ring-mode) #chat-empty-state .empty-icon { display: none; }
+  body:not(.hud-ring-mode) #chat-empty-state .empty-title { font-size: var(--yazi-16); }
+  body:not(.hud-ring-mode) #chat-empty-state .empty-sub { margin-block-end: var(--b-2); }
+
+  body:not(.hud-ring-mode) #input-area { padding: var(--b-3); }
+
+  body:not(.hud-ring-mode) #input-container {
+    grid-template-columns: var(--hedef-dar) minmax(0, 1fr) var(--hedef-dar) var(--hedef-dar);
+    gap: var(--b-2);
+    padding: var(--b-2);
+  }
+
+  body:not(.hud-ring-mode) #mic-container,
+  body:not(.hud-ring-mode) #mic-btn,
+  body:not(.hud-ring-mode) #send-btn,
+  body:not(.hud-ring-mode) #input-more-btn,
+  body:not(.hud-ring-mode) #stop-audio-btn {
+    width: var(--hedef-dar);
+    min-width: var(--hedef-dar);
+    height: var(--hedef-dar);
+    min-height: var(--hedef-dar);
+  }
+
+  body:not(.hud-ring-mode) #mic-btn,
+  body:not(.hud-ring-mode) #send-btn,
+  body:not(.hud-ring-mode) #input-more-btn,
+  body:not(.hud-ring-mode) #stop-audio-btn { position: relative; }
+
+  body:not(.hud-ring-mode) #mic-btn::after,
+  body:not(.hud-ring-mode) #send-btn::after,
+  body:not(.hud-ring-mode) #input-more-btn::after,
+  body:not(.hud-ring-mode) #stop-audio-btn::after {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: var(--hedef);
+    height: var(--hedef);
+    translate: -50% -50%;
+  }
+
+  body:not(.hud-ring-mode) #mic-level-ring {
+    inset: -6px;
+  }
+
+  body:not(.hud-ring-mode) #msg-input {
+    min-height: var(--hedef-dar);
+    padding: var(--b-3);
+  }
+
+  body:not(.hud-ring-mode) #input-secondary-btns {
+    inset-inline-end: 0;
+    width: min(280px, calc(100cqw - (var(--b-4) * 2)));
+  }
+}
+
+@container kabuk (min-width: 960px) {
+  body:not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #avatar-pane { flex-basis: 35%; }
+}
+
+@container kabuk (min-width: 1400px) {
+  body:not(.hud-ring-mode) #avatar-pane { flex-basis: 36%; }
+  body:not(.hud-ring-mode) #header { align-items: center; flex-wrap: nowrap; padding-inline: var(--b-6); }
+  body:not(.hud-ring-mode) #header-actions { display: contents; }
+  body:not(.hud-ring-mode) .header-actions-toggle { display: none; }
+  body:not(.hud-ring-mode) .hud-controls { flex: 0 1 auto; flex-wrap: nowrap; gap: var(--b-3); }
+  body:not(.hud-ring-mode) #messages { padding: var(--b-7); }
+  body:not(.hud-ring-mode) #input-area { padding: var(--b-5) var(--b-6) var(--b-6); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:not(.hud-ring-mode) .msg-row { animation: none !important; }
+}
+
+/* ===========================================================================
+   MODEL SEÇİCİ — popover (FAZ 4)
+   Eskiden #model-overlay perdesi + #model-dropdown-sheet bottom-sheet'iydi;
+   ikisi de satır içi z-index (9000/9001) taşıyordu. Popover top layer'da
+   çizilir → z-index yarışına hiç girmez, perdeyi ::backdrop yapar.
+   Taban kurallar ogeler.css § 11'de; burada yalnız konum + liste biçimi var.
+   =========================================================================== */
+
+.model-popover {
+  position: fixed;
+  /* Tetik composer'da, yani ALTTA — popover yukarı doğru açılır.
+     🔴 `inset-block-start: auto` ŞART: tarayıcının [popover] varsayılanı
+     `inset: 0` veriyor; yalnız `inset-block-end` yazınca öğe hem üstten hem
+     alttan bağlanıyor ve ekranın TEPESİNE yapışıyordu (canlı ölçümde y=0 çıktı,
+     üstelik "ekran içinde" kapısı bunu yeşil geçti — ekran görüntüsü yakaladı). */
+  inset-block-start: auto;
+  inset-block-end: calc(var(--b-5) + var(--hedef) + var(--b-3));
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  inline-size: min(420px, calc(100vw - (var(--b-5) * 2)));
+  max-inline-size: none;
+  /* Liste uzarsa panel değil İÇİ kayar; taşıp ekranı iterse konum bozulurdu. */
+  max-block-size: min(60vh, 420px);
+  border-color: var(--kenar-guclu);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.model-popover:popover-open {
+  display: grid;
+  gap: var(--b-4);
+}
+
+/* Taşma ipucu ( M5): kaydırılabilir yönde kenar yüzey rengine solar.
+   Sıfır yükseklikli yapışkan öğe + gölge — `mask` kenarı ve gölgeyi de silerdi.
+   Öğeler her zaman var (yalnız opaklık değişir): ekle/kaldır yerleşimi oynatırdı.
+   Sınıfları core.js::_modelTasmaIpucu yazar. */
+.model-popover::before,
+.model-popover::after {
+  content: "";
+  position: sticky;
+  z-index: 1;
+  display: block;
+  block-size: 0;
+  margin-block: calc(var(--b-4) * -1);   /* grid aralığını geri al: içerik kaymasın */
+  box-shadow: 0 0 var(--b-6) var(--b-6) var(--yuzey-3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--sure-2) var(--egri);
+}
+.model-popover::before { inset-block-start: calc(var(--b-4) * -1); }
+.model-popover::after  { inset-block-end: calc(var(--b-4) * -1); }
+.model-popover.tasma-ust::before,
+.model-popover.tasma-alt::after { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .model-popover::before, .model-popover::after { transition: none; }
+}
+
+.model-popover-baslik {
+  padding-inline: var(--b-3);
+  color: var(--ink-1);
+  font-size: var(--yazi-13);
+  font-weight: var(--ag-kalin);
+}
+
+#model-popover-liste {
+  display: grid;
+  gap: var(--b-5);
+}
+
+.model-bolum {
+  display: grid;
+  gap: var(--b-1);
+}
+
+.model-bolum-baslik {
+  padding-inline: var(--b-3);
+  padding-block-end: var(--b-2);
+  color: var(--ink-3);
+  font-size: var(--yazi-12);
+  font-weight: var(--ag-orta);
+}
+
+.model-secenek {
+  justify-content: flex-start;
+  gap: var(--b-3);
+  min-width: 0;
+  padding-inline: var(--b-3);
+  text-align: start;
+}
+
+.model-secenek-ad {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* "hızlı" rozeti — ⚡ emoji değil metin. Emoji ikon yasak (kapı S7) ve tek
+   başına ekran okuyucuya hiçbir şey söylemiyordu. */
+.model-secenek-hizli {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+  padding: var(--b-1) var(--b-3);
+  border-radius: var(--r-1);
+  border: 1px solid var(--kenar);
+  background: var(--yuzey-2);
+  color: var(--ink-2);
+  font-size: var(--yazi-11);
+  font-weight: var(--ag-orta);
+}
+
+.model-secenek[aria-checked="true"] {
+  background: var(--mor-zemin);
+  color: var(--mor-ink);
+  font-weight: var(--ag-kalin);
+}
+
+@media (max-width: 480px) {
+  .model-popover {
+    inset-inline: var(--b-3);
+    inset-block-end: var(--b-3);
+    inline-size: auto;
+    max-block-size: min(72dvh, 560px);
+    translate: none;
+  }
+
+  body:not(.hud-ring-mode) #cmd-palette { max-height: min(64dvh, 480px); }
+
+  body:not(.hud-ring-mode) #wake-word-banner {
+    inset-inline: var(--b-3);
+    inset-inline-start: var(--b-3);
+    flex-direction: column;
+    align-items: stretch;
+    max-width: none;
+    translate: none;
+    white-space: normal;
+  }
+
+  body:not(.hud-ring-mode) #wake-word-secim {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DAR PENCERE (Panel modu) DÜZELTMELERİ — 2026-08-28
+   Dar pencerede kontrast ölçümünden sonra eklendi.
+   420px ekran görüntüsündeki işaretlere göre.
+   Dosyanın SONUNA yazıldı: sohbet.css index.html'de style.css'ten sonra
+   yükleniyor, yani eşit özgüllükte kaynak sırası burayı kazandırır — asıl
+   çakışma style.css'in flex dönemi kalıntısıyla (aşağıda).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── ① YAZI ALANI 44 PİKSELE SIKIŞIYORDU ─────────────────────────────────────
+   Belirti: 420px'te yer tutucu "Yuki'ye yaz…" iki satıra kırılıp "Yuki' ye"
+   diye YARIM görünüyordu. geliştirici bunu "sağdaki metin ne işe yarıyor" diye
+   okudu — haklıydı, ama o metin bir etiket değil, TEXTAREA'nın kendi yer
+   tutucusuydu; alan 44x44 piksele sıkıştığı için sarıyordu (ölçüldü).
+
+   🔴 KÖK NEDEN — iki çağın çakışması:
+   `style.css:2565` (@media max-width:800px, FLEX dönemi) hâlâ `order`
+   atıyor: more=1 · mic=6 · msg-input=7 · send=9. O blok konteynerin FLEX
+   olduğunu varsayıyor (`flex-wrap:wrap` + `#input-break` ile iki satır).
+   Ama bu dosya konteyneri GRID yaptı: `44px minmax(0,1fr) 44px 44px`.
+   Grid'de `flex-wrap` ölü, `#input-break` gizli — ama **`order` YAŞIYOR** ve
+   otomatik yerleşimi yeniden sıralıyor. Sonuç: `mic-container` 208 piksellik
+   ESNEK sütuna, `msg-input` 44 piksellik SABİT sütuna düştü.
+   Ölçüldü: 1280px'te tüm order=0 → doğru (msg-input 582px); 420px'te
+   order devrede → msg-input 44px.
+
+   📏 Ders: bir konteyneri flex'ten grid'e çevirmek çocukların flex
+   özelliklerini sessizce etkisizleştirir — ama `order` İKİSİNDE DE çalışır.
+   Yani yarısı ölür, yarısı yaşar ve düzen sessizce bozulur.
+
+   ÇÖZÜM: sıralamaya güvenme, YERİ SÖYLE. Açıkça yerleştirilen bir grid
+   öğesinin konumunu `order` değiştiremez → kalıntı blok zararsızlaşır. */
+body:not(.hud-ring-mode) #mic-container  { grid-column: 1; grid-row: 1; }
+body:not(.hud-ring-mode) #msg-input      { grid-column: 2; grid-row: 1; }
+body:not(.hud-ring-mode) #input-more-btn { grid-column: 3; grid-row: 1; }
+body:not(.hud-ring-mode) #send-btn       { grid-column: 4; grid-row: 1; }
+/* ⚠️ `grid-row` de gerekli, yalnız sütun YETMEZ: satırı belirtilmemiş öğeler
+   yerleştirme sırasına göre (ki o sıra `order` ile değişiyor) konur ve
+   algoritma imleci geri almaz — `⋯` düğmesi order=1 ile ÖNCE gelip 3. sütuna
+   oturunca mikrofon 1. sütun için AYRI BİR SATIRA düştü. Ölçüldü: more @y623,
+   ötekiler @y673. Satırı sabitlemek sıralamanın etkisini tamamen bitirir. */
+
+/* ── ② MİKROFON "AĞIR" GÖRÜNÜYORDU ──────────────────────────────────────────
+   `#mic-level-ring .ring-bg` mikrofonun çevresine HER ZAMAN 52px'lik bir
+   halka çiziyordu; 44px'lik düğmenin etrafında bu, dar ekranda ağır bir
+   hedef gibi okunuyor. Halka yalnız KAYIT SIRASINDA bilgi taşıyor (seviye).
+   Boştayken bilgi taşımayan çizgi süstür → PRODUCT.md İlke 1.
+   `#mic-btn.recording` kancası zaten var (core.js:1948/2073).
+   🔄 2026-10-11 (geliştirici kararı): boşta İNCE KESİKLİ süs halkası geri geldi —
+   kişiseldeki Halka Konsolu ile birebir. "Ağır" görünen eski çizimdi (düz, --kenar,
+   52px); bu halka ince, kesikli ve soluk mor. Kayıtta kesik kalkar, ring-level ses
+   seviyesini çizmeye devam eder (core.js $micRingLevel). İlke 1'in istisnası PRODUCT.md'de. */
+/* Ölçü: genel `svg { max-width:100% }` sıfırlaması 52px'lik halkayı 44px'lik kaba sıkıştırıp
+   elipse çeviriyordu (ölçüldü 44×52) — çember düğmenin İÇİNE, çerçevesinin üstüne düşüyordu.
+   Halka kabın 6px dışında, kare ve kaptan türetilir (dar kabukta 40px düğmede de aynı boşluk). */
+body:not(.hud-ring-mode) #mic-level-ring {
+  inset: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
+  max-width: none;
+  transition: transform 600ms var(--egri, ease);
+}
+body:not(.hud-ring-mode) #mic-container:not(:has(#mic-btn.recording)) #mic-level-ring .ring-bg {
+  stroke: color-mix(in oklab, var(--mor-ink) 42%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3.5;
+}
+body:not(.hud-ring-mode) #mic-container:not(:has(#mic-btn.recording)):hover #mic-level-ring { transform: rotate(30deg); }
+@media (prefers-reduced-motion: reduce) {
+  body:not(.hud-ring-mode) #mic-level-ring { transition: none; }
+  body:not(.hud-ring-mode) #mic-container:hover #mic-level-ring { transform: none; }
+}
+
+/* ── ③ DAR PENCEREDE AVATAR ALTI ŞERİDİ ─────────────────────────────────────
+   `UNIT // YUKI` saf etiket — bilgi taşımıyor, dar pencerede bir satır yiyor.
+   `#waveform-hud` ise ⚠️ SÜS DEĞİL: kayıt sırasında gerçek mikrofon seviyesini
+   çiziyor (map-init.js, `analyser.getFloatTimeDomainData`). Bu yüzden
+   SİLİNMEDİ — yalnız dar pencerede gizlendi, çünkü orada aynı bilgiyi
+   mikrofon düğmesinin halkası zaten veriyor (② ile artık kayıtta görünüyor).
+   Geniş pencerede ikisi de yerinde kalır. */
+@container kabuk (max-width: 619px) {
+  body:not(.hud-ring-mode) #av-unit-id { display: none; }
+
+  /* ⚠️ Özgüllük notu: 380-619 aralığında `#app[data-avatar-ayar="buyuk"]
+     #waveform-hud { display:flex }` kuralı var (0,4,1). Sade bir gizleme
+     (0,2,1) ONU YENEMEZ — ilk denememde şeridi gizlemedi, ölçümle görüldü.
+     Öznitelik seçicisiyle eşitlendi; kaynak sırası burayı kazandırır.
+
+     Ve gizleme koşullu: BOŞTA gizli (bilgi taşımayan çizgi süstür),
+     KAYITTA görünür (o an gerçek mikrofon seviyesini çiziyor). Süsü almak
+     için bilgiyi de almak, kusuru çözerken özelliği silmek olurdu. */
+  body:not(.hud-ring-mode) #app[data-avatar-ayar] #waveform-hud { display: none; }
+  body:not(.hud-ring-mode) #app[data-avatar-ayar]:has(#mic-btn.recording) #waveform-hud { display: flex; }
+
+  /* ── ④ MOD DÜĞMESİ İKİ KERE GÖRÜNÜYORDU ────────────────────────────────
+     geliştirici bunu işaretlemedi — `UNIT // YUKI` gizlenince ortaya çıktı: avatarın
+     üstündeki `#mode-toggle-fab` ile üst şerittteki `#mode-toggle` ikisi de
+     "KLASİK" gösteriyordu (ölçüldü: @340,139 ve @241,200).
+     Kusur eski: `#mode-toggle-fab` yalnız ≤379'da gizleniyor, 380-619 aralığı
+     atlanmış. Üst şerit denetimi zaten taşıdığı için FAB burada da gizlendi —
+     aynı işi yapan ikinci düğme seçenek değil, kararsızlıktır. */
+  body:not(.hud-ring-mode) #mode-toggle-fab { display: none; }
+}
+
+
+/* ═══ SOHBET — style.css'ten taşındı ( FAZ C/4a, 2026-09-01) ═══ */
+/* Ellipsis DIŞ düğmede değil metni taşıyan span'da olmalı — dıştaki
+   overflow:hidden metni yalnız KESİYORDU, "…" hiç görünmüyordu
+   (ölçüldü 2026-08-03: `gemma-4-26b-a4b-it:free` ortadan kırpılıyordu). */
+#model-selector-btn > #model-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+#model-selector-btn:hover {
+  background: rgba(96,165,250,0.18);
+  border-color: var(--accent);
+  box-shadow: 0 0 8px rgba(96,165,250,0.25);
+}
+/* ══════════════════════════════════════════════════════════
+   MESSAGES
+   ══════════════════════════════════════════════════════════ */
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-dim) transparent;
+}
+#messages::-webkit-scrollbar { width: 4px; }
+#messages::-webkit-scrollbar-track { background: transparent; }
+#messages::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 2px; }
+#messages:focus-visible { outline: var(--odak-kalinlik) solid var(--mor-ink); outline-offset: calc(var(--odak-offset) * -1); }
+/* Scroll button */
+#scroll-btn {
+  position: absolute;
+  right: 18px;
+  bottom: 90px;
+  width: 30px;
+  height: 30px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-dim);
+  color: var(--accent);
+  font-size: 14px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-hud);
+  z-index: 10;
+  transition: all var(--transition);
+}
+#scroll-btn:hover { background: rgba(96,165,250,0.12); border-color: var(--accent); }
+/* ── Always-on wake word ── */
+/* 2026-08-03: ⋯ menüsüne taşındı → font-size kaldırıldı (ikon-only dönemden
+   kalmıştı ve menüde tek satırı diğerlerinden büyük gösteriyordu). */
+#always-on-btn { transition: color 0.2s, box-shadow 0.2s; }
+#wake-word-banner {
+  display: none;
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--yuzey-3);
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-3);
+  padding: var(--b-3) var(--b-4);
+  box-shadow: var(--golge-2);
+  font-size: var(--yazi-13);
+  color: var(--ink-2);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: var(--z-bildirim);
+}
+/* Seçim düğmeleri banner'ın içinde: banner `pointer-events:none` olduğu için
+   düğmelere tıklanabilirliği ayrıca geri veriyoruz (yoksa görünür ama ölü olurlardı). */
+#wake-word-secim { pointer-events:auto; }
+#wake-word-secim button {
+  min-height: var(--hedef);
+  padding: var(--b-3) var(--b-4);
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-2);
+  background: var(--yuzey-2);
+  color: var(--ink-2);
+  font-size: var(--yazi-12);
+  cursor: pointer;
+  font-family: inherit;
+}
+#wake-word-secim button:hover { background:var(--yuzey-1); color:var(--ink-1); }
+/* ── Native Audio toggle ── */
+#native-audio-btn { transition: color 0.2s, box-shadow 0.2s; }
+.more-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--text, #e8f4fa);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.more-item:hover  { background: rgba(96,165,250,0.10); color: var(--accent); }
+.more-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.more-item .mi-ico { width: 18px; text-align: center; font-size: 14px; flex-shrink: 0; }
+.more-sep { height: 1px; margin: 5px 4px; background: var(--border-dim); }
+#mic-level-ring {
+  display: none;
+}
+#mic-timer {
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-hud);
+  font-size: 8px;
+  color: var(--muted);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  letter-spacing: 0.04em;
+}
+#msg-input::placeholder { color: var(--muted); font-size: 13px; }
+#msg-input::-webkit-scrollbar { width: 3px; }
+#msg-input::-webkit-scrollbar-thumb { background: var(--border-dim); }
+/* ── Command Palette ── */
+#cmd-palette {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  padding: var(--b-2);
+  background: var(--yuzey-3);
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-3);
+  box-shadow: var(--golge-3);
+  z-index: var(--z-acilir);
+  display: none;
+  flex-direction: column;
+  max-height: min(640px, 82vh);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-dim) transparent;
+}
+#send-btn:hover {
+  background: rgba(96,165,250,0.2);
+  box-shadow: 0 0 10px rgba(96,165,250,0.3);
+}
+#stop-audio-btn:hover {
+  background: rgba(255,60,60,0.25);
+  box-shadow: 0 0 10px rgba(255,60,60,0.4);
+}
+/* ──────────────────────────────────────────────────────────── */
+
+/* ══════════════════════════════════════════════════════════
+   ERİŞİLEBİLİRLİK — GLOBAL HAREKET AZALTMA (2026-07-12)
+   Tüm stylesheet'leri kapsar (opening, hud-ring, characters dahil).
+   Son durumlar korunur (fill-mode etkisi), sadece hareket söner.
+   ══════════════════════════════════════════════════════════ */
+/* Global prefers-reduced-motion bloğu buradan KALDIRILDI (2026-09-01 FAZ B).
+   css/temel.css aynı seçiciyi BİREBİR aynı dört bildirimle tanımlıyor, style.css'ten
+   sonra yükleniyor → buradaki kopya ölüydü. temel.css'teki üstelik daha kapsamlı:
+   ::view-transition-group(*) dallarını da kapatıyor, bu blok kapatmıyordu. */
+
+/* ══════════════════════════════════════════════════════════
+   MİKROFON CİHAZ SEÇİCİ (2026-08-02) — js/mic-devices.js
+   Tek tık kayıt davranışı korunur; menü sağ tık / uzun basış /
+   ▾ ipucu ile açılır. Menü position:fixed — input alanı ekranın
+   altında olduğu için yukarı doğru açılır, taşarsa aşağı düşer.
+   ══════════════════════════════════════════════════════════ */
+.mic-dev-hint {
+  /* Tur 2 (göz 10-04): 9px'lik ▾ glifi %55 opaklıktaydı (~6px, zor görünür,
+     zor basılır). Artık 18px'lik rozet + çizilmiş ok; ::before vuruş alanını
+     26px'e açar. Glif metni DOM'da kalır (mic-devices.js yazar), gözle çizim. */
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  z-index: var(--z-yuksek);
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-tam);
+  background: var(--yuzey-3);
+  color: var(--ink-2);
+  font-size: 0;
+  line-height: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  user-select: none;
+  transition: color var(--sure-2) var(--egri), border-color var(--sure-2) var(--egri);
+}
+.mic-dev-hint::before { content: ""; position: absolute; inset: -4px; }
+.mic-dev-hint::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+#mic-container:hover .mic-dev-hint,
+.mic-dev-hint:focus-visible { color: var(--mor-ink); border-color: var(--mor-ink); }
+/* T3 (10-11): dar kabukta rozet mikrofonun köşesine biniyordu ve 16-18px'lik hedef parmakla
+   basılmıyordu (mikrofon kayda başlıyordu). Orada rozet yok; cihaz seçimi ⋯ menüsündeki
+   "Mikrofon seç" (#menu-mik-sec) + uzun basışta. Geniş kabukta rozet aynen duruyor. */
+/* ⋯ menüsündeki eşi yalnız rozetsiz kabukta. Menü boyu DEĞİŞMEZ (goz 10-11, iki tur): geniş
+   kabukta 620px tavanında, dar kabukta 100dvh-140 tavanında bir satır daha "Arayüz dili"ni ipucusuz
+   kaydırmanın altına itiyordu. Dar kabukta yer eskiden "Sohbeti dışa aktar"dan alınıyordu (AKTAR
+   çipi altta duruyordu). 🔄 10-11: çip kalktı, menüdeki eş TEK yol → dar kabukta da
+   görünür; "Arayüz dili"nin ulaşılabilirliği tarayıcı testinde ölçülür (test_birebir_konsol.py). */
+body:not(.hud-ring-mode) #menu-mik-sec { display: none; }
+@container kabuk (max-width: 619px) {
+  .mic-dev-hint { display: none; }
+  body:not(.hud-ring-mode) #menu-mik-sec { display: flex; }
+}
+
+
+/* ═══ SOHBET — tek ekranlı @media blokları (2026-09-01) ═══ */
+/* Dar ekran: tek sütun — iki sütunda metinler kırpılıyordu */
+@media (max-width: 520px) {
+  #chat-empty-state .empty-title { font-size: 15px; }
+  /* Dar ekranda dikey alan avatar + composer'a gidiyor; ölçüldü (420×820):
+     sıkıştırmadan 4 karttan 2'si composer'ın arkasında kalıyordu. */
+  #chat-empty-state { gap: 5px; padding: 10px 16px 16px; }
+  #chat-empty-state .empty-icon { display: none; }
+  #chat-empty-state .empty-sub { margin-bottom: 2px; }
+}
+/* Kısa ekran (telefon yatay, küçük pencere): kartlar sığsın diye sıkıştır */
+@media (max-height: 760px) {
+  #chat-empty-state { gap: 5px; padding: 12px 20px 20px; }
+  #chat-empty-state .empty-icon { display: none; }
+}
+/* Hareket azaltma tercihi — kart hover'ı zıplamasın */
+@media (prefers-reduced-motion: reduce) {
+}
+
+
+/* ═══ SOHBET — tüm tanımlar birlikte (/2, 2026-09-01) ═══ */
+/* ── Chat Pane ── */
+#chat-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+/* ── Model Selector ── */
+#model-selector-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+#model-selector-btn {
+  background: rgba(96,165,250,0.06);
+  border: 1px solid var(--border-dim);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 30px;
+  padding: 0 7px;
+  font-family: var(--font-hud);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  transition: all var(--transition);
+  max-width: 120px;
+  min-width: 80px;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* ══════════════════════════════════════════════════════════
+   INPUT AREA
+   ══════════════════════════════════════════════════════════ */
+#input-area {
+  padding: 10px 12px 14px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border-dim);
+  flex-shrink: 0;
+}
+#input-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: rgba(96,165,250,0.04);
+  border: 1px solid var(--border-dim);
+  padding: 8px 10px;
+  position: relative;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  /* Corner brackets on input */
+  background-image:
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud));
+  background-size:
+    10px 1px, 1px 10px,
+    10px 1px, 1px 10px,
+    10px 1px, 1px 10px,
+    10px 1px, 1px 10px;
+  background-position:
+    top left, top left,
+    top right, top right,
+    bottom left, bottom left,
+    bottom right, bottom right;
+  background-repeat: no-repeat;
+  background-color: rgba(96,165,250,0.03);
+}
+/* Mic container */
+#mic-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+}
+#mic-btn {
+  position: relative;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+}
+/* ── ⋯ MENÜSÜ (2026-08-03) ───────────────────────────────────────────
+   Eskiden 8 ikon yazma alanının etrafına ve altına dağılmıştı; hepsi
+   ikon-only, etiketsiz. Yeni kullanıcı için 12 kontrollük bir duvardı.
+   Artık tek bir ETİKETLİ menüde toplanıyor — yetenek kaybı yok, yalnız
+   görünürlük sırası değişti. Mobil zaten bu deseni kullanıyordu; desktop
+   ona hizalandı (iki ayrı düzen bakmak yerine tek düzen). */
+#input-more-btn {
+  display: flex;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  flex-shrink: 0;
+}
+#input-secondary-btns {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 8px;
+  z-index: 60;                    /* composer'ın üstünde, modal'ların altında */
+  min-width: 210px;
+  padding: 6px;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--panel, #0d141c);
+  border: 1px solid var(--border-dim);
+  border-radius: 12px;
+  box-shadow: 0 12px 34px rgba(0,0,0,0.55);
+}
+/* Flex-wrap satır kırıcı — sadece mobil portrait'te aktif (aşağıdaki media query) */
+#input-break { display: none; }
+/* Textarea */
+#msg-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-bright);
+  font-family: var(--font-main);
+  font-size: 13.5px;
+  line-height: 1.5;
+  resize: none;
+  max-height: 120px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-dim) transparent;
+  caret-color: var(--accent);
+}
+#msg-input { resize: none; max-height: 120px; }
+/* Send button */
+#send-btn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background: rgba(96,165,250,0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* Stop audio button */
+#stop-audio-btn {
+  display: none;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,60,60,0.12);
+  border: 1px solid rgba(255,80,80,0.5);
+  border-radius: 6px;
+  color: #ff5555;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+@media (max-width: 800px) {
+  #chat-pane { flex: 1; min-height: 0; }
+}
+@media (max-width: 800px) and (orientation: portrait) {
+  /* Input area — safe area padding */
+    #input-area {
+      padding-bottom: calc(8px + env(safe-area-inset-bottom));
+      padding-left: calc(8px + env(safe-area-inset-left));
+      padding-right: calc(8px + env(safe-area-inset-right));
+    }
+  /* ══ Mobile input redesign — İKİ SATIR ══
+       Sorun: tek satırda mic+textarea+model+claude+dil+gönder sığmıyor,
+       flex:1 textarea sıfıra sıkışıp dokunulamaz hale geliyordu.
+       Çözüm: flex-wrap + order ile kontroller ÜST satır, asıl yazı alanı
+       + gönder ALT satıra (başparmak/klavye erişimi en altta). */
+    #input-container {
+      flex-wrap: wrap;
+      align-items: center;
+      row-gap: 8px;
+      column-gap: 6px;
+      padding: 8px;
+    }
+  /* Üst satır: kontroller (sırayla soldan sağa) */
+    #input-more-btn      { display: flex !important; order: 1; width: 38px; height: 38px; font-size: 16px; }
+  #model-selector-wrap { order: 2; }
+  #model-selector-btn  { height: 38px; min-width: 84px; font-size: 11px; }
+  /* Satır kırıcı: kontrolleri yazı alanından ayırır */
+    #input-break { display: block; order: 5; flex-basis: 100%; width: 100%; height: 0; margin: 0; }
+  /* Alt satır: mikrofon + GENİŞ yazı alanı + gönder */
+    #mic-container { order: 6; }
+  #mic-btn       { width: 40px; height: 40px; }
+  #msg-input {
+      order: 7;
+      flex: 1 1 0;
+      min-width: 0;            /* flex item'in içeriğinden taşmasını engelle */
+      min-height: 40px;
+      padding: 8px 10px;
+      font-size: 15px;         /* iOS zoom-on-focus eşiği (16px≈15px güvenli) */
+      background: rgba(96,165,250,0.05);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--r-xs);
+    }
+  #stop-audio-btn { order: 8; }
+  #send-btn       { order: 9; width: 44px; height: 44px; }
+  /* ⋯ menüsü mobilde de aynı bileşen (2026-08-03: iki ayrı düzen tekleştirildi).
+       Tek fark: dar ekranda menü kenarlara yapışmasın diye genişliği sınırla. */
+    #input-secondary-btns { left: 6px; right: 6px; min-width: 0; }
+}
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 500px) {
+  #chat-pane { flex: 1; }
+  /* Input area safe area */
+    #input-area {
+      padding-right: calc(8px + env(safe-area-inset-right));
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KONUŞMAYI DURDURMA DÜĞMESİ — GRID'DE YERİ SÖYLENDİ (2026-09-06)
+
+   🔴 BELİRTİ (geliştirici, ekran görüntüsü): Yuki konuşurken çıkan ■ durdurma düğmesi
+   kompozit çubuğun ALTINA, sol köşeye kayıyordu.
+
+   KÖK NEDEN: `#input-container` bir GRID ve dört öğenin yeri açıkça yazılmış
+   (mic=1 · msg-input=2 · more=3 · send=4, ~satır 1970). `#stop-audio-btn` o
+   listede YOKTU → görünür olduğunda otomatik yerleşim onu ilk boş hücreye,
+   yani 2. SATIRIN 1. sütununa koyuyordu. Ekrandaki kayma tam olarak buydu.
+
+   📏 Bu, aynı dosyanın § ① bölümünde yazılı dersin ikinci kez tekrarı:
+   *"sıralamaya güvenme, YERİ SÖYLE"*. O tur dört öğeyi yerleştirmiş, beşinciyi
+   atlamıştı — çünkü beşinci yalnız konuşurken görünüyor ve denetimde görünmez.
+
+   5. sütun YALNIZ konuşurken var: kalıcı olsaydı düğme gizliyken 44px + boşluk
+   kadar ölü alan kalır ve yazı alanı boşuna daralırdı. */
+body:not(.hud-ring-mode) #input-container.konusuyor {
+  grid-template-columns:
+    var(--hedef) minmax(0, 1fr) var(--hedef) var(--hedef) var(--hedef);
+}
+
+/* ⚠️ Özgüllük hesabı — `body:not(.hud-ring-mode) #stop-audio-btn` (1-1-1)
+   `display:none` diyor; onu yenmek için sınıflı biçim de aynı önekle yazılmalı
+   (1-2-1). Yalnız `#stop-audio-btn.gorunur` (1-1-0) yazılsaydı düğme klasik
+   modda HİÇ görünmezdi. */
+body:not(.hud-ring-mode) #stop-audio-btn.gorunur {
+  display: flex;
+  grid-column: 5;
+  grid-row: 1;
+}
+
+/* HALKA modunun kendi düzeni var (grid değil) — orada yalnız görünürlük gerek.
+   Eskiden düğmeyi JS satır içi `style.display` ile açıyordu ve satır içi her
+   kuralı yendiği için bu ayrım gerekmiyordu; sınıfa geçince gerekli oldu. */
+#stop-audio-btn.gorunur { display: flex; }
+
+@container kabuk (max-width: 379px) {
+  body:not(.hud-ring-mode) #input-container.konusuyor {
+    grid-template-columns:
+      var(--hedef-dar) minmax(0, 1fr) var(--hedef-dar) var(--hedef-dar) var(--hedef-dar);
+  }
+}

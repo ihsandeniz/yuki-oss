@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Galeri · Yuki</title>
+<!-- Yerel yazı tipleri (vendor/fonts*.css) — CDN yok. -->
+<link rel="stylesheet" href="/ui/vendor/fonts.css?v=1">
+<link rel="stylesheet" href="/ui/vendor/fonts-mono.css?v=1">
+<link rel="stylesheet" href="/ui/css/galeri-tokens.css?v=1">
+<link rel="stylesheet" href="/ui/css/states.css?v=2">
+<link rel="stylesheet" href="/ui/css/galeri.css?v=25">
+<link rel="stylesheet" href="/ui/css/fontlar-gozlemevi.css?v=1">
+<link rel="stylesheet" href="/ui/css/guvenli-onay.css?v=1">
+<!-- Token URL'den gelirse (panel webview'u) devralınır ve adresten silinir;
+     sekmeden açılışta ana pencerenin sessionStorage'ı iframe ile paylaşılır. -->
+<script>(function(){try{var u=new URL(location.href);var t=u.searchParams.get('token');if(!t)return;try{sessionStorage.setItem('aliceToken',t);}catch(e){}u.searchParams.delete('token');history.replaceState(null,'',u.pathname+u.search+u.hash);}catch(e){}})();</script>
+</head>
+<body class="gl">
+
+<!-- ══ Tek ikon dili: satır içi sprite, 1.6 çizgi, currentColor ═══════════
+     Renkli emoji ve glif karışımı (🗺📊📅 · ⧉⚖⊞⟳) bu turda kalktı. -->
+<svg class="gl-sprite" width="0" height="0" aria-hidden="true" focusable="false">
+  <symbol id="i-ayar" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+  <symbol id="i-ara" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></symbol>
+  <symbol id="i-asagi" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-yukari" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+  <symbol id="i-sag" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-sol" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+  <symbol id="i-kapat" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-indir" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-bilgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-oynat" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></symbol>
+  <symbol id="i-durdur" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+  <symbol id="i-tam" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-kucuk" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></symbol>
+  <symbol id="i-harita" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v16M15 6v16"/></symbol>
+  <symbol id="i-kopya" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+  <symbol id="i-grafik" viewBox="0 0 24 24"><path d="M6 20v-8M12 20V5M18 20v-5M3 20h18"/></symbol>
+  <symbol id="i-kiyas" viewBox="0 0 24 24"><rect x="3" y="5" width="8" height="14" rx="1.5"/><rect x="13" y="5" width="8" height="14" rx="1.5"/></symbol>
+  <symbol id="i-klavye" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/></symbol>
+  <symbol id="i-yenile" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></symbol>
+  <symbol id="i-klasor" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-disk" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 14h.01M11 14h6"/></symbol>
+  <symbol id="i-takvim" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-izgara" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-arti" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-eksi" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-sirala" viewBox="0 0 24 24"><path d="M7 4v16M4 17l3 3 3-3M14 6h7M14 12h5M14 18h3"/></symbol>
+  <symbol id="i-sirala-ters" viewBox="0 0 24 24"><path d="M7 20V4M4 7l3-3 3 3M14 6h3M14 12h5M14 18h7"/></symbol>
+  <symbol id="i-kilit" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-agac" viewBox="0 0 24 24"><path d="M5 4v14a2 2 0 0 0 2 2h3M5 10h5"/><rect x="12" y="7" width="8" height="6" rx="1.5"/><rect x="12" y="15" width="8" height="6" rx="1.5"/></symbol>
+  <symbol id="i-cop" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-kalem" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/></symbol>
+  <symbol id="i-tasi" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM10 13h6M13 10l3 3-3 3"/></symbol>
+  <symbol id="i-geri" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3"/></symbol>
+  <symbol id="i-onay" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-konum" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+</svg>
+
+<!-- ══ ÜST ÇUBUK ═══════════════════════════════════════════════════════════
+     `header.gl-ust` adı SABİT: index.html ☰ boşluğunu bu seçiciyle basar
+     (NAV_IFRAME_BOSLUK). Masaüstü: nerede olduğun (kırıntı + sayı) · görünüm
+     segmentleri · keşif araçları · arama. Telefon/dar: klasör düğmesi + ara +
+     ayar; görünüm ve araçlar alttan açılan sayfaya taşınır (aynı DOM). -->
+<header class="gl-ust">
+  <button class="gl-klasor-dugme" id="gl-ray-ac" type="button"
+          aria-controls="gl-ray" aria-expanded="false" title="Klasörler">
+    <svg class="gl-ik"><use href="#i-klasor"/></svg>
+    <span class="gl-klasor-dugme-ad" id="gl-tel-ad">Hepsi</span>
+    <span class="gl-d" id="gl-tel-sayi"></span>
+    <svg class="gl-ik gl-ik-k"><use href="#i-asagi"/></svg>
+  </button>
+  <!-- Başlık kişisel Yuki'deki gibi (11-14, kullanıcı seçimi: 11-13 "tek tarz başlık" bu sekmede geri alındı):
+       düz satır — GALERİ kökü (≤1360'ta gizli) + seçili klasör + sayı. -->
+  <div class="gl-baslik">
+    <span class="gl-baslik-kok">GALERİ</span>
+    <span class="gl-baslik-ad" id="gl-yol-ad">Hepsi</span>
+    <span class="gl-baslik-sayi gl-d" id="gl-yol-sayi"></span>
+  </div>
+  <span class="gl-bosluk"></span>
+
+  <!-- Görünüm + keşif. Masaüstünde çubukta satır içi; dar ekranda sayfa olur. -->
+  <div class="gl-kontrol" id="gl-kontrol" role="group" aria-label="Görünüm ve araçlar">
+    <div class="gl-sayfa-bas">
+      <b>GÖRÜNÜM</b>
+      <button class="gl-kapat-k" id="gl-kontrol-kapat" type="button" aria-label="Kapat">
+        <svg class="gl-ik"><use href="#i-kapat"/></svg>
+      </button>
+    </div>
+    <div class="gl-gorunum">
+      <!-- 🔴 Sıralama SUNUCUDA yapılır — akış sayfalı, istemcide dizmek yalnız elde
+           olan 120 kaydı dizerdi. Segment, gizli <select>'in değerini yazar:
+           select durumun kaynağıdır (kalıcılık + test çapası), segment görünen yüzü. -->
+      <div class="gl-seg" id="gl-sirala-seg" role="radiogroup" aria-label="Sırala">
+        <button type="button" role="radio" data-deger="tarih"><svg class="gl-ik gl-ik-k"><use href="#i-takvim"/></svg>TARİH</button>
+        <button type="button" role="radio" data-deger="ad">AD</button>
+        <button type="button" role="radio" data-deger="boyut">BOYUT</button>
+        <button type="button" role="radio" data-deger="tip">TÜR</button>
+      </div>
+      <select id="gl-sirala" class="gorunmez-etiket" tabindex="-1" aria-hidden="true">
+        <option value="tarih" selected>tarih</option>
+        <option value="ad">ad</option>
+        <option value="boyut">boyut</option>
+        <option value="tip">tür</option>
+      </select>
+      <button class="gl-ikon" id="gl-yon" type="button" title="Sıralama yönü">
+        <svg class="gl-ik"><use href="#i-sirala"/></svg><span class="gl-etiket">Yön</span>
+      </button>
+      <div class="gl-seg" id="gl-tip-seg" role="radiogroup" aria-label="Tür">
+        <button type="button" role="radio" data-deger="">HEPSİ</button>
+        <button type="button" role="radio" data-deger="resim">RESİM</button>
+        <button type="button" role="radio" data-deger="video">VİDEO</button>
+      </div>
+      <select id="gl-tip" class="gorunmez-etiket" tabindex="-1" aria-hidden="true">
+        <option value="" selected>hepsi</option>
+        <option value="resim">resim</option>
+        <option value="video">video</option>
+      </select>
+      <button class="gl-ikon" id="gl-grupla" type="button" aria-pressed="true"
+              title="Aylara böl — ay başlıkları (yalnız tarih sırasında)">
+        <svg class="gl-ik"><use href="#i-takvim"/></svg><span class="gl-etiket">Aylara böl</span>
+      </button>
+      <div class="gl-seg gl-boyut-adim" role="group" aria-label="Kutucuk boyutu">
+        <button type="button" id="gl-kucult" aria-label="Kutucukları küçült" title="Küçült"><svg class="gl-ik gl-ik-k"><use href="#i-eksi"/></svg></button>
+        <button type="button" id="gl-buyult" aria-label="Kutucukları büyüt" title="Büyüt"><svg class="gl-ik gl-ik-k"><use href="#i-arti"/></svg></button>
+      </div>
+      <!-- Dar ekranda dört kademe açıkça görünür (sayfada yer var) -->
+      <div class="gl-boyut" id="gl-boyut" role="group" aria-label="Kutucuk boyutu"></div>
+    </div>
+    <!-- Keşif araçları (2026-09-20, GalleryWeb'den). Hepsi SALT OKUMA (K6). -->
+    <div class="gl-araclar" role="group" aria-label="Keşif araçları">
+      <button class="gl-arac" id="gl-stat-btn" type="button" title="İstatistik (T)">
+        <svg class="gl-ik"><use href="#i-grafik"/></svg><span class="gl-arac-ad">İstatistik<small>kütüphane özeti</small></span><kbd>T</kbd></button>
+      <button class="gl-arac" id="gl-kiyas-btn" type="button" title="Karşılaştır — iki resim seç (C)">
+        <svg class="gl-ik"><use href="#i-kiyas"/></svg><span class="gl-arac-ad">Karşılaştır<small>iki resim seç, yan yana</small></span><kbd>C</kbd></button>
+      <button class="gl-arac" id="gl-kopya-btn" type="button" title="Kopya bulucu (D)">
+        <svg class="gl-ik"><use href="#i-kopya"/></svg><span class="gl-arac-ad">Kopya bulucu<small>benzerleri bulur · ağır tarama</small></span><kbd>D</kbd></button>
+      <button class="gl-arac" id="gl-harita-btn" type="button" title="Harita — GPS'li fotoğraflar (M)">
+        <svg class="gl-ik"><use href="#i-harita"/></svg><span class="gl-arac-ad">Harita<small id="gl-harita-ozet">konum bilgili fotoğraflar</small></span><kbd>M</kbd></button>
+      <button class="gl-arac" id="gl-yenile" type="button" title="Yenile — diskten yeniden oku (R)">
+        <svg class="gl-ik"><use href="#i-yenile"/></svg><span class="gl-arac-ad">Yenile<small>diskten yeniden oku</small></span><kbd>R</kbd></button>
+      <button class="gl-arac" id="gl-yardim-btn" type="button" title="Klavye kısayolları (?)">
+        <svg class="gl-ik"><use href="#i-klavye"/></svg><span class="gl-arac-ad">Kısayollar<small>tüm tuşlar</small></span><kbd>?</kbd></button>
+    </div>
+  </div>
+
+  <label class="gl-ara-sar">
+    <svg class="gl-ik gl-ik-k"><use href="#i-ara"/></svg>
+    <input id="gl-ara" class="gl-ara" type="search" placeholder="Adına göre ara" aria-label="Adına göre ara" autocomplete="off">
+    <button class="gl-ara-kapat" id="gl-ara-kapat" type="button" aria-label="Aramayı kapat"><svg class="gl-ik"><use href="#i-kapat"/></svg></button>
+  </label>
+  <button class="gl-ikon gl-dar" id="gl-ara-ac" type="button" aria-label="Ara"><svg class="gl-ik"><use href="#i-ara"/></svg></button>
+  <button class="gl-ikon gl-dar" id="gl-kontrol-ac" type="button" aria-label="Görünüm ve araçlar"
+          aria-controls="gl-kontrol" aria-expanded="false"><svg class="gl-ik"><use href="#i-ayar"/></svg></button>
+</header>
+
+<!-- ══ KLASÖR RAYI ═════════════════════════════════════════════════════════
+     Sayılar `/api/galeri/klasorler`'den (alt ağaç dahil). Uç yoksa (eski
+     backend) ray yalnız kökleri gösterir — galeri çökmez. -->
+<aside class="gl-ray" id="gl-ray" aria-label="Klasörler">
+  <div class="gl-ray-bas">
+    <span class="gl-hud">Klasörler · <span class="gl-d" id="gl-kl-sayi"></span></span>
+    <button class="gl-kapat-k gl-dar" id="gl-ray-kapat" type="button" aria-label="Klasörleri kapat">
+      <svg class="gl-ik"><use href="#i-kapat"/></svg>
+    </button>
+  </div>
+  <nav class="gl-ray-liste" id="gl-ray-liste"><span class="gl-bos-etiket">yükleniyor…</span></nav>
+  <div class="gl-ray-alt">
+    <!-- Alt klasör anahtarı: rayda klasör seçilince o klasörün ALT AĞACI da gelsin mi.
+         Raydaki sayı alt ağaç sayısıdır → varsayılan AÇIK (sayı ile akış aynı şeyi söylesin). -->
+    <button class="gl-anahtar-sat" id="gl-altklasor" type="button" aria-pressed="true">
+      <span>Alt klasörler dahil<small>klasör seçince alt ağacı da getir</small></span><span class="gl-anahtar-g"></span>
+    </button>
+    <div class="gl-kokler" id="gl-kokler"></div>
+    <button class="gl-metin-btn" id="gl-ekle" type="button" title="Galeriye kök klasör ekle">
+      <svg class="gl-ik gl-ik-k"><use href="#i-arti"/></svg>KÖK KLASÖR EKLE</button>
+    <p class="gl-salt"><svg class="gl-ik gl-ik-k"><use href="#i-kilit"/></svg>Salt okunur — dosyalar taşınmaz, silinmez.</p>
+  </div>
+</aside>
+
+<main id="gl-icerik">
+  <button class="gl-yeni-aylar" id="gl-yeni-aylar" type="button" hidden>
+    <svg class="gl-ik gl-ik-k"><use href="#i-yukari"/></svg>Daha yeni aylar<span class="gl-d" id="gl-yeni-sayi"></span>
+  </button>
+  <div class="gl-izgara" id="gl-izgara" data-boyut="orta"></div>
+  <!-- Sonsuz akış sentineli: görününce bir sayfa daha çizilir/istenir -->
+  <div class="gl-sentinel" id="gl-sentinel" hidden><span>sonraki sayfa · yükleniyor</span></div>
+  <div class="gl-bos" id="gl-bos" hidden></div>
+</main>
+
+<!-- ══ ZAMAN OMURGASI ══════════════════════════════════════════════════════
+     Çubuk boyu = o ayın yoğunluğu (cyan). Bulunduğun ay = altın. Tıkla → o
+     aydan başla. Telefonda sağ kenarda ince iz + tek altın başparmak. -->
+<nav class="gl-omurga" id="gl-omurga" aria-label="Zaman omurgası">
+  <div class="gl-om-not" id="gl-om-not" hidden></div>
+  <div class="gl-om-liste" id="gl-om-liste"></div>
+  <button class="gl-om-basparmak" id="gl-om-basparmak" type="button" aria-label="Zamanda kaydır — sürükle"></button>
+</nav>
+
+<!-- ══ FİŞ — büyük görünüm (arşivde yan belge; ızgara görünür kalır) ═══════
+     `#gl-buyuk` kimliği korunur: fişin kendisi büyük görünümdür. ⛶ ile
+     `gl-tam` kipine geçer (sahne tüm pencere, zoom/kaydırma/slayt orada). -->
+<aside class="gl-buyuk" id="gl-buyuk" hidden aria-label="Fiş">
+  <div class="gl-fis-bas">
+    <b>FİŞ</b><span class="gl-hud" id="gl-fis-sayac"></span>
+    <span class="gl-bosluk"></span>
+    <button class="gl-kapat" id="gl-kapat" type="button" aria-label="Kapat (Esc)"><svg class="gl-ik"><use href="#i-kapat"/></svg></button>
+  </div>
+  <div class="gl-fis-gov" id="gl-fis-gov">
+    <div class="gl-fis-resim">
+      <div class="gl-sahne" id="gl-sahne"></div>
+      <button class="gl-ok gl-ok-sol" id="gl-onceki" type="button" aria-label="Önceki (←)"><svg class="gl-ik"><use href="#i-sol"/></svg></button>
+      <button class="gl-ok gl-ok-sag" id="gl-sonraki" type="button" aria-label="Sonraki (→)"><svg class="gl-ik"><use href="#i-sag"/></svg></button>
+      <button class="gl-yuvarlak gl-buyut" id="gl-buyut-btn" type="button" aria-label="Büyüt — tüm pencere" title="Büyüt">
+        <svg class="gl-ik"><use href="#i-tam"/></svg></button>
+      <div class="gl-zoom-rozet" id="gl-zoom-rozet" hidden>%100</div>
+    </div>
+    <div class="gl-fis-kart" id="gl-kunye">
+      <div class="gl-fis-yol" id="gl-fis-yol"></div>
+      <h3 class="gl-fis-ad" id="gl-fis-ad"></h3>
+      <dl class="gl-kv" id="gl-fis-kv"></dl>
+    </div>
+    <div class="gl-fis-eylem">
+      <button class="gl-dar-tel gl-eylem-ok" id="gl-tel-onceki" type="button" aria-label="Önceki"><svg class="gl-ik"><use href="#i-sol"/></svg>ÖNCEKİ</button>
+      <!-- 🔴 <button> DEĞİL <a href>: telefonda indirme, kullanıcının DOĞRUDAN
+           dokunduğu gerçek bağlantıda güvenilir çalışır. JS ile sonradan üretilen
+           tıklama (özellikle await'ten sonra) mobil tarayıcıda engellenebiliyor.
+           href fiş açılırken biletle doldurulur (galeri.js). -->
+      <a class="gl-indir" id="gl-indir" download hidden aria-label="İndir" title="Bu dosyayı indir">
+        <svg class="gl-ik gl-ik-k"><use href="#i-indir"/></svg>İNDİR</a>
+      <button class="gl-eylem" id="gl-slayt-btn" type="button" aria-pressed="false" title="Slayt gösterisi (S)">
+        <svg class="gl-ik gl-ik-k"><use href="#i-oynat"/></svg><span>SLAYT</span></button>
+      <button class="gl-eylem gl-masa-eylem" id="gl-fis-kiyas" type="button" title="Bununla karşılaştır — ızgaradan ikinci resmi seç">
+        <svg class="gl-ik gl-ik-k"><use href="#i-kiyas"/></svg>KIYASLA</button>
+      <button class="gl-eylem" id="gl-exif-btn" type="button" aria-pressed="false" title="Künye / EXIF (I)">
+        <svg class="gl-ik gl-ik-k"><use href="#i-bilgi"/></svg>KÜNYE</button>
+      <button class="gl-eylem gl-tam-eylem" id="gl-tamekran-btn" type="button" title="Tam ekran (F)">
+        <svg class="gl-ik gl-ik-k"><use href="#i-tam"/></svg>TAM EKRAN</button>
+      <button class="gl-dar-tel gl-eylem-ok" id="gl-tel-sonraki" type="button" aria-label="Sonraki"><svg class="gl-ik"><use href="#i-sag"/></svg>SONRAKİ</button>
+    </div>
+    <!-- EXIF künyesi — fişin içinde, gezinmeyle birlikte ilerler -->
+    <section class="gl-exif" id="gl-exif" hidden>
+      <div class="gl-exif-bas">
+        <span>KÜNYE · EXIF</span>
+        <button class="gl-kapat-k" id="gl-exif-kapat" type="button" aria-label="Künyeyi kapat"><svg class="gl-ik"><use href="#i-kapat"/></svg></button>
+      </div>
+      <div class="gl-exif-govde" id="gl-exif-govde"></div>
+    </section>
+    <div class="gl-komsu" id="gl-komsu" hidden>
+      <div class="gl-hud gl-komsu-bas"><span id="gl-komsu-bas">Aynı klasörden</span><span class="gl-d" id="gl-komsu-sayi"></span></div>
+      <div class="gl-komsu-sira" id="gl-komsu-sira"></div>
+    </div>
+  </div>
+</aside>
+
+<!-- Seçim şeridi — yalnız karşılaştırma seçimi açıkken görünür -->
+<div class="gl-secim-serit" id="gl-secim-serit" hidden>
+  <svg class="gl-ik gl-ik-k"><use href="#i-kiyas"/></svg>
+  <span class="gl-secim-bilgi" id="gl-secim-bilgi">Karşılaştırmak için 2 resim seç</span>
+  <button class="gl-btn" id="gl-secim-iptal" type="button">Vazgeç</button>
+</div>
+
+<div class="gl-perde" id="gl-perde" hidden></div>
+<div class="gl-balon" id="gl-balon" role="status" aria-live="polite"></div>
+<div class="gl-duyuru" id="gl-duyuru" role="status" aria-live="polite" hidden></div>
+
+<!-- ══ Karşılaştırma — iki resim yan yana, ORTAK zoom/kaydırma ══════════ -->
+<div class="gl-kiyas" id="gl-kiyas" hidden>
+  <div class="gl-kiyas-bas">
+    <span class="gl-kiyas-ad" id="gl-kiyas-ad-sol"></span>
+    <span class="gl-kiyas-orta">
+      <button class="gl-btn" id="gl-kiyas-sifirla" type="button">Sıfırla</button>
+      <span class="gl-bos-etiket">tekerlek: yakınlaştır · sürükle: kaydır</span>
+    </span>
+    <span class="gl-kiyas-ad" id="gl-kiyas-ad-sag"></span>
+    <button class="gl-kapat-k" id="gl-kiyas-kapat" type="button" aria-label="Kapat"><svg class="gl-ik"><use href="#i-kapat"/></svg></button>
+  </div>
+  <div class="gl-kiyas-bol" id="gl-kiyas-bol">
+    <div class="gl-kiyas-yari"><img id="gl-kiyas-sol" alt=""></div>
+    <div class="gl-kiyas-yari"><img id="gl-kiyas-sag" alt=""></div>
+  </div>
+</div>
+
+<!-- ══ Harita — GPS'li fotoğraflar ═════════════════════════════════════ -->
+<div class="gl-modal gl-modal-genis" id="gl-harita" hidden>
+  <div class="gl-modal-kutu gl-kutu-genis">
+    <div class="gl-modal-bas">
+      <span>HARİTA</span>
+      <span class="gl-modal-sayac" id="gl-harita-sayac"></span>
+      <button class="gl-kapat-k" id="gl-harita-kapat" type="button" aria-label="Kapat"><svg class="gl-ik"><use href="#i-kapat"/></svg></button>
+    </div>
+    <!-- 🔴 Altlık onayı: döşeme isteği fotoğrafların ÇEKİLDİĞİ YERİ
+         openstreetmap.org'a söyler. Onay verilene dek harita altlıksız çizilir. -->
+    <div class="gl-onay" id="gl-harita-onay" hidden>
+      <p>Harita altlığı <b>openstreetmap.org</b>'dan indirilir. Bu istek, fotoğraflarının
+         <b>çekildiği bölgeyi</b> o sunucuya gösterir — fotoğrafın kendisi asla gönderilmez.
+         Altlıksız da çalışır: işaretçiler boş zeminde görünür.</p>
+      <div class="gl-onay-dugme">
+        <button class="gl-btn gl-btn-birincil" id="gl-harita-izin" type="button">Altlığı aç</button>
+        <button class="gl-btn" id="gl-harita-ret" type="button">Altlıksız kullan</button>
+      </div>
+    </div>
+    <div class="gl-ilerleme" id="gl-harita-ilerleme" hidden><i></i></div>
+    <div class="gl-harita-tuval" id="gl-harita-tuval"></div>
+    <div class="gl-modal-alt">
+      <span class="gl-secici-bilgi" id="gl-harita-bilgi"></span>
+      <button class="gl-btn" id="gl-harita-onay-sifirla" type="button" hidden>Altlık tercihini sıfırla</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Kopya bulucu ════════════════════════════════════════════════════ -->
+<div class="gl-modal gl-modal-genis" id="gl-kopya" hidden>
+  <div class="gl-modal-kutu gl-kutu-genis">
+    <div class="gl-modal-bas">
+      <span>KOPYA BULUCU</span>
+      <span class="gl-modal-sayac" id="gl-kopya-sayac"></span>
+      <label class="gl-esik">benzerlik
+        <select id="gl-kopya-esik" class="gl-secim">
+          <option value="2">birebir</option>
+          <option value="6" selected>yakın</option>
+          <option value="10">gevşek</option>
+        </select>
+      </label>
+      <button class="gl-kapat-k" id="gl-kopya-kapat" type="button" aria-label="Kapat"><svg class="gl-ik"><use href="#i-kapat"/></svg></button>
+    </div>
+    <div class="gl-ilerleme" id="gl-kopya-ilerleme" hidden><i></i></div>
+    <div class="gl-kopya-liste" id="gl-kopya-liste"></div>
+    <div class="gl-modal-alt">
+      <span class="gl-secici-bilgi" id="gl-kopya-bilgi">Galeri salt okunurdur — burası kopyaları <b>bulur</b>, silmez.</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ İstatistik ══════════════════════════════════════════════════════ -->
+<div class="gl-modal" id="gl-stat" hidden>
+  <div class="gl-modal-kutu gl-kutu-orta">
+    <div class="gl-modal-bas">
+      <span>KÜTÜPHANE</span>
+      <button class="gl-kapat-k" id="gl-stat-kapat" type="button" aria-label="Kapat"><svg class="gl-ik"><use href="#i-kapat"/></svg></button>
+    </div>
+    <div class="gl-stat-govde" id="gl-stat-govde"></div>
+  </div>
+</div>
+
+<!-- ══ Klavye kısayolları ══════════════════════════════════════════════ -->
+<!-- Klasör seçici (kök ekleme) -->
+<div class="gl-modal" id="gl-secici" hidden>
+  <div class="gl-modal-kutu">
+    <div class="gl-modal-bas">
+      <span>Klasör seç</span>
+      <button class="gl-kapat-k" id="gl-secici-kapat" type="button" aria-label="Kapat"><svg class="gl-ik"><use href="#i-kapat"/></svg></button>
+    </div>
+    <div class="gl-secici-yol" id="gl-secici-yol"></div>
+    <div class="gl-secici-liste" id="gl-secici-liste"></div>
+    <div class="gl-modal-alt">
+      <span class="gl-secici-bilgi" id="gl-secici-bilgi"></span>
+      <button class="gl-btn gl-btn-birincil" id="gl-secici-ekle" type="button">Bu klasörü ekle</button>
+    </div>
+  </div>
+</div>
+
+<div class="gl-modal" id="gl-yardim" hidden>
+  <div class="gl-modal-kutu">
+    <div class="gl-modal-bas">
+      <span>KISAYOLLAR</span>
+      <button class="gl-kapat-k" id="gl-yardim-kapat" type="button" aria-label="Kapat"><svg class="gl-ik"><use href="#i-kapat"/></svg></button>
+    </div>
+    <div class="gl-yardim-govde">
+      <div class="gl-yardim-bolum">IZGARA</div>
+      <dl class="gl-tus">
+        <dt>/</dt><dd>aramaya git</dd>
+        <dt>M</dt><dd>harita</dd>
+        <dt>D</dt><dd>kopya bulucu</dd>
+        <dt>T</dt><dd>istatistik</dd>
+        <dt>C</dt><dd>karşılaştırma seçimi</dd>
+        <dt>S</dt><dd>slayt gösterisi</dd>
+        <dt>R</dt><dd>yenile</dd>
+        <dt>G / Shift+G</dt><dd>en üste / en alta</dd>
+        <dt>[ / ]</dt><dd>bir ay yeni / bir ay eski (omurga)</dd>
+        <dt>?</dt><dd>bu pencere</dd>
+      </dl>
+      <div class="gl-yardim-bolum">FİŞ · BÜYÜK GÖRÜNÜM</div>
+      <dl class="gl-tus">
+        <dt>← →</dt><dd>önceki / sonraki</dd>
+        <dt>J / K</dt><dd>10 ileri / 10 geri</dd>
+        <dt>I</dt><dd>künye (EXIF)</dd>
+        <dt>+ / −</dt><dd>yakınlaştır / uzaklaştır</dd>
+        <dt>0</dt><dd>zoom sıfırla</dd>
+        <dt>çift tık</dt><dd>büyüt · büyükte yakınlaştır / sığdır</dd>
+        <dt>F</dt><dd>tam ekran</dd>
+        <dt>S</dt><dd>slayt başlat / durdur</dd>
+        <dt>Esc / Q</dt><dd>bir kat geri · kapat</dd>
+      </dl>
+      <div class="gl-yardim-bolum">SLAYT HIZI</div>
+      <div class="gl-hiz" id="gl-hiz" role="group" aria-label="Slayt hızı"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/ui/js/galeri.js?v=26"></script>
+<script src="/ui/js/guvenli-onay.js?v=1"></script>
+<script src="/ui/js/galeri-guvenli.js?v=1"></script>
+</body>
+</html>

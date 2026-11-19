@@ -1,0 +1,246 @@
+/* ============================================================================
+   YUKI · MİNİ HUD KARTI  (240×180 · 2026-10-04)
+
+   Ana pencere gizliyken ekranda kalan tek yüzey: "Yuki şu an ne yapıyor".
+   Kişisel AliceAi'nin mini HUD'undan DÜZEN ve DAVRANIŞ alındı; renkler
+   ürünün token'ları (tokens.css · 01-TASARIM-DILI § 1.2):
+     · canlı ses (dinliyor · konuşuyor)  → --yesil-ink   ("canlı" durum)
+     · hazır · düşünüyor · uyku          → nötr --ink-2 / --ink-3
+     · hata                              → --kirmizi-ink (yalnız tehlike)
+     · mor YALNIZ odak halkası           ("canlı hissi" için mor yasak)
+   Altın yok: kart bir premium işareti değil.
+   🔴 Durumlar renkle değil BİÇİMLE ayrılır (halka · nabız · yay · dalga ·
+   nokta · kesik halka) — renk ikinci kanal (mini-hud.js § DURUMLAR).
+   ========================================================================= */
+
+/* Pencere `transparent:true` → gövde gerçekten saydam olmalı; renk yazılırsa
+   kartın yuvarlak köşelerinin dışı dolu kare görünür. */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  user-select: none;
+  cursor: default;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--ink-1);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── KART ─────────────────────────────────────────────────────────────────
+   Yüzen katman → --yuzey-1 + ince --kenar. Masaüstünün üstünde yüzdüğü için
+   pencere modlarındaki cam kuralının aynısı (01 § 7 "Cam efekti"): arka hafif
+   seçilir, "bu bir katman" bilgisini taşır. Opaklık %92: metin kontrastı
+   arkadaki duvar kâğıdına bırakılmaz. */
+.hud {
+  position: relative;
+  box-sizing: border-box;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--b-3);
+  padding: var(--b-4) var(--b-5) var(--b-5);
+
+  background: color-mix(in oklab, var(--yuzey-1) 92%, transparent);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-4);
+  overflow: hidden;
+
+  /* Kart buradan sürüklenir; düğmeler aşağıda muaf. */
+  -webkit-app-region: drag;
+  transition: border-color var(--sure-2) var(--egri);
+}
+
+/* Canlı ses sınırı ince yeşil; hata kırmızı. Düşünüyor sınırı BOYAMAZ —
+   dönen yay zaten anlatıyor (tek ses kuralı). */
+.hud[data-state="listening"],
+.hud[data-state="talking"] { border-color: color-mix(in oklab, var(--yesil-ink) 55%, var(--kenar)); }
+.hud[data-state="error"]   { border-color: var(--kirmizi-ink); }
+
+
+/* ── BAŞLIK ─────────────────────────────────────────────────────────────── */
+.hud-baslik {
+  display: flex;
+  align-items: center;
+  gap: var(--b-3);
+  min-height: var(--hedef-min);
+  /* Sağdaki iki düğme (2×24 + 8 aralık) etiketin üstüne binmesin */
+  padding-inline-end: calc(var(--hedef-min) * 2 + var(--b-4) + var(--b-3));
+}
+
+/* Etiket --ink-2: kart yarı saydam değil (%92), ama yine de en kötü zeminde
+   (açık duvar kâğıdı, koyu tema) --ink-3 sınıra yaklaşır — ikincil metin seç. */
+.hud-etiket {
+  font-size: var(--yazi-11);
+  font-weight: var(--ag-orta);
+  /* 0.12em'de "KONUŞUYOR · SEVİNÇLİ" 150 px'e sığmıyordu (ölçüldü, kesiliyordu).
+     0.03em: en uzun çift "KONUŞUYOR · UTANGAÇ" 140 px'lik alana sığar. */
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Bağlantı noktası. Renk TEK başına bildirmez: kopukken etiket de "BAĞLANTI YOK". */
+.hud-nokta {
+  inline-size: 6px;
+  block-size: 6px;
+  flex: 0 0 auto;
+  border-radius: var(--r-tam);
+  background: var(--ink-3);
+  opacity: 0.5;
+  transition: background var(--sure-2) var(--egri), opacity var(--sure-2) var(--egri);
+}
+.hud[data-bagli="evet"] .hud-nokta { background: var(--yesil-ink); opacity: 1; }
+
+
+/* ── GÖRSELLEŞTİRİCİ ─────────────────────────────────────────────────────── */
+.hud-tuval-kap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.hud-tuval {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  display: block;
+}
+
+
+/* ── ALT ŞERİT: mikrofon + son mesaj ─────────────────────────────────────── */
+.hud-alt {
+  display: flex;
+  align-items: center;
+  gap: var(--b-2);
+  min-width: 0;
+  -webkit-app-region: no-drag;
+}
+
+/* Düğmeler: ikincil tip (yüzey-2 + kenar). GÖRSEL 24×24 (kart 240×180), İSABET
+   ALANI 44×44 ( M7): görünmez ::before. Komşu isabet alanları birbirine
+   DEĞER ama ÜST ÜSTE BİNMEZ — biri öbürünün tıklamasını çalmaz. Alt sırada alan
+   ortalı (her yöne 10px, düğmeler arası 20px). Üst sağ çiftte yer dar (etiket):
+   alan kartın kenar payına ve etiketin ucuna doğru büyür, düğmeler arası 8px
+   kalır. Üst düğmeler 10px içeride ki alan kartın kenarında kırpılmasın. */
+.hud-mic,
+.hud-dugme {
+  position: relative;
+  inline-size: var(--hedef-min);
+  block-size: var(--hedef-min);
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--yuzey-2);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-1);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background var(--sure-1) var(--egri), color var(--sure-1) var(--egri),
+              border-color var(--sure-1) var(--egri);
+}
+.hud-mic::before,
+.hud-dugme::before {
+  content: "";
+  position: absolute;
+  /* -1px: konum kutusu kenarlığın İÇİNDEN ölçülür; alan kenarlık dahil 44 olsun */
+  inset: calc((var(--hedef) - var(--hedef-min)) / -2 - 1px);
+  -webkit-app-region: no-drag;   /* büyütülen alan kartın sürükleme bölgesine düşmesin */
+}
+.hud-mic + .hud-mic { margin-inline-start: calc(var(--b-7) - var(--b-2)); }
+/* Üst çift: büyüt alanı yalnız sola (etiketin ucuna) uzar; gizle sağa kartın
+   kenar payı kadar (12px), sola kalan kadar (8px) — ikisi büyüt'ün sağ kenarında buluşur. */
+#hud-buyut::before { inset-inline-start: calc(var(--hedef-min) - var(--hedef) - 1px); inset-inline-end: -1px; }
+#hud-gizle::before {
+  inset-inline-start: calc(var(--hedef-min) - var(--hedef) + var(--b-5) - 1px);
+  inset-inline-end: calc(var(--b-5) * -1 - 1px);
+}
+.hud-mic:hover,
+.hud-dugme:hover { background: var(--yuzey-3); color: var(--ink-1); }
+.hud-mic:active,
+.hud-dugme:active { transform: scale(0.98); }
+
+/* Odak — her yerde aynı (01 § 1.5): 2px mor + 2px offset. Mor yalnız burada. */
+.hud-mic:focus-visible,
+.hud-dugme:focus-visible {
+  outline: var(--odak-kalinlik) solid var(--mor-ink);
+  outline-offset: var(--odak-offset);
+}
+.hud-mic:focus:not(:focus-visible),
+.hud-dugme:focus:not(:focus-visible) { outline: none; }
+
+.hud-mic svg,
+.hud-dugme svg {
+  inline-size: 14px;
+  block-size: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* AÇIK mikrofon = canlı → yeşil. Renk tek kanal değil: aria-pressed + zemin. */
+.hud-mic[aria-pressed="true"] {
+  color: var(--yesil-ink);
+  background: var(--yesil-zemin);
+  border-color: color-mix(in oklab, var(--yesil-ink) 55%, var(--kenar));
+}
+.hud-mic.kayitta { animation: hudMicNabiz 1.6s ease-in-out infinite; }
+@keyframes hudMicNabiz {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.6; }
+}
+
+.hud-mic:disabled,
+.hud-dugme:disabled { opacity: 0.45; cursor: not-allowed; }
+.hud-mic[hidden] { display: none; }
+
+/* Son mesaj — tek satır, taşarsa kırpılır. Kart okuma yüzeyi değil. */
+.hud-metin {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;                 /* <p> varsayılanı 1em — tuvali kaydırır (kişisel ölçümü) */
+  margin-inline-start: var(--b-3);   /* yandaki düğmenin isabet alanı metnin üstüne taşmasın */
+  min-height: var(--hedef-min);
+  box-sizing: border-box;
+  padding: var(--b-2) var(--b-3);
+  background: var(--bg);
+  border-radius: var(--r-1);
+  font-size: var(--yazi-11);
+  line-height: 16px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hud-metin:empty { background: transparent; }
+
+
+/* ── PENCERE DÜĞMELERİ (sağ üst) ─────────────────────────────────────────
+   Hover'a SAKLANMAZ: "Yalnız Mini HUD"da ana pencereye dönüş yolu budur;
+   görünmeyen dönüş yolu, olmayan dönüş yoludur. */
+.hud-kontrol {
+  position: absolute;
+  top: calc(var(--b-4) + var(--b-1));
+  right: var(--b-5);
+  display: flex;
+  gap: var(--b-4);
+  -webkit-app-region: no-drag;
+}
+/* `display:flex` [hidden]'ı ezer — köprü yokken düğmeler odak almasın. */
+.hud-kontrol[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hud, .hud-nokta, .hud-mic, .hud-dugme { transition: none; }
+  .hud-mic.kayitta { animation: none; }
+}

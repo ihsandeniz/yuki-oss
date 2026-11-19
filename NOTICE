@@ -1,0 +1,72 @@
+Yuki — NOTICE
+
+SOURCE CODE
+  Licensed under the MIT License (see LICENSE).
+
+  EXCEPTION — The MIT License (LICENSE) covers the source code only. It does NOT
+  cover the Yuki character, its name used as a character, or any artwork,
+  avatar, sprite, animation, 3D model, icon or logo. Those are listed below
+  and are Copyright (c) 2026 ihsandeniz, All Rights Reserved.
+
+YUKI CHARACTER AND ARTWORK — ALL RIGHTS RESERVED
+  Copyright (c) 2026 ihsandeniz. All Rights Reserved.
+  The Yuki character (design, appearance, persona) and every file below are
+  NOT covered by the MIT License. You may not copy, modify, redistribute or
+  use them in other projects, products or media without written permission.
+  Forks must replace them with their own artwork before redistribution.
+
+    frontend/assets/avatar/**
+    frontend/assets/characters/**
+    frontend/assets/icons/**
+    frontend/assets/yuki.ico
+
+  The 3D model (VRM) is NOT distributed in this repository. The earlier file
+  was derived from a third-party sample avatar whose license does not allow
+  redistribution, so it was removed. The 3D view stays off unless you place a
+  VRM you have the rights to at frontend/assets/characters/yuki3d.vrm.
+
+  Infringement: the owner will first send a notice asking for removal; if it
+  is not removed, a DMCA takedown request will be filed with GitHub.
+
+THIRD-PARTY COMPONENTS
+  Bundled third-party libraries keep their own licenses (see the headers in
+  frontend/vendor/** and the LICENSE files shipped with each package).
+
+  backend/app/services/security/threat_patterns.py adapts detection patterns
+  from Nous Research Hermes Agent (tools/threat_patterns.py), MIT License.
+  Source: https://github.com/NousResearch/hermes-agent (tools/threat_patterns.py).
+  Its copyright and permission notice, reproduced as the MIT License requires:
+
+    MIT License
+
+    Copyright (c) 2025 Nous Research
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+---
+
+Yuki karakteri ve görselleri — TÜM HAKLARI SAKLIDIR
+  Kod MIT lisanslıdır; Yuki karakteri ve yukarıda listelenen görsel/animasyon/
+  3B model/ikon dosyaları MIT kapsamında DEĞİLDİR ve yazılı izin olmadan
+  kopyalanamaz, değiştirilemez, başka projede kullanılamaz. İhlalde önce
+  kaldırma uyarısı gönderilir, kaldırılmazsa GitHub'a DMCA bildirimi yapılır.
+  3B model (VRM) bu depoda dağıtılmaz: önceki dosya yeniden dağıtıma izin
+  vermeyen bir örnek avatardan türetilmişti ve çıkarıldı. Hakkına sahip
+  olduğunuz bir VRM'i frontend/assets/characters/yuki3d.vrm yoluna koymazsanız
+  3B görünüm kapalı kalır.

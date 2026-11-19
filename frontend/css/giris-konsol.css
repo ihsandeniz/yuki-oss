@@ -1,0 +1,138 @@
+/* ════════════════════════════════════════════════════════════════════
+   giris-konsol.css — "Halka Konsolu" yazı çubuğu (2026-10-11)
+
+   Kişisel AliceAi 933779b'nin ürün çevirisi. Kişiselden DÜZEN alındı, renk ve
+   ölçü ürünün tokenları (mor palet, --hedef 44px):
+     [yuvarlak mikrofon] ( cam hap: yazı · ⋯ · dur · gönder )
+                         altında ince durum satırı: ◈ model · dil · küçült ⌄ (10-11 ;
+                         çipler ⋯ menüsüne taşındı — stil modes/sohbet-sahne.css)
+   küçült → #input-area.kucuk: mikrofon + YAZ kalır (js/giris-konsol.js)
+
+   🔑 DOM'a DOKUNULMADI. #input-container bir grid ve her öğenin yeri sohbet.css'te
+   açıkça yazılı (§ "sıralamaya güvenme, YERİ SÖYLE" — iki kez yaşanmış kayma).
+   Hap bu yüzden ayrı bir sarmalayıcı değil, grid'in 2..son sütununu kaplayan
+   `::before` katmanı: konuşurken açılan 5. sütunu (■ dur) da kendiliğinden kapsar.
+
+   Bilerek ALINMAYANLAR:
+     · Araç yayı (⋯ → ikon yayı): ürün 2026-08-03'te etiketsiz ikon kümesini
+       kaldırıp etiketli menüye geçti; yay o sınıfa döner. ⋯ menüsü aynen kalır.
+     · ~~Mikrofonun boştaki kesikli halkası~~ → 10-11 geliştirici kararıyla ALINDI:
+       sohbet.css § ② + PRODUCT.md İlke 1 istisnası. Kayıtta ses seviyesini çizer (aynen).
+     · Kişiselin altın vurguları: ürünün vurgusu mor.
+   Kapsam: SOHBET (body:not(.hud-ring-mode)). HALKA'nın çubuğu hud-ring.css'te
+   zaten çerçevesiz; orada yalnız küçültme geçerli.
+   ════════════════════════════════════════════════════════════════════ */
+
+body:not(.hud-ring-mode) #input-container {
+  /* Mikrofon ↔ hap arası (goz 10-12 #6): hap kabın --b-2 dışına taşar (margin), süs halkası
+     mikrofonun 6px dışında (sohbet.css § ②) → --b-4'te ikisi 0px değiyordu. 6px görünen ara kalsın.
+     #hizli-satir aynı değişkenle hapın altında ortalanır (sohbet-sahne.css). */
+  --giris-mik-ara: calc(var(--b-2) + 12px);
+  column-gap: var(--giris-mik-ara);
+  padding: var(--b-2) var(--b-2) var(--b-2) 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  isolation: isolate;          /* hap katmanı (z-index:-1) bu kabın İÇİNDE en altta kalsın */
+}
+
+/* ── Cam hap ── */
+body:not(.hud-ring-mode) #input-container::before {
+  content: '';
+  /* backdrop-filter kendi yığın bağlamını açar ve konumlanmamış kardeşlerin ÜSTÜNE
+     boyanır (ölçüldü: gönder ve ⋯ hapın altında kalıp soluk görünüyordu) → en alta. */
+  position: relative;
+  z-index: -1;
+  grid-column: 2 / -1;
+  grid-row: 1;
+  align-self: stretch;
+  margin: calc(-1 * var(--b-2));
+  border: 1px solid var(--kenar-guclu);
+  border-radius: calc(var(--hedef) / 2 + var(--b-2));
+  background: color-mix(in oklab, var(--yuzey-2) 78%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--golge-2);
+  pointer-events: none;
+  transition: border-color var(--sure-2) var(--egri), box-shadow var(--sure-2) var(--egri);
+}
+/* Odak hapın kendisinde: yazı alanının iç çizgisi yerine hap çerçevesi + hale.
+   Çerçeve --mor-ink (≥3:1 zeminde) → odak görünürlüğü korunur. */
+body:not(.hud-ring-mode) #input-container:focus-within::before {
+  border-color: var(--mor-ink);
+  box-shadow: var(--golge-2), 0 0 0 3px color-mix(in oklab, var(--mor-ink) 18%, transparent);
+}
+body:not(.hud-ring-mode) #msg-input {
+  padding-inline-start: var(--b-5);
+  /* Eski bir kuraldan gelen backdrop-filter:blur(8px) hapın camını İKİNCİ kez bulanıklaştırıp
+     koyu temada yazı alanını ayrı bir kutu gibi gösteriyordu (göz tur 3 A1: 32,30,37 ↔ 29,28,34). */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+body:not(.hud-ring-mode) #msg-input:focus-visible { outline: none; }
+
+/* Hap içindeki düğmeler yuvarlak */
+body:not(.hud-ring-mode) #send-btn,
+body:not(.hud-ring-mode) #input-more-btn,
+body:not(.hud-ring-mode) #stop-audio-btn { border-radius: var(--r-tam); }
+
+/* ── Yuvarlak mikrofon (hapın dışında) ── */
+body:not(.hud-ring-mode) #mic-btn {
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-tam);
+  background: var(--yuzey-2);
+  color: var(--mor-ink);
+}
+body:not(.hud-ring-mode) #mic-btn:hover { border-color: var(--mor-ink); background: var(--yuzey-3); }
+body:not(.hud-ring-mode) #mic-btn.recording {
+  border-color: var(--kirmizi-ink);
+  background: var(--kirmizi-zemin);
+  color: var(--kirmizi-ink);
+}
+
+/* ── Küçültülmüş hâl ── */
+#giris-ac { display: none; }
+#input-area.kucuk #input-container {
+  grid-template-columns: var(--hedef) auto auto;
+  justify-content: start;
+}
+/* !important: sohbet.css'in flex döneminden kalan `#input-more-btn { display:flex !important }`
+   (dar ekran) ⋯'yi küçük hâlde de gösteriyordu (ölçüldü 390). Özgüllük burada daha yüksek. */
+#input-area.kucuk #input-container::before,
+#input-area.kucuk #msg-input,
+#input-area.kucuk #input-more-btn,
+#input-area.kucuk #send-btn,
+#input-area.kucuk #cmd-palette,
+#input-area.kucuk #hizli-satir { display: none !important; }
+#input-area.kucuk #stop-audio-btn.gorunur { grid-column: 3; }
+#input-area.kucuk #giris-ac:not([hidden]) {
+  display: inline-flex;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  align-items: center;
+  gap: var(--b-3);
+  min-height: var(--hedef);
+  padding: 0 var(--b-6) 0 var(--b-5);
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-tam);
+  background: var(--yuzey-2);
+  color: var(--ink-2);
+  font: var(--ag-orta) var(--yazi-11) / 1 var(--font-mono);
+  letter-spacing: 0.14em;
+  cursor: pointer;
+}
+#input-area.kucuk #giris-ac:hover { color: var(--ink-1); border-color: var(--mor-ink); }
+#input-area.kucuk #giris-ac:focus-visible {
+  outline: var(--odak-kalinlik) solid var(--mor-ink);
+  outline-offset: var(--odak-offset);
+}
+#giris-ac svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--mor-ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

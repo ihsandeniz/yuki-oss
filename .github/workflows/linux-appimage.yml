@@ -1,0 +1,27 @@
+name: Linux AppImage derlemesi
+
+# Temiz klondan tek komut: bash scripts/linux-derle.sh
+# Yalnız elle tetiklenir (derleme ~500 MB, gizli depoda Actions dakikası harcar).
+# Yayın YOK — çıktı yalnız iş artifact'ı olarak kalır.
+on:
+  workflow_dispatch:
+
+jobs:
+  appimage:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Derle
+        run: bash scripts/linux-derle.sh
+      - name: Duman testi — kutu kendi Python'uyla motoru içe aktarabiliyor mu
+        run: |
+          cd backend
+          PYTHONNOUSERSITE=1 ./pybundle/bin/python3 -s -c "import app.main" || PYTHONNOUSERSITE=1 ./pybundle/bin/python3 -s -c "import fastapi, uvicorn"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yuki-oss-linux-appimage
+          path: electron/dist/*.AppImage
+          retention-days: 3

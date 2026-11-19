@@ -1,0 +1,190 @@
+/* ============================================================================
+   Yuki — ETKİLEŞİM DURUMLARI  (FAZ 7 · 2026-08-18)
+
+   ── NEDEN BU DOSYA VAR ───────────────────────────────────────────────────
+   Ölçüldü (08-18): kod tabanında **189 `:hover` kuralı** vardı ama yalnız
+   **6 `:focus-visible`** — %3. Yani arayüz fareye cevap veriyor, klavyeye
+   vermiyordu. Bu 189 kuralın her birine tek tek odak kuralı yazmak hem
+   dağınık hem eksik kalmaya mahkûmdu (bir sonraki bileşende yine unutulur).
+
+   Çözüm: TEMEL KATMAN. Odak, devre dışı ve yükleniyor durumları burada
+   BİR KEZ, tüm etkileşimli öğeler için tanımlanır.
+
+   ── ÖZGÜLLÜK SÖZLEŞMESİ ──────────────────────────────────────────────────
+   🔑 Her şey `:where()` içinde → özgüllük **0**. Yani bu dosya hiçbir
+      bileşen kuralını EZMEZ; bileşen kendi odak stilini yazarsa o kazanır.
+      Bu dosya yalnız BOŞLUĞU doldurur, kavga etmez.
+   ⚠️ Bu yüzden `!important` YOK ve olmamalı — `!important` yazarsan
+      sözleşme kırılır ve bileşenler kendi durumlarını tanımlayamaz.
+
+   ⚠️ Değiştirirsen index.html'deki states.css?v= anahtarını ARTIR.
+============================================================================ */
+
+/* ── ODAK ─────────────────────────────────────────────────────────────────
+   `:focus-visible` (`:focus` DEĞİL): fareyle tıklayınca halka çıkmaz,
+   klavyeyle gezerken çıkar. Renk altın çünkü odak tam olarak "kullanıcının
+   şu an dokunduğu şey"dir — token sözlüğünde altının tanımı budur.
+   outline (border değil): düzeni kaydırmaz, yer kaplamaz. */
+:where(
+  a[href],
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [role="button"],
+  [role="tab"],
+  [role="link"],
+  [role="menuitem"],
+  [role="switch"],
+  [role="checkbox"],
+  [contenteditable="true"],
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: 2px solid var(--c-gold);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* Koyu/parlak zemin farkı gözetmeksizin halka görünsün: altın zaten
+   yüksek kontrastlı ama tuval/harita üstünde kaybolmasın diye ince bir
+   dış gölge. Işıma DEĞİL — okunabilirlik payı. */
+:where(a[href], button, [role="button"], [role="tab"]):focus-visible {
+  box-shadow: 0 0 0 4px var(--scrim-2);
+}
+
+/* Fare kullanıcısına halka gösterme — ama `:focus`u tamamen bastırma,
+   çünkü `:focus-visible` desteklemeyen bir yüzey kalırsa erişilebilirlik
+   sessizce ölür. Yalnız outline'ı sıfırla, `:focus-visible` yukarıda
+   geri koyuyor. */
+:where(button, [role="button"]):focus:not(:focus-visible) {
+  outline: none;
+}
+
+
+/* ── DEVRE DIŞI ───────────────────────────────────────────────────────────
+   Tek sözleşme: soluk + imleç yok + olay yok. Eskiden her bileşen kendi
+   opacity'sini seçiyordu (0.3 · 0.4 · 0.5 · 0.6 hepsi vardı). */
+:where(
+  button, input, select, textarea, [role="button"], [role="tab"]
+):disabled,
+:where([aria-disabled="true"]) {
+  opacity: 0.42;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+
+/* ── YÜKLENİYOR ───────────────────────────────────────────────────────────
+   `aria-busy="true"` hem ekran okuyucuya hem göze aynı şeyi söyler.
+   İçerik yerinde kalır (iskelet/atlama yok), yalnız etkileşim durur. */
+:where([aria-busy="true"]) {
+  cursor: progress;
+  opacity: 0.7;
+}
+:where(button[aria-busy="true"], [role="button"][aria-busy="true"]) {
+  pointer-events: none;
+}
+
+
+/* ── HATA ─────────────────────────────────────────────────────────────────
+   Renk TEK BAŞINA hata bildirmez (renk körlüğü). `aria-invalid` hem
+   sınırı hem ekran okuyucuyu sürer; bileşen ayrıca metin göstermeli. */
+:where(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--c-err);
+}
+:where(input, select, textarea)[aria-invalid="true"]:focus-visible {
+  outline-color: var(--c-err);
+}
+
+
+/* ── SEÇİLİ ───────────────────────────────────────────────────────────────
+   `aria-selected` / `aria-current` görsel seçiliyle aynı anlama gelmeli;
+   ikisi ayrışırsa ekran okuyucu ile ekran farklı şey söyler. */
+:where([aria-selected="true"], [aria-current="page"], [aria-current="true"]) {
+  color: var(--c-gold);
+}
+
+
+/* ── HAREKET AZALTMA — GLOBAL KAPI ────────────────────────────────────────
+   tokens.css süreleri 1ms'e çekiyor; burada süre TANIMLAMAYAN, doğrudan
+   saniye yazan eski animasyonlar da kapatılıyor. Kaybolan tek şey
+   dekorasyon: durum değişimi anlık olur, bilgi kaybı yok.
+   🔴 `animation: none` yerine kısaltma: sonsuz döngüler (nabız, tarama,
+      dönen halka) durur ama bir kez çalışan giriş animasyonları
+      tamamlanmış sayılır — `both` fill-mode'lu kurallar son karede kalır. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* ── KLAVYEYLE ATLAMA ─────────────────────────────────────────────────────
+   Yalnız klavyeyle gezen kullanıcı için: sekme çubuğunu atlayıp doğrudan
+   sohbete gitmek. Görünmez durur, odaklanınca belirir. */
+.skip-link {
+  position: absolute;
+  top: var(--sp-2);
+  left: var(--sp-2);
+  z-index: var(--z-auth);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-active);
+  border-radius: var(--r-md);
+  color: var(--c-gold);
+  font-family: var(--font-hud);
+  font-size: var(--fs-md);
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform var(--dur-2) var(--ease);
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+
+/* ── EKRAN OKUYUCUYA ÖZEL ─────────────────────────────────────────────────
+   Gözle görünmez, ekran okuyucuya okunur. `display:none` OLMAZ — o
+   ekran okuyucudan da gizler. */
+.gorunmez-etiket {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+
+/* ── HEDEF ALANI — WCAG 2.2 · 2.5.8 (AA, 24×24) ───────────────────────────
+   2026-08-18 ölçümü: halka modunda 9,2×9,2 px'lik kart katlama okları ve
+   18×18 widget düğmeleri vardı. Görsel olarak küçük kalmaları TASARIM —
+   dokunulabilir alanın küçük kalması KUSUR. İkisi ayrı şeydir.
+
+   `.hedef-24` görünümü değiştirmeden hedefi büyütür: görünmez bir ::after
+   kutusu elemanın ortasına oturur.
+
+   🔴 YAN YANA DÜĞMEDE KULLANMA. İki düğme arasındaki boşluk 24 px'ten azsa
+   büyütülen hedefler ÇAKIŞIR ve üstteki (DOM'da sonraki) tıklamayı çalar —
+   "kapat" düğmesi komşusunun tıklamasını yutar. Orada kutuyu gerçekten
+   büyüt (`width/height: var(--hedef-min)`), hedefi hayalet olarak uzatma. */
+:where(.hedef-24) { position: relative; }
+:where(.hedef-24)::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, var(--hedef-min));
+  height: max(100%, var(--hedef-min));
+  transform: translate(-50%, -50%);
+  /* görünmez: yalnız isabet testi için var */
+}

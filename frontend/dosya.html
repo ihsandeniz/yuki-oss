@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark" data-tema="grimoire">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dosyalar · Yuki</title>
+<!-- Yerel yazı tipleri (vendor/fonts*.css) — CDN yok. -->
+<link rel="stylesheet" href="/ui/vendor/fonts.css?v=1">
+<link rel="stylesheet" href="/ui/vendor/fonts-mono.css?v=1">
+<link rel="stylesheet" href="/ui/css/tokens.css?v=7">
+<link rel="stylesheet" href="/ui/css/tema.css?v=1">
+<script>try{var _t=localStorage.getItem('yukiTema_v1');if(_t)document.documentElement.dataset.tema=_t;}catch(e){}</script>
+<link rel="stylesheet" href="/ui/css/dosya.css?v=23">  <!-- 11-14: başlık kişisel Yuki gibi (altın DOSYALAR + mühür solda); 11-13 ortak sekme başlığı bu sekmede geri alındı -->
+<link rel="stylesheet" href="/ui/css/dosya-guvenli.css?v=1">
+<link rel="stylesheet" href="/ui/css/guvenli-onay.css?v=1">
+<!-- Token URL'den gelirse sessionStorage'a alınır ve ADRESTEN SİLİNİR (galeri.html deseni). -->
+<script>(function(){try{var u=new URL(location.href);var t=u.searchParams.get('token');if(!t)return;try{sessionStorage.setItem('aliceToken',t);}catch(e){}u.searchParams.delete('token');history.replaceState(null,'',u.pathname+u.search+u.hash);}catch(e){}})();</script>
+</head>
+<body class="dy">
+
+<svg class="dy-sprite" width="0" height="0" aria-hidden="true" focusable="false">
+  <symbol id="i-sol" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+  <symbol id="i-sag" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-yukari" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-liste" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-izgara" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-goz" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-klasor" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-dosya" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></symbol>
+  <symbol id="i-resim" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></symbol>
+  <symbol id="i-metin" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M9 12h6M9 16h6"/></symbol>
+  <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M9 15h1.5a1.5 1.5 0 0 0 0-3H9v5"/></symbol>
+  <symbol id="i-ses" viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="16" r="2"/></symbol>
+  <symbol id="i-arsiv" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 4v8M10 6h2M12 8h2M10 10h2"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="i-gonder" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2.5-6.5z"/><path d="M11.5 13.5L20 4"/></symbol>
+  <symbol id="i-indir" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-sigil" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44"/><circle cx="50" cy="50" r="34" stroke-dasharray="3 5"/><path d="M50 14 L71 79 L16 39 L84 39 L29 79 Z"/><circle cx="50" cy="50" r="6"/></symbol>
+  <symbol id="i-tema" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></symbol>
+  <symbol id="i-kapat" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-kilit" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-ara" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></symbol>
+  <symbol id="i-sira" viewBox="0 0 24 24"><path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4"/></symbol>
+  <symbol id="i-yildiz" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></symbol>
+</svg>
+
+<div class="dy-gok" aria-hidden="true"></div>
+<header class="dy-ust">
+  <div class="dy-marka"><svg class="dy-sigil" aria-hidden="true"><use href="#i-sigil"/></svg><h1>DOSYALAR</h1></div>
+  <div class="dy-kokler" id="dy-kokler" role="tablist" aria-label="Kökler"></div>
+  <!-- F5: bu klasörde süz (yüklü satırlar, istemcide; "/" odaklar, Esc temizler) -->
+  <label class="dy-suz"><svg aria-hidden="true"><use href="#i-ara"/></svg><input id="dy-suz" type="search" placeholder="Süz · Enter: alt klasörlerde ara" aria-label="Bu klasörde süz, Enter ile alt klasörlerde ara" title="Yazdıkça bu klasörü süzer · Enter alt klasörlerde arar · Esc temizler" autocomplete="off" spellcheck="false"><kbd>/</kbd></label>
+  <div class="dy-araclar">
+    <select id="dy-sira" class="dy-secim" aria-label="Sırala">
+      <option value="ad">Ad</option><option value="tarih">Tarih</option>
+      <option value="boyut">Boyut</option><option value="tur">Tür</option>
+    </select>
+    <button id="dy-yon" class="dy-dugme dy-yon" title="Sıralama yönü" aria-label="Sıralama yönü">↑</button>
+    <button id="dy-ara-ac" class="dy-dugme dy-tel-yalniz" type="button" title="Bu klasörde süz" aria-label="Süz" aria-expanded="false" aria-controls="dy-suz"><svg><use href="#i-ara"/></svg></button>
+    <button id="dy-gizli" class="dy-dugme" title="Gizli dosyaları göster" aria-pressed="false" aria-label="Gizli dosyalar"><svg><use href="#i-goz"/></svg></button>
+    <button id="dy-tema" class="dy-dugme" title="Tema: Grimoire / Gözlemevi / Klasik" aria-label="Tema değiştir"><svg><use href="#i-tema"/></svg></button>
+    <button id="dy-gorunum" class="dy-dugme" title="Liste / ızgara" aria-label="Görünüm"><svg><use href="#i-izgara"/></svg></button>
+  </div>
+</header>
+
+
+<!-- Kip + konum şeridi: salt okunur kilit rozeti + gezinti/kırıntı. Yazma ucu yok (bu sürüm yalnız gezer). -->
+<div class="dy-kip-serit" id="dy-kip-serit" role="toolbar" aria-label="Kip ve konum">
+  <span class="dy-kip-rozet" id="dy-kip-rozet"><svg><use href="#i-kilit"/></svg><span id="dy-kip">Salt okunur</span></span>
+  <div class="dy-gezinti" role="group" aria-label="Gezinti">
+    <button id="dy-geri" class="dy-dugme" title="Geri (Alt+←)" aria-label="Geri"><svg><use href="#i-sol"/></svg></button>
+    <button id="dy-ileri" class="dy-dugme" title="İleri (Alt+→)" aria-label="İleri"><svg><use href="#i-sag"/></svg></button>
+    <button id="dy-yukari" class="dy-dugme" title="Üst klasör (Alt+↑ · Backspace)" aria-label="Üst klasör"><svg><use href="#i-yukari"/></svg></button>
+  </div>
+  <button id="dy-yerimi" class="dy-dugme dy-yerimi-dug" type="button" title="Bu klasörü yer imlerine ekle (Ctrl+D)" aria-label="Yer imi" aria-pressed="false"><svg><use href="#i-yildiz"/></svg></button>
+  <nav id="dy-kirinti" class="dy-kirinti" aria-label="Konum" title="Yol yazmak için boş yere tıkla ya da Ctrl+L"></nav>
+  <form id="dy-yol-form" class="dy-yol-form" hidden>
+    <input id="dy-yol" class="dy-yol" type="text" spellcheck="false" autocomplete="off" aria-label="Yol yaz">
+  </form>
+  <!-- Kip notu: bu sürüm salt okunur gezer; güvenli dosya eki (dosya-guvenli.js) varsa metni o günceller. -->
+  <span class="dy-kapi-not" id="dy-kapi-not" role="note">Salt okunur — bu kurulumda dosyalar yalnız gezilir</span>
+  <!-- Gönder: seçili dosya(lar) → Yuki'ye gönder (sohbet eki, kabuk alır) · İndir. Salt okunurda da açık. -->
+  <button id="dy-gonder" class="dy-dugme dy-gonder-dug" type="button" title="Gönder — önce dosya seç" aria-label="Gönder"
+          aria-haspopup="menu" aria-expanded="false" disabled><svg><use href="#i-gonder"/></svg><span>Gönder</span></button>
+</div>
+
+<main class="dy-govde">
+  <!-- F5 · Sütun gezgini (Taslak B): açık klasörün üst klasörleri solda, salt okunur sütunlar (tek liste GET'i/sütun) -->
+  <div class="dy-atalar" id="dy-atalar" aria-label="Üst klasörler"></div>
+  <section class="dy-alan" id="dy-alan" aria-label="Klasör içeriği">
+    <div class="dy-panel-bas"><svg aria-hidden="true"><use href="#i-klasor"/></svg><h2 id="dy-panel-ad"></h2><em id="dy-panel-alt"></em><span class="dy-sayi" id="dy-panel-sayi"></span><button id="dy-arama-kapat" class="dy-dugme dy-arama-kapat" type="button" title="Aramayı kapat (Esc)" hidden><svg><use href="#i-kapat"/></svg><span>Aramayı kapat</span></button></div>
+    <div class="dy-baslik-satir" id="dy-baslik-satir">
+      <span>Ad</span><span>Boyut</span><span>Değiştirilme</span>
+    </div>
+    <ul id="dy-liste" class="dy-liste" role="listbox" tabindex="0" aria-label="Dosyalar"></ul>
+    <div id="dy-durum" class="dy-durum" role="status"></div>
+    <div id="dy-sentinel" class="dy-sentinel"></div>
+  </section>
+  <aside class="dy-onizleme" id="dy-onizleme" hidden aria-label="Önizleme">
+    <span class="dy-kurdele" aria-hidden="true"></span>
+    <div class="dy-folyo">ÖNİZLEME</div>
+    <div class="dy-on-ust">
+      <strong id="dy-on-ad" class="dy-on-ad"></strong>
+      <button id="dy-on-kapat" class="dy-dugme" aria-label="Önizlemeyi kapat (Esc)"><svg><use href="#i-kapat"/></svg></button>
+    </div>
+    <dl id="dy-on-bilgi" class="dy-on-bilgi"></dl>
+    <div id="dy-on-icerik" class="dy-on-icerik"></div>
+    <div class="dy-on-eylem">
+      <button id="dy-on-gonder" class="dy-dugme dy-indir" hidden title="Bu dosyayı sohbette Yuki'ye ilet"><svg><use href="#i-gonder"/></svg><span>Yuki'ye gönder</span></button>
+      <button id="dy-on-indir" class="dy-dugme dy-indir"><svg><use href="#i-indir"/></svg><span>İndir</span></button>
+    </div>
+  </aside>
+</main>
+
+<footer class="dy-alt" id="dy-alt"></footer>
+<!-- F4 · Telefon alt gezinti (Taslak B): Geri · Üst · Kökler · Sırala — ≤768 px'te görünür; masaüstünde gizli.
+     Kökler/Sırala paneli var olan #dy-kokler ve #dy-sira/#dy-yon denetimlerine vekâlet eder (ikinci mantık yok). -->
+<div class="dy-tel-panel" id="dy-tel-panel" role="dialog" aria-modal="false" hidden></div>
+<nav class="dy-tel-alt" id="dy-tel-alt" aria-label="Gezinti (telefon)">
+  <button type="button" id="dy-t-geri"><svg><use href="#i-sol"/></svg><span>Geri</span></button>
+  <button type="button" id="dy-t-ust"><svg><use href="#i-yukari"/></svg><span>Üst</span></button>
+  <button type="button" id="dy-t-kokler" aria-expanded="false" aria-controls="dy-tel-panel"><svg><use href="#i-klasor"/></svg><span>Kökler</span></button>
+  <button type="button" id="dy-t-sira" aria-expanded="false" aria-controls="dy-tel-panel"><svg><use href="#i-sira"/></svg><span>Sırala</span></button>
+</nav>
+<div id="dy-duyuru" class="dy-duyuru" role="alert" hidden><span id="dy-duyuru-metin"></span><button id="dy-duyuru-eylem" class="dy-dugme" type="button" hidden></button></div>
+
+<script src="/ui/js/dosya.js?v=18"></script>
+<script src="/ui/js/guvenli-onay.js?v=1"></script>
+<script src="/ui/js/dosya-guvenli.js?v=2"></script>
+</body>
+</html>

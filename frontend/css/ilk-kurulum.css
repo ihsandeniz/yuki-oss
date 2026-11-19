@@ -1,0 +1,47 @@
+/* İlk açılış sihirbazı — frontend/js/ilk-kurulum.js */
+.ilk-kurulum{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;
+  background:rgba(8,6,14,.78);backdrop-filter:blur(6px);padding:16px}
+.ik-kutu{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;background:#17141f;color:#ece8f5;
+  border:1px solid rgba(167,139,250,.35);border-radius:16px;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.5);
+  font:14px/1.5 Inter,system-ui,sans-serif}
+.ik-ust{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.ik-etiket{font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:#a78bfa;text-transform:uppercase}
+.ik-atla{background:none;border:0;color:#9b94ad;cursor:pointer;font-size:13px;text-decoration:underline}
+.ik-adimlar{display:flex;gap:6px;list-style:none;margin:0 0 16px;padding:0}
+.ik-adimlar li{flex:1;font-size:11px;color:#7d7690;border-top:3px solid #2e2a3a;padding-top:6px}
+.ik-adimlar li.bitti{color:#b9b2c9;border-color:#6d5bd0}
+.ik-adimlar li.simdi{color:#fff;border-color:#a78bfa;font-weight:600}
+.ik-kutu h2{font-size:20px;margin:0 0 8px;color:#fff;font-weight:650}
+.ik-aciklama{color:#b9b2c9;margin:0 0 12px}
+.ik-kutu a{color:#c4b5fd}
+.ik-secenekler{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:14px}
+.ik-liste{grid-template-columns:1fr;max-height:300px;overflow:auto}
+.ik-kart{display:flex;flex-wrap:wrap;align-items:center;gap:6px;text-align:left;background:#211d2c;color:#ece8f5;
+  border:1px solid #332e42;border-radius:10px;padding:10px 12px;cursor:pointer;font:inherit}
+.ik-kart small{flex-basis:100%;color:#9b94ad;font-size:12px}
+.ik-kart:hover{border-color:#6d5bd0}
+.ik-kart.secili{border-color:#a78bfa;background:#2a2340;box-shadow:0 0 0 1px #a78bfa inset}
+.ik-rozet{font-size:10px;padding:2px 6px;border-radius:99px;background:#3b2f6b;color:#d8ccff}
+.ik-girdi{width:100%;box-sizing:border-box;background:#0f0d15;color:#fff;border:1px solid #3a3450;border-radius:10px;
+  padding:10px 12px;font:13px 'JetBrains Mono',monospace;margin-bottom:10px}
+.ik-girdi:focus{outline:2px solid #a78bfa;outline-offset:1px}
+.ik-mesaj{font-size:13px;margin:0 0 10px}
+.ik-mesaj.hata{color:#fda4af}
+.ik-alt{display:flex;justify-content:flex-end;gap:8px}
+.ik-ileri,.ik-geri{border-radius:10px;padding:9px 16px;font:600 13px Inter,system-ui,sans-serif;cursor:pointer;border:1px solid transparent}
+.ik-ileri{background:#7c5cff;color:#fff}
+.ik-ileri:disabled{opacity:.5;cursor:default}
+.ik-geri{background:transparent;color:#c9c2d9;border-color:#3a3450}
+@media (prefers-reduced-motion:no-preference){.ik-kutu{animation:ik-gel .18s ease-out}}
+@keyframes ik-gel{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* B3 (11-14, temiz kurulum denetimi): ilk açılışta tanıtım animasyonu (#yuki-opening) sihirbazın
+   ÜSTÜNDE oynuyordu; sihirbaz 0,5 sn'de eklenip animasyonun altında kalıyordu. Animasyon oynarken
+   sihirbaz görünmez ve tıklanmaz; kabuk kalkınca (baglanti.js kabukKaldir) kendiliğinden belirir.
+   Sıra bağımsız: sihirbaz önce ya da sonra eklense de kural aynı. */
+html:has(#yuki-opening:not(:empty)) .ilk-kurulum { visibility: hidden; pointer-events: none; }
+/* B13 (11-14, goz): sağlayıcı listesinin son kartı kutunun altında kesiliyordu ve kaydırılabildiği
+   anlaşılmıyordu. Alt kenar yumuşak solar + kaydırma çubuğu her zaman yer tutar. */
+.ik-liste { scrollbar-gutter: stable; padding-bottom: 18px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }

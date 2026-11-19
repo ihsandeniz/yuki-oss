@@ -1,0 +1,58 @@
+/* ════════════════════════════════════════════════════════════════════
+   characters.css — Karakter Tema Varyasyonları (Faz 3)
+
+   <html data-character="..."> attribute'una göre hud-ring ve game-mode
+   renk paletini + UI imzasını değiştirir. Her karakter birbirine benzemez.
+   Yalnızca yeni modlar (hud-ring / game) etkilenir; klasik sohbet teması
+   (--accent vb. ana değişkenler) DOKUNULMAZ.
+
+   2026-11-14 (ürün kararı): açık kaynak sürümde tek karakter Yuki — öbür dört karakterin
+   paletleri ve OYUN sahneleri kaldırıldı. Yapı korunur: yeni karakter = bir
+   `:root[data-character="<ad>"]` palet bloğu + (isterse) bir `#gm-root` sahnesi.
+     YUKI  saf minimalizm  · beyaz / buz mavisi
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Ortak: yeni-mod değişkenleri karaktere göre türetilir.
+   --gm-accent  → vurgular  ·  --gm-accent-soft → glow/dolgu
+   --gm-bg-deep → derin arka ·  --gm-line → çizgi/çerçeve
+   --hr-* (halka) game değişkenlerinden beslenir. */
+
+/* ── YUKI — Saf Minimalizm ───────────────────────────────── */
+:root[data-character="yuki"] {
+  --gm-accent: #a0d8ff;
+  --gm-accent-soft: rgba(160, 216, 255, 0.14);
+  --gm-bg-deep: #07101a;
+  --gm-line: rgba(232, 244, 250, 0.30);
+}
+:root[data-character="yuki"] .gm-box,
+:root[data-character="yuki"] .gm-char-btn { border-width: 1px; }
+:root[data-character="yuki"] #gm-char-title b { letter-spacing: 12px; font-weight: 300; }
+
+/* ════════════════════════════════════════════════════════════════════
+   KARAKTER SAHNELERİ — OYUN modu arka plan "odaları" (saf CSS, z-index:0)
+   Her karakter kişiliğine uygun atmosfer. Katmanlar:
+     #gm-root background = sahne tabanı · ::before = doku · ::after = animasyonlu motif
+   Yalnız #gm-root'u hedefler → SADECE OYUN modunu etkiler (HALKA #hr-* kullanır).
+   Animasyonlar transform/opacity (GPU-dostu). Ref: cyberpunk-hud-ui-design-patterns.md
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── YUKI · Dijital buz ufku (sakin, soğuk, temiz) ── */
+:root[data-character="yuki"] #gm-root {
+  background:
+    radial-gradient(ellipse 95% 55% at 50% 0%, rgba(160, 216, 255, 0.16), transparent 60%),
+    radial-gradient(ellipse 70% 45% at 50% 100%, rgba(120, 180, 255, 0.12), transparent 65%),
+    linear-gradient(180deg, #081623 0%, #07101a 55%, #060d15 100%);
+}
+:root[data-character="yuki"] #gm-root::after {
+  background: radial-gradient(ellipse 64% 20% at 50% 32%, rgba(176, 224, 255, 0.12), transparent 70%);
+  animation: yuki-aurora 16s ease-in-out infinite;
+}
+@keyframes yuki-aurora {
+  0%, 100% { transform: translateY(0)    scaleX(1);    opacity: 0.5; }
+  50%      { transform: translateY(16px) scaleX(1.18); opacity: 0.85; }
+}
+
+/* Erişilebilirlik: hareketi azalt → sahne animasyonlarını durdur (statik gradyan kalır) */
+@media (prefers-reduced-motion: reduce) {
+  #gm-root::after { animation: none !important; }
+}

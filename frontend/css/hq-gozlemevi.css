@@ -1,0 +1,166 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   HQ › GÖZLEMEVİ DİLİ — kişisel Yuki'deki HQ görünümünün ürün karşılığı
+   (2026-11-13 — geliştirici seçimi "HQ kişiseldeki gibi")
+   ───────────────────────────────────────────────────────────────────────────
+   NE: HQ'nun ayar ve panel yüzeyleri Gözlemevi diliyle giyinir — serif başlık
+   (Fraunces), gövde Figtree, canlı sayı Martian Mono, KART YERİNE KIL ÇİZGİ,
+   mor = seçili, mavi = canlı veri, soluk altın = yalnız ince ayraç.
+
+   KAPSAM — yalnız KOYU tema: tüm kurallar `:root:not([data-tema]) #tab-hq`
+   altında. `tema.js` koyu temada `data-tema`yı SİLER; orta/açık temada
+   öznitelik durur → bu dosyanın hiçbir kuralı eşleşmez, tokens.css'in
+   açık/orta paleti aynen kalır (Gözlemevi gece paletidir, açık temada
+   okunmaz). Geri alma: index.html'deki <link>'i kaldırmak.
+
+   Yazı tipleri: ad kişiseldeki gibi ilk sırada, yoksa sistemdeki yedeğe düşer
+   (Fraunces → Georgia · Figtree → Inter · Martian Mono → JetBrains Mono).
+   Font dosyaları + @font-face ORTAK şeridin işi (şef 11-13 kararı).
+
+   Kişisel kaynak: AliceAi `css/hq-gozlemevi.css` + `css/kimlik.css`
+   token değerleri. Kod kopyalanmadı: ürünün sınıf adlarına (mon-*, oda-*,
+   hq-subnav) yeniden yazıldı.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root:not([data-tema]) #tab-hq {
+  /* ── Gözlemevi token'ları (kişisel kimlik.css değerleri; yalnız bu sekmede) ── */
+  --k-zemin:       #05060c;
+  --k-zemin-2:     #090b16;
+  --k-yuzey:       #0d1020;
+  --k-yuzey-3:     #1a1f3c;
+  --k-gok:         radial-gradient(70vmax 50vmax at 50% 36%, rgba(214, 217, 227, .065), transparent 60%),
+                   radial-gradient(46vmax 34vmax at 84% 4%, rgba(118, 92, 230, .11), transparent 70%),
+                   radial-gradient(40vmax 30vmax at 6% 100%, rgba(80, 110, 220, .06), transparent 70%),
+                   #05060c;
+  --k-metin:       #f4f5fa;
+  --k-metin-2:     #c3c7d4;
+  --k-metin-3:     #8e94a8;
+  --k-gumus:       #d6d9e3;
+  --k-cizgi:       rgba(214, 217, 227, .10);
+  --k-cizgi-2:     rgba(214, 217, 227, .20);
+  --k-cizgi-3:     rgba(214, 217, 227, .40);
+  --k-mor:         #a993ff;
+  --k-mor-zemin:   rgba(169, 147, 255, .13);
+  --k-mor-hat:     rgba(169, 147, 255, .50);
+  --k-mor-isik:    0 0 14px rgba(169, 147, 255, .75);
+  --k-mavi:        #8fb8ff;
+  --k-mavi-zemin:  rgba(143, 184, 255, .12);
+  --k-mavi-hat:    rgba(143, 184, 255, .45);
+  --k-altin-iz:    rgba(205, 176, 113, .20);
+  --k-altin-hat:   #cdb071;
+  --k-hata:        #e8808c;
+  --k-font-serif:  "Fraunces", Georgia, serif;
+  --k-font-canli:  "Martian Mono", "JetBrains Mono", ui-monospace, monospace;
+  --k-font-govde:  "Figtree", "Inter", system-ui, sans-serif;
+  --k-etiket-ara:  .16em;
+  --k-fs-mikro:    12px;
+  --k-r-hap:       999px;
+
+  /* ── Ürün token'ları → Gözlemevi rolleri (yalnız bu sekmenin içinde) ── */
+  --ink-1:         var(--k-metin);       --ink-2: var(--k-metin-2);   --ink-3: var(--k-metin-3);
+  --text:          var(--k-metin-2);     --text-bright: var(--k-metin); --muted: var(--k-metin-3);
+  --kenar:         var(--k-cizgi);       --kenar-guclu: var(--k-cizgi-3);
+  --yuzey-1:       var(--k-zemin-2);     --yuzey-2: var(--k-yuzey);    --yuzey-3: var(--k-yuzey-3);
+  --mor-ink:       var(--k-mor);         --mor-zemin: var(--k-mor-zemin);
+  --accent:        var(--k-mor);
+  --mon-veri:      var(--k-mavi);        --mon-veri-soluk: var(--k-mavi-zemin);
+  --mon-seri-1:    var(--k-mavi);        --mon-seri-2: var(--k-mor);
+  --font-ui:       var(--k-font-govde);  --font-hud: var(--k-font-govde);
+  --font-disp:     var(--k-font-serif);
+  font-family: var(--k-font-govde);
+  background: var(--k-gok);
+}
+
+/* ── Sol menü: zemin gece, seçili = mor ince kenar, etiketler versal-seyrek ── */
+:root:not([data-tema]) #tab-hq #hq-subnav { background: var(--k-zemin-2); border-color: var(--k-cizgi); }
+:root:not([data-tema]) #tab-hq #hq-subnav :is(.hq-nav-grup, .hq-nav-baslik, h3, h4) {
+  font-family: var(--k-font-govde); letter-spacing: var(--k-etiket-ara); color: var(--k-metin-3);
+}
+
+/* ── Oda başlığı: büyük serif italik ekran başlığı + sessiz amaç cümlesi ── */
+:root:not([data-tema]) #tab-hq .oda-bas { border-bottom: .75px solid var(--k-altin-iz); }
+:root:not([data-tema]) #tab-hq .oda-baslik {
+  font: italic 400 clamp(26px, 3.4vw, 40px)/1.15 var(--k-font-serif);
+  letter-spacing: .01em; color: var(--k-metin); text-transform: none;
+}
+:root:not([data-tema]) #tab-hq .oda-amac { color: var(--k-metin-2); }
+
+/* ── Düğmeler: hap, kıl hat ── */
+:root:not([data-tema]) #tab-hq .oda-eylem .dg,
+:root:not([data-tema]) #tab-hq #mon-doctor-btn {
+  border-radius: var(--k-r-hap); border-color: var(--k-cizgi-2); color: var(--k-metin-2); background: transparent;
+}
+:root:not([data-tema]) #tab-hq :is(.oda-eylem .dg, #mon-doctor-btn):hover { border-color: var(--k-gumus); color: var(--k-metin); }
+
+/* ═══ BİLGİSAYARIM (sistem) — kart → kıl çizgi ═══ */
+:root:not([data-tema]) #tab-hq .mon-kart {
+  background: none; border: 0; border-radius: 0; padding: 14px 0 0;
+  border-top: .75px solid var(--k-altin-iz);
+}
+:root:not([data-tema]) #tab-hq .mon-makine { gap: 12px 32px; }
+:root:not([data-tema]) #tab-hq .mon-kart-bas,
+:root:not([data-tema]) #tab-hq .mon-bolum-bas {
+  font: 500 13px var(--k-font-govde); letter-spacing: var(--k-etiket-ara); color: var(--k-metin-2);
+}
+:root:not([data-tema]) #tab-hq .mon-kart-sag { font-family: var(--k-font-canli); color: var(--k-metin-3); }
+
+/* "Ne yiyor?" / "Gün özeti" kişiseldeki gibi serif bölüm başlığı. Metin sözlükte versal
+   ("NE YİYOR?") → küçük harfe çevrilip ilk harf büyütülür (html lang'ı İ/ı'yı doğru çevirir).
+   Yalnız başlık metni serif: "Gün özeti"nin yanındaki tarih ve gezinme düğmeleri gövde yazısında kalır. */
+:root:not([data-tema]) #tab-hq .mon-alt-ikili .mon-bolum-bas { padding-top: 14px; border-top: .75px solid var(--k-altin-iz); }
+:root:not([data-tema]) #tab-hq :is(#mon-h-yiyen, #mon-h-bugun > [data-i18n="mon.gun-ozeti"]) {
+  display: inline-block; font: 400 26px/1.15 var(--k-font-serif); letter-spacing: .01em; color: var(--k-metin);
+  text-transform: lowercase;
+}
+:root:not([data-tema]) #tab-hq :is(#mon-h-yiyen, #mon-h-bugun > [data-i18n="mon.gun-ozeti"])::first-letter { text-transform: uppercase; }
+:root:not([data-tema]) #tab-hq #mon-h-yiyen { display: flex; width: 100%; align-self: stretch; }   /* kıl çizgi bölüm boyu */
+
+/* Canlı veri rengi: üründe --cyan = mor; Gözlemevi'nde akan veri MAVİ, mor yalnız seçili */
+:root:not([data-tema]) #tab-hq #hq-panel-sistem {
+  --mon-veri: var(--k-mavi); --mon-veri-soluk: var(--k-mavi-zemin);
+  --mon-seri-1: var(--k-mavi); --mon-seri-2: var(--k-gumus); --mon-seri-3: var(--k-metin-2);   /* mor yalnız seçili (goz t1 #2) */
+}
+
+/* Canlı SAYILAR: Martian Mono, kalın, mavi */
+:root:not([data-tema]) #tab-hq .mon-buyuk b {
+  font: 650 34px/1 var(--k-font-canli); color: var(--k-mavi);
+  font-variant-numeric: tabular-nums lining-nums; letter-spacing: -.01em;
+}
+:root:not([data-tema]) #tab-hq :is(.mon-kimlik, .mon-meta, .mon-ag-satir, .mon-yiyen-ust, .mon-lejant,
+  .mon-kart-alt, .mon-buyuk, .mon-cekirdek b, .mon-cekirdek i, .mon-rep-h, .mon-proc td.num) {
+  font-family: var(--k-font-canli); font-variant-numeric: tabular-nums;
+}
+/* Makine adı: kişiselde küçük versal etiket */
+:root:not([data-tema]) #tab-hq .mon-kimlik {
+  font: 500 13px var(--k-font-govde); letter-spacing: var(--k-etiket-ara); color: var(--k-metin-2);
+}
+
+/* Çekirdek / hücre kareleri: köşe az, kenar kıl */
+:root:not([data-tema]) #tab-hq .mon-cekirdek { border-radius: 2px; }
+:root:not([data-tema]) #tab-hq .mon-cekirdek i { color: var(--k-metin-2); }   /* Ç1…Ç12 mavi zeminde okunsun (goz t1 #11) */
+:root:not([data-tema]) #tab-hq .mon-hucreler i { border-radius: 2px; }
+
+/* Sağlık mührü + uyarı hapları: kıl hat, zemin yok */
+:root:not([data-tema]) #tab-hq .mon-muhur { background: transparent; border-color: var(--k-cizgi-2); min-height: 44px; }
+:root:not([data-tema]) #tab-hq .mon-muhur-metin { font-family: var(--k-font-govde); letter-spacing: var(--k-etiket-ara); }
+
+/* Okuma tabanı: veri metinleri ≥12px (ürün 10-11px sabit yazıyordu) */
+:root:not([data-tema]) #tab-hq :is(.mon-kart-alt, .mon-lejant, .mon-meta, .mon-ag-satir, .mon-cekirdek b,
+  .mon-cekirdek i, .mon-rep-h, .mon-leg, .mon-alert, .mon-rbtn, .mon-rep-navbtn) {
+  font-size: var(--k-fs-mikro);
+}
+
+/* Aralık düğmeleri: hap; seçili = mor dolu */
+:root:not([data-tema]) #tab-hq :is(.mon-rbtn, .mon-rep-navbtn) {
+  border-color: var(--k-cizgi-2); border-radius: var(--k-r-hap); color: var(--k-metin-2); background: transparent;
+}
+:root:not([data-tema]) #tab-hq .mon-rbtn.active { background: var(--k-mor); color: var(--k-zemin); border-color: var(--k-mor); }
+
+/* Katlı bölümler (TÜM PROGRAMLAR · GEÇMİŞ): kıl ayraç */
+:root:not([data-tema]) #tab-hq .mon-katli { border: 0; border-top: .75px solid var(--k-cizgi); border-radius: 0; background: none; }
+
+/* ── Telefon: dokunma hedefleri ≥44px ── */
+@media (max-width: 600px) {
+  :root:not([data-tema]) #tab-hq :is(.mon-rbtn, .mon-rep-navbtn) { min-height: 44px; min-width: 44px; }
+  :root:not([data-tema]) #tab-hq .mon-buyuk b { font-size: 28px; }
+  :root:not([data-tema]) #tab-hq .mon-alt-ikili .mon-bolum-bas { font-size: 22px; }
+}

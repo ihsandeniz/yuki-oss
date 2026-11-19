@@ -1,0 +1,1032 @@
+/* ============================================================================
+   YUKI · HQ + AYARLAR  (FAZ 4)
+   Kaynak: docs/tasarim-2026-08-20/05-FAZLAR.md § FAZ 4
+
+   🔴 NEDEN AYRI DOSYA: HQ'nun tamamı hâlâ eski `style.css`'te yaşıyor —
+   FAZ 1-3 ona hiç dokunmadı (ölçüldü 2026-08-23: css/*.css içinde tek bir
+   `hq-` kuralı yok). FAZ 4'te eklenen her şeyi style.css'e yazmak, arşive
+   alınacak dosyaya yeni borç yazmak olurdu. Yeni HQ kuralları buraya birikir;
+   style.css arşive alındığında (FAZ 6) taşınacak kural kalmaz.
+
+   Buradaki her değer tokens.css'ten gelir. Yeni token icat edilmez.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------------------
+   Hafıza Yöneticisi — FAZ 4'te Alt+H overlay'i buraya katlandı.
+   Kaldırılan overlay'in iki şeyi vardı ve ikisi de taşındı: dışa aktarma
+   düğmesi + gizlilik metni.
+   ------------------------------------------------------------------------ */
+
+#memmgr-export-btn {
+  flex: 0 0 auto;
+  min-height: var(--hedef-min);
+  padding: var(--b-3) var(--b-5);
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-1);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--yazi-11);
+  font-weight: var(--ag-orta);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--sure-2) var(--egri),
+              color      var(--sure-2) var(--egri);
+}
+
+#memmgr-export-btn:hover {
+  background: var(--mor-zemin);
+  color: var(--mor-ink);
+}
+
+/* ---------------------------------------------------------------------------
+   DAR EKRANDA TAŞMA — FAZ 4 kapısı: "8 panel her genişlikte çalışıyor"
+
+   40 tur ölçüldü (8 panel × 320/480/768/1024/1440, canlı Chromium 2026-08-23).
+   1024 ve üstü temizdi; kusurların tamamı dar bantta ve hepsi aynı sınıftan:
+   **flex araç çubukları sarmalamıyor**, içerik kapsayıcıyı aşıyor.
+
+   ⚠️ Bunlar YENİ kusur değil — `git stash` ile ölçüldü, HEAD'de de aynı taşma
+   var (memmgr 768px'te 1 öğe). FAZ 4'ün DIŞA AKTAR düğmesi sayıyı artırmadı,
+   ama kapı "her genişlikte çalışıyor" dediği için burada kapatılıyor.
+   ------------------------------------------------------------------------ */
+
+/* TEMİZLE düğmesi 768/480/320'de ekranın dışında kalıyordu (sağ kenar 815px /
+   768px). Arama alanı esneyip düğmeyi dışarı itiyor; sarmalama serbest. */
+#memmgr-toolbar,
+
+/* 320px'te açılır listeler kapsayıcıyı aşıyordu: güncelleme kanalı 368px,
+   geçmiş kategori süzgeci 324px. Esneme payı olmayan `select` doğal
+   genişliğinde diretiyor. */
+#hq-upd-channel,
+
+/* Etiket + select ikilisi 320'de tek satıra sığmıyor → alt alta insin.
+   (Satır içi `style` ile flex kuruluyor; burada yalnız sarmalama ekleniyor.) */
+#hq-panel-license label {
+  flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------------------------
+   Başlık semantiği — <div> görünümü, <h3> anlamı (FAZ 4 kapısı).
+
+   Bu başlıklar `div`/`span` olarak yazılmıştı: ekran okuyucuda HQ'nun hiçbir
+   iç yapısı yoktu (h1 dışında tek başlık yok). h3'e çevrildiler; buradaki
+   reset yalnız TARAYICI VARSAYILANINI siler, mevcut kuralları bozmaz:
+     · margin       → h3'ün 1em üst/alt boşluğu düzeni kaydırırdı
+     · font-weight  → h3 varsayılanı 700; tokens.css § Ağırlık: "700 yok —
+                      koyu zeminde kalın metin kanar (halation)"
+   `font-size` bilerek ELLENMİYOR: #memmgr-side-head'in style.css'te kendi
+   10px'i var, sınıfın ise hiç kuralı yok (inherit doğru davranış).
+   ------------------------------------------------------------------------ */
+
+h3#memmgr-side-head {
+  margin: 0;
+  font-weight: inherit;
+}
+
+/* ---------------------------------------------------------------------------
+   Menüde tanımsız ayar kategorisi — GÖRÜNÜR uyarı (FAZ 4 kapısı).
+   Backend'e kategori eklenip HQ_MENU'ye yazılmazsa kategori GELİŞMİŞ'e düşer.
+   Bu projenin en sık kusur sınıfı ve bugüne dek SESSİZDİ.
+   Kırmızı DEĞİL altın: bu bir kullanıcı hatası değil, geliştiriciye not.
+   Kırmızı yalnız tehlike içindir (tokens.css § KIRMIZI).
+   ------------------------------------------------------------------------ */
+
+.hq-nav-btn[data-bilinmeyen="1"] {
+  border-inline-start: 1px solid var(--altin);
+}
+
+.hq-nav-uyari {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--b-6);
+  block-size: var(--b-6);
+  margin-inline-start: auto;
+  border-radius: var(--r-tam);
+  background: var(--altin-zemin);
+  color: var(--altin-ink);
+  font-size: var(--yazi-11);
+  font-weight: var(--ag-kalin);
+  line-height: 1;
+}
+
+/* Gizlilik metninin kuralı → css/hq-hafiza.css `.hf-dip-metin` (2026-09-27). */
+
+/* Yer tutucu kuralı yoktu → tarayıcı varsayılanı #757575 (4.11:1, PRODUCT.md ihlali) */
+#hq-key-input::placeholder { color: var(--ink-3); opacity: 1; }
+
+/* 🔴 2026-08-28: 08-27'de bu kural YALNIZ #hq-key-input'a yazılmıştı;
+   aynı kusuru taşıyan öteki HQ girdileri o turda ölçülmemişti (hepsi bir
+   TIKLAMA arkasında, tur ise doğrudan açılan ekranları geziyordu). Ölçüldü:
+   #757575 açık temada 4.42:1 — eşiğin altında.
+
+   📏 Ders iki kademeli: ① bir kuralı tek id'ye yazmak, aynı kusurun
+   kardeşlerini kapatmaz ② kardeşleri TEK TEK saymak da yetmez — sayarken
+   `mf-*` (modlar formu) ve `pe-*` (bildirim düzenleme) gibi JS'in ÇALIŞMA
+   ZAMANINDA ürettiği, id'si dinamik alanlar listeye hiç girmez. O yüzden
+   kural id listesi değil KAPSAM: HQ'nun içindeki her girdi, bugün var olan
+   da sonra eklenecek olan da. */
+#tab-hq input::placeholder,
+#tab-hq textarea::placeholder,
+#auth-input::placeholder { color: var(--ink-3); opacity: 1; }
+/* `#onboard-input` seçicisi kaldırıldı (2026-09-06): karşılama perdesiyle
+   birlikte o alan da silindi, kalsaydı var olmayan bir öğeyi boyayan ölü kural
+   olurdu. */
+
+/* ══ TEMA SEÇİCİ (2026-08-27) ═══════════════════════════════════════════════
+   (Kartlar artık css/hq-tema.css'te; `.hq-bolum*` başka odalarda kullanılıyor.) */
+.hq-bolum { padding: 4px 0 18px; }
+.hq-bolum-baslik {
+  font-size: var(--yazi-12); letter-spacing: .12em; color: var(--ink-3);
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.hq-bolum-aciklama {
+  font-size: var(--yazi-13); color: var(--ink-2); margin: 0 0 14px;
+  line-height: var(--satir-orta);
+}
+
+/* `.tema-grid/.tema-kart/.tema-onizleme` (üç gri çubuklu eski kartlar) 2026-10-01'de kaldırıldı:
+   TEMA paneli ORTAM SEÇ'e geçti → css/hq-tema.css (`.tm-*`). */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANAHTAR PANELİ — varyant A "katlanır öğretmen"   (2026-08-28 FAZ 1)
+   Plan: 2026-08-28 ayarlar iç tasarım planı
+
+   Ölçülen sorun: 266 kelime metne karşı 5 kontrol (~53 kelime/kontrol) ve
+   kontroller metin bloklarının arasına dağılmıştı. Bu bölüm YALNIZ düzen
+   kurar — katlama bileşeninin kendisi tasarım sisteminden gelir
+   (`ogeler.css § 5 .katlanir/.katlanir-bas`), burada yeniden yazılmadı.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.ak-govde {
+  inline-size: 100%;
+  max-inline-size: 560px;      /* okuma ölçüsü: satır 75 karakteri geçmesin */
+  margin-inline: auto;
+  padding: var(--b-7) var(--b-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--b-6);
+  overflow-y: auto;
+}
+
+.ak-bas { display: flex; flex-direction: column; gap: var(--b-3); }
+
+.ak-baslik {
+  display: flex;
+  align-items: center;
+  gap: var(--b-4);
+  margin: 0;
+  font-size: var(--yazi-19);
+  font-weight: var(--ag-kalin);
+  color: var(--ink-1);
+}
+
+.ak-alt {
+  margin: 0;
+  font-size: var(--yazi-13);
+  line-height: var(--satir-genis);
+  color: var(--ink-2);
+}
+
+/* ① YAPMA — dört kontrol bitişik. Aralarındaki boşluk metin bloklarınınkinden
+   KÜÇÜK: yakınlık "bunlar tek bir iş" demenin en ucuz yolu. */
+.ak-form { display: flex; flex-direction: column; gap: var(--b-5); }
+
+
+/* ── GOOGLE paneli yardımcıları (2026-09-14) ────────────────────────
+   `js/google-baglanti.js` bunları kullanır. ⚠️ Satır içi stil yerine sınıf:
+   ilk sürüm inline `display:grid;gap` yazıyordu ve canlı turda görüldü —
+   düğmeler dikey kutulara dönüşmüş, panel öbür panellere hiç benzemiyordu. */
+.ak-dugmeler {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--b-3);
+}
+
+/* Eylem gerektiren uyarı. Katlanmaz, gizlenmez (Anahtar panelinin
+   "öğretme/durum ayrımı" dersi: eylem isteyen metin katlanmaz). */
+.ak-uyari {
+  margin: 0;
+  padding: var(--b-4);
+  border-radius: var(--r-2);
+  background: var(--altin-zemin);
+  color: var(--ink-1);
+  line-height: 1.5;
+}
+
+/* İşlem sonucu satırı. Yüksekliği SABİT tutulur — mesaj gelince form
+   zıplamasın (düğmeye basan gözün odağı kayardı). */
+.ak-mesaj {
+  min-height: 1.4em;
+  color: var(--ink-2);
+  font-size: var(--yazi-12);
+}
+
+.ak-mesaj[data-hata="1"] { color: var(--kirmizi-ink, var(--p-red, #d33)); }
+
+/* .ak-eylem/.ak-spin/.ak-sonuc/.ak-durum/.ak-katli-ic SİLİNDİ ( panel 8, 2026-09-27): yalnız eski
+   ANAHTAR paneli kullanıyordu; yeni bağlantı kartı css/hq-anahtar.css'te (.an-*). */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   VARYANT B — "solda yap, sağda öğren"      (2026-08-28)
+   A'nın üstüne kurulur: .ak-form / .ak-bas / .alan hepsi aynen kullanılır,
+   yalnız yerleşim değişir. A'ya dönmek istersen bu blok + .ak-b kaldırılır.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* A'da 560px "okuma ölçüsü"ydü (tek kolon). B iki kolon taşıdığı için daha
+   geniş; ama sınırsız değil — sol kolon yine okunur ölçüde kalmalı. */
+.ak-b { max-inline-size: 1020px; }
+
+/* .ak-kolonlar/.ak-ogren/.ak-kart* (iki kolon "solda yap, sağda öğren") SİLİNDİ — ANAHTAR artık tek
+   kartlı bağlantı kartı ( panel 8). .ak-b google/yedekleme'de kullanılıyor, kaldı. */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ODA KABUĞU — 16 AYARLAR odasının ortak iskeleti   (2026-08-28 · FAZ 9)
+   Plan: 2026-08-28 ayarlar oda tasarımı
+
+   🔴 NEDEN: Odaların ortak bir kabuğu YOKTU. Her panel kendi iç boşluğunu
+   eski style.css'te tek tek alıyordu (`#hq-panel-tema{padding:22px 26px}`
+   gibi) — alan bir odaya yazılıp öbürüne yazılmayınca hizalar ayrıştı.
+   Ölçüldü 2026-08-28: içerik sol kenarı Bildirim'de 210px, öteki odalarda
+   244px; Bildirim'in kendi başlığı ise 200px'ten başlıyordu (kendi
+   gövdesiyle bile hizasız).
+
+   🔴 İKİNCİ ÖLÇÜM — kapatma düğmesi hiçbir odanın düzeninde yoktu.
+   `#hq-katman-kapat` sağ üstte `position:absolute` duruyor ama odalar o
+   alanı boş bırakmıyordu: Hafıza Yöneticisi'nde "DIŞA AKTAR"/"TEMİZLE",
+   Bildirim'de "YENİLE" düğmesi onun ALTINA girip kırpılıyordu — düğmeler
+   ekranda görünüyor ama tıklanamıyordu. Güvenli alan artık token:
+   `--oda-sag-guvenli`, tek yerden ölçülür.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+#tab-hq {
+  /* Kapatma düğmesinin işgal ettiği sağ üst alan: düğme + iki yanının boşluğu.
+     Odanın başlık şeridi bu kadar içeriden biter; gövde etkilenmez. */
+  --oda-sag-guvenli: calc(var(--hedef) + var(--b-5) * 2);
+  --oda-ped-i: var(--b-9);   /* 32px — odanın yatay iç boşluğu  */
+  --oda-ped-b: var(--b-7);   /* 20px — dikey                    */
+}
+
+/* Odanın iki katmanı: başlık şeridi KAYMAZ, gövde kayar.
+   Böylece uzun bir odada aşağı inerken "neredeyim" bilgisi ekranda kalır. */
+/* ⚠️ `display` BURADA KAZANILMAZ: eski style.css `#tab-hq[data-hq=…] #hq-panel-…`
+   seçicisiyle `display:flex !important` yazıyor (style.css:3486-3502) ve o kural
+   ayakta olduğu sürece buradaki `grid` uygulanmaz. O yüzden kabuk İKİ düzende de
+   ayakta durmak zorunda: satır ölçüleri grid için, `flex-direction` + `flex`
+   payları flex için. Ölçülmeseydi görülmezdi — memmgr odasında başlık şeridi ile
+   gövde yan yana düşmüştü (flex satır yönü), 2026-08-28. */
+.oda {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  flex-direction: column;
+  min-block-size: 0;
+  inline-size: 100%;
+}
+
+.oda-bas {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--b-6);
+  padding: var(--oda-ped-b) var(--oda-sag-guvenli) var(--b-6) var(--oda-ped-i);
+  border-block-end: 1px solid var(--kenar);
+}
+
+.oda-bas-metin { display: flex; flex-direction: column; gap: var(--b-3); min-inline-size: 0; }
+
+.oda-baslik {
+  margin: 0;
+  font-size: var(--yazi-19);
+  font-weight: var(--ag-kalin);
+  color: var(--ink-1);
+  line-height: var(--satir-sik);
+}
+
+/* Odanın ne işe yaradığını söyleyen tek cümle. Her odada VAR — bir odanın
+   amacı yazılamıyorsa o oda ya gereksizdir ya da iki odadır. */
+.oda-amac {
+  margin: 0;
+  max-inline-size: 68ch;          /* okuma ölçüsü — 1030px'lik tek satır bitti */
+  font-size: var(--yazi-13);
+  line-height: var(--satir-genis);
+  color: var(--ink-2);
+}
+
+/* Odaya özel eylemler (YENİLE, DIŞA AKTAR…) başlık şeridinin sağında yaşar —
+   güvenli alan sayesinde kapatma düğmesiyle çakışmaz. */
+.oda-eylem { display: flex; align-items: center; gap: var(--b-4); flex-shrink: 0; }
+
+.oda-govde {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--b-7) var(--oda-ped-i) var(--b-9);
+  display: flex;
+  flex-direction: column;
+  gap: var(--b-7);
+}
+
+/* Gövdedeki düz metin bloğu. Kontrol ızgaraları geniş kalabilir; okunacak
+   metin kalamaz (product register: veri yoğun olabilir, prose olamaz). */
+.oda-prose {
+  margin: 0;
+  max-inline-size: 68ch;
+  font-size: var(--yazi-13);
+  line-height: var(--satir-genis);
+  color: var(--ink-2);
+}
+
+/* Oda içi bölüm — kart DEĞİL. Hiyerarşi kutu çizerek değil, başlık + boşluk
+   ile kurulur (PRODUCT.md: kart içinde kart her zaman yanlış). */
+.oda-bolum { display: flex; flex-direction: column; gap: var(--b-5); }
+
+.oda-bolum-bas {
+  margin: 0;
+  font-size: var(--yazi-12);
+  font-weight: var(--ag-orta);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.oda-bolum + .oda-bolum { padding-block-start: var(--b-6); border-block-start: 1px solid var(--kenar); }
+
+/* Dar pencere: başlık şeridi güvenli alanı korur (kapatma düğmesi orada
+   duruyor) ama iç boşluk daralır — 320px'te 32px'lik kenarlar içeriği yer. */
+@container kabuk (max-width: 479px) {
+  #tab-hq { --oda-ped-i: var(--b-6); --oda-ped-b: var(--b-6); }
+  .oda-bas { flex-direction: column; gap: var(--b-5); }
+  .oda-eylem { inline-size: 100%; }
+}
+
+/* ── Ayar satırı: etiket ile kontrolü birbirine yaklaştır ──────────────────
+   Ölçüldü 2026-08-28: 1440px'te etiket 253px'te başlıyor, kontrol 1250px'te
+   bitiyordu — arada ~1000px boşluk. Göz o mesafeyi her satırda yeniden kat
+   ediyor ve hangi anahtarın hangi etikete ait olduğu ancak hizayla anlaşılıyor.
+   Satır ölçüsü sınırlandı; oda geniş kalır, satır okunur olur. */
+#hq-settings-main .hq-set-row {
+  max-inline-size: 780px;
+}
+
+
+/* Hafıza Yöneticisi → HAFIZA · DOSYA (2026-09-27): kuralları css/hq-hafiza.css'te.
+   Eski süzgeç şeridi / liste satırı kuralları silindi — id seçicileri (#memmgr-list,
+   #memmgr-stats) yeni sınıfları özgüllükle eziyordu. */
+
+/* Kenarlı + tehlikeli: yıkıcı ama birincil olmayan eylem. Sessiz varyant bu iş
+   için fazla görünmezdi (ölçüldü: düğme zeminden ayırt edilemiyordu). */
+.dg-ikincil.dg-tehlike:hover:not(:disabled),
+.dg-ikincil.dg-tehlike:focus-visible:not(:disabled) {
+  --dg-yuzey: var(--kirmizi-zemin);
+  --dg-ink: var(--kirmizi-ink);
+  border-color: var(--kirmizi-ink);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODLAR ODASI   (2026-08-28 · FAZ 9)
+
+   Eski hâl (style.css:3599-3620): 224px'lik sabit sütun + `border-left` şerit
+   vurgusu + gradyan seçili zemin + 7-9px yazılar + `box-shadow` glow nokta.
+   Üçüncü dikey şeridi kaldırdık; kurallar burada token'la yeniden yazıldı.
+   Eski satırlar style.css'te duruyor (arşive alınacak dosya) — buradaki
+   seçiciler `.oda` bağlamıyla daha özgül olduğu için onları eziyor.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Mod listesi (şerit/çip) 09-27'de kart ızgarasına döndü → kurallar css/hq-modlar.css */
+
+/* Kurulu sistem damgası: başlık şeridinde sakin bir bilgi, kutu değil. */
+.oda .hq-modes-sys {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--yazi-12);
+  letter-spacing: normal;
+  color: var(--ink-3);
+  max-inline-size: 22ch;
+}
+
+/* Mod formu — alanlar okuma ölçüsünde kalsın. Eskiden form odanın tamamı
+   kadar geniş uzuyordu: 1440px'te bir "mod adı" alanı 1100px genişliğindeydi. */
+.oda #hq-mode-form { max-inline-size: 720px; }
+.oda #hq-mode-form .ff > label {
+  font-family: inherit;
+  font-size: var(--yazi-12);
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.oda #hq-mode-form .ff input[type=text],
+.oda #hq-mode-form .ff textarea,
+.oda #hq-mode-form .ff select {
+  font-family: inherit;
+  font-size: var(--yazi-13);
+  color: var(--ink-1);
+  border: 1px solid var(--kenar);        /* eskiden mor: her alan seçiliymiş gibi */
+  border-radius: var(--r-2);
+  padding: var(--b-4) var(--b-5);
+}
+.oda #hq-mode-form .ff input:focus,
+.oda #hq-mode-form .ff textarea:focus,
+.oda #hq-mode-form .ff select:focus {
+  border-color: var(--mor-ink);
+  outline: var(--odak-kalinlik) solid var(--mor-ink);
+  outline-offset: var(--odak-offset);
+}
+
+/* ── Modlar formu: altın enflasyonu ────────────────────────────────────────
+   Tasarım dili altını NADİR tutar (ekran başına ≤2 öğe — docs/tasarim-2026-08-20
+   § kapılar). Modlar odasında ölçüldü: "+ YENİ" düğmesi + 15 özel-alan çipi =
+   16 altın öğe. Altın her yerde olunca hiçbir yerde değil; ekranda öne çıkması
+   gereken şey (birincil eylem) çiplerin arasında kayboluyordu.
+
+   Karar: birincil eylem MOR (sistemin kimlik rengi), çipler NÖTR — seçili olan
+   mor zeminle işaretlenir. Altın bu odada hiç kullanılmıyor. */
+/* ⚠️ Renk BURADA sabitlenmez. İlk yazımda `color: var(--ink-1)` vardı ve açık
+   temada 2.24:1 ölçüldü — `--ink-1` temayla dönüyor, mor yüzey dönmüyor.
+   `.dg-birincil` bu işi zaten doğru yapıyor (metni sabit beyaz); buradaki
+   kural yalnız eski id stilinin font/ölçü kalıntısını temizler. */
+#hq-mode-new-btn.dg {
+  font-family: inherit;
+  font-size: var(--yazi-13);
+  letter-spacing: normal;
+  border-radius: var(--r-2);
+}
+
+.oda .hq-sp-btn {
+  font-family: inherit;
+  font-size: var(--yazi-12);
+  min-block-size: var(--hedef-dar);
+  padding: var(--b-3) var(--b-5);
+  background: transparent;
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-tam);
+  color: var(--ink-2);
+  transition: background-color var(--sure-2) var(--egri),
+              border-color var(--sure-2) var(--egri),
+              color var(--sure-2) var(--egri);
+}
+.oda .hq-sp-btn:hover:not(.active-sp) { background: var(--yuzey-2); color: var(--ink-1); }
+.oda .hq-sp-btn.active-sp {
+  background: var(--mor-zemin);
+  border-color: var(--mor-ink);
+  color: var(--mor-ink);
+}
+.oda .hq-sp-btn:focus-visible {
+  outline: var(--odak-kalinlik) solid var(--mor-ink);
+  outline-offset: var(--odak-offset);
+}
+
+/* GEÇMİŞ ODASI kuralları 2026-08-29'da SİLİNDİ — oda kaldırıldı (geliştirici kararı:
+   Hafıza Yöneticisi ile aynı veriyi gösteriyordu). `#hist-*` seçicileri artık
+   hiçbir DOM'a denk gelmiyor; yetim kural bırakmamak için tamamı çıkarıldı. */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PALET TEMİZLİĞİ — kalan mavi kenarlar   (2026-08-28 · FAZ 9 kapısı)
+
+   Kapı ölçümü (16 oda × 3 tema × 3 genişlik, canlı Chromium) 12 benzersiz
+   palet ihlali buldu ve hepsi aynı kaynaktan: eski style.css'in
+   `rgba(96,165,250,…)` mavi kenarları. Palet mor/altın/kırmızı; mavi yok.
+   İkisi ayrıca sistem sınıflarını eziyordu — `.girdi` ve `.dg-ikincil` doğru
+   yazılmış olmasına rağmen `#hist-*` id kuralları üstlerine mavi basıyordu.
+
+   `--kenar` tema-duyarlı: üç temada da doğru tonu verir, sabit rgba veremez.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+#tab-hq .hq-select,
+#tab-hq .hq-input,
+#tab-hq .tts-section,
+#tab-hq .tts-voice-card,
+#tab-hq .tts-input,
+#tab-hq .tts-btn,
+#memmgr-search { border-color: var(--kenar); }
+
+#tab-hq .hq-select:focus,
+#tab-hq .hq-input:focus,
+#tab-hq .tts-input:focus,
+#memmgr-search:focus { border-color: var(--mor-ink); }
+
+/* Geçmiş odasının kontrolleri sistem bileşenlerine döndü — eski id kuralları
+   font/boyut/renk basmaya devam etmesin. */
+
+/* TTS zinciri: "aktif motor" damgası palet dışı bir yeşille (rgba(0,255,159))
+   boyanıyordu. Sistemde yeşil zaten var (--yesil-ink / --yesil-zemin) ve üç
+   temada ölçülmüş. */
+#tab-hq .tts-node.active {
+  background: var(--yesil-zemin);
+  border-color: var(--yesil-ink);
+  color: var(--yesil-ink);
+}
+
+/* Dokunma hedefi: TTS düğmeleri 23.x px yüksekliğindeydi (WCAG 2.5.8 tabanı 24). */
+#tab-hq .tts-btn { min-block-size: var(--hedef-min); }
+
+/* ═══ SOL MENÜ — style.css'ten TEK PARÇA taşındı ( FAZ C/2, 2026-09-01) ═══
+   🔴 NEDEN TEK PARÇA: FAZ C/1'de bu menünün 5 seçicisi taşıma DIŞI bırakılmıştı.
+   `.hq-nav-btn.active` tek başına taşınınca "Lisans" düğmesinin mor zemini
+   kayboldu (149 piksel) — bir ekranın menü stilleri tek tek taşınamaz.
+   📏 NEDEN BURAYA, dosyanın SONUNA DEĞİL: hemen aşağıdaki dar-pencere bloğu
+   `#hq-subnav { inline-size }` ile aşağıdaki `width: 100%`'ü ezmek zorunda
+   (aynı özgüllük → sonra gelen kazanır). Sona eklenseydi sıra tersine döner,
+   şeridin son düğmesi kapatma düğmesinin altına geri girerdi.
+   ⚠️ `#tab-hq { flex-direction: column }` de bu blokta: menü yatay şeride
+   dönerken sekmenin ekseni de dönmek zorunda, ikisi ayrılamaz. */
+
+/* ── Sekme başlığı (11-13) — öbür sekmelerle aynı köşe: ☰'ın sağı, sayfa koordinatında
+   (--sb-sol, --sb-ust). AYAR katmanı tam ekran (#tab-hq 0,0) → değerler doğrudan sayfa koordinatı.
+   Masaüstünde sol menünün ☰ payında (196px sütun, 60px üst boşluk) durur; telefonda şeridin
+   başında, şerit düğmeleri ondan sonra başlar (--hq-serit-sol, aşağıdaki dar blok). */
+#tab-hq { --hq-sb-sol: calc(var(--sb-sol, 64px) - 12px); --hq-sb-ust: calc(var(--sb-ust, 17px) - 12px); }
+.hq-sekme-baslik {
+  /* 11-15 tam hizala: dış çerçeve kalktı (☰ 8,8) — öbür sekmeler 12 px'lik kartla birlikte 52/5'e kaydı;
+     AYAR katmanı zaten tam ekran olduğu için kart payı burada elle düşülür. */
+  position: absolute; inset-block-start: var(--hq-sb-ust); inset-inline-start: var(--hq-sb-sol);
+  z-index: 3; max-inline-size: var(--hq-bas-gen, 120px); pointer-events: none;
+}
+
+/* Telefon şeridinin okları yalnız ≤720px'te ve bayrakla çizilir (aşağıdaki dar blok). */
+.hq-serit-ok { display: none; }
+
+/* ── Sol dikey menü (D5, 2026-08-12) ──────────────────────────────────────
+   Yatay şerit 1440px'de 1372px yer kaplayıp yalnız 805px'ini kullanıyordu
+   (ölçüldü: 567px ölü bant). Dikey listede o bant yapısal olarak yok:
+   genişlik sabit, artan yer içeriğe gidiyor. */
+#hq-subnav {
+  display: flex; flex-direction: column; gap: 1px; flex-shrink: 0;
+  width: 196px; padding: 10px 0 14px;
+  /* Sol üstteki ☰ ilk düğmenin üstüne biniyordu — liste altından başlar. */
+  padding-block-start: var(--nav-bosluk, 10px);
+  /* Cam efekti sabit koyuydu; açık temada gri bir duvar olup içindeki
+     metni 1.09:1'e düşürüyordu (ölçüldü 08-27). Menü artık yüzey token'ı. */
+  background: var(--yuzey-1);
+  border-right: 1px solid var(--kenar);
+  backdrop-filter: var(--glass-blur, blur(12px));
+  overflow-y: auto; scrollbar-width: thin;
+}
+
+/* Üst örtü (11-15 tam hizala, goz #3): menü kayınca düğme yazısı ☰ + sekme başlığının altına giriyordu
+   (başlık mutlak, menünün üst boşluğunun üstünde). Üst boşluk yapışkan bir örtüye döner: kaydırmada
+   menü zemini (opak) yazıyı örter, alt kenarda 10 px solma. Yalnız masaüstü sütunu; ≤720'de menü yatay şerit. */
+@media (min-width: 721px) {
+  #hq-subnav { padding-block-start: 0; }
+  #hq-subnav::before {
+    content: ''; display: block; flex: none; position: sticky; inset-block-start: 0; z-index: 2;
+    block-size: var(--nav-bosluk, 10px); margin-block-end: -10px; pointer-events: none;
+    background: linear-gradient(var(--yuzey-1) calc(100% - 10px), transparent);
+  }
+  #hq-subnav > :first-child { margin-block-start: 10px; }
+}
+
+.hq-nav-grup {
+  /* 7px + --ink-3 okunmuyordu ( M2): okunur boy, ikincil mürekkep. */
+  font-family: var(--font-hud); font-size: var(--yazi-12); font-weight: 600; letter-spacing: 0.12em;
+  color: var(--ink-2); text-transform: uppercase;
+  padding: 14px 14px 5px; user-select: none;
+}
+.hq-nav-grup:first-child { padding-top: 4px; }
+.hq-nav-btn {
+  width: 100%; text-align: left; font-family: var(--font-hud); font-size: var(--yazi-12);
+  letter-spacing: 0; line-height: 1.35; color: var(--ink-2); background: transparent;
+  border: none; border-left: 2px solid transparent; padding: 9px 12px; cursor: pointer;
+  display: flex; align-items: center; gap: 9px;
+  transition: color .15s var(--e-out,cubic-bezier(.25,1,.4,1)), background .15s var(--e-out,cubic-bezier(.25,1,.4,1));
+}
+.hq-nav-btn:hover { color: var(--ink-1); background: var(--yuzey-2); }
+.hq-nav-btn.active { color: var(--mor-ink); border-left-color: var(--mor-ink); background: var(--mor-zemin); }
+.hq-nav-btn .ic { display: grid; place-items: center; width: 16px; flex-shrink: 0; }
+.hq-nav-btn .ic svg { width: 16px; height: 16px; stroke-width: 1.6; }
+/* 🔴 `transition` ile BİRLİKTE gelmek ZORUNDA. Bu kural style.css'te
+   `.hq-toggle::after` ile aynı satırdaydı; `.hq-nav-btn` burada tanımlanınca
+   style.css'teki reduced-motion kuralı (önce yüklenir) aynı özgüllükte GERİDE
+   kalır ve hareket kısıtı sessizce ölürdü. Piksel tabanı bunu göremez —
+   duran görüntüde geçiş yoktur. `.hq-toggle::after` style.css'te KALDI. */
+@media (prefers-reduced-motion: reduce) { .hq-nav-btn { transition: none; } }
+/* Dar pencere: menü üstte yatay şeride döner — 196px'lik sabit sütun 800px'in
+   altında içeriğe yer bırakmıyor. Gruplar orada gizlenir (satır kırmasın). */
+@media (max-width: 720px) {
+  #tab-hq { flex-direction: column; }
+  #hq-subnav { width: 100%; flex-direction: row; overflow-x: auto; overflow-y: hidden;
+    border-right: none; border-bottom: 1px solid rgba(96,165,250,0.14); padding: 4px 6px;
+    padding-inline-start: var(--hq-serit-sol, var(--nav-bosluk, 6px)); /* ☰ + sekme başlığı solda */ }
+  .hq-nav-grup { display: none; }
+  .hq-nav-btn { width: auto; white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; }
+  /* `border-bottom-color` KALDIRILDI ( FAZ B) — aşağıdaki dar-pencere
+     bloğu aynı media sorgusunda aynı seçiciye var(--mor-ink) veriyor. */
+  .hq-nav-btn.active { border-left-color: transparent; background: transparent; }
+}
+
+
+/* ── Dar pencere: menü şeridi ↔ kapatma düğmesi ────────────────────────────
+   720px altında sol menü yatay bir şeride dönüyor (yukarıdaki blok). Ölçüldü
+   2026-08-28 @380px: şeridin sağa taşan son düğmesi kapatma düğmesinin ALTINA
+   giriyor — 16 odanın hepsinde, çünkü sorun odada değil kabukta.
+   Şeride kapatma düğmesi kadar sağ pay verildi; kaydırma sonunda düğme boşta
+   kalır, X'in altına girmez.
+
+   Ayrıca alt kenar mavisi (`rgba(96,165,250,.14)`) token'a çevrildi ve seçili
+   sekmenin `--accent` alt çizgisi mora bağlandı — ikisi de palet dışıydı. */
+@media (max-width: 720px) {
+  /* ⚠️ `padding` YETMEDİ (ölçüldü): şerit yatay KAYIYOR (scrollWidth 1938 /
+     380), yani iç boşluk yalnız son düğmenin durduğu yeri değiştiriyor —
+     kaydırma ortasındayken herhangi bir düğme X'in altından geçiyordu.
+     Çözüm alanı daraltmak: şerit kapatma düğmesinin SOLUNDA bitsin. */
+  /* ⚠️ İki deneme yetmedi, ölçüm ikisini de yakaladı:
+       ① `padding-inline-end` → şerit YATAY KAYIYOR (scrollWidth 1938/380),
+          iç boşluk yalnız son düğmenin durduğu yeri değiştiriyor
+       ② `margin-inline-end` → style.css'in `width: 100%`'ü payı yutuyor,
+          şerit yine tam genişlikte kalıyor
+     Genişlik açıkça kısıtlandı: şerit kapatma düğmesinin SOLUNDA biter, kaydırma
+     nereye gelirse gelsin düğmeler X'in altına giremez. */
+  /* Şerit boyu (11-13 goz): 47px'lik şeritte ✕ (44px, üstten 12) ve ☰ (36px, üstten 18)
+     şeridin alt çizgisini aşıp içeriğe sarkıyordu — ✕ sekmelerin sağ ucunu örtüyor görünüyordu.
+     Şerit öbür sekmelerin başlık bandı boyuna çıktı (sohbet/galeri ≈67px); düğmeler dikeyde
+     ortada, ✕ ve ☰ bandın İÇİNDE kalır. Boy tek token: ::before ve okların üst payı ondan. */
+  /* Şerit sekme başlığından (.hq-sekme-baslik, 84px'e sığar; uzunsa üç noktayla kısalır) SONRA başlar.
+     Solma maskesi, sol ok ve JS'in hizalama payı (hqMenuIsaretle SOL) bu tek değerden okur. */
+  #tab-hq { --hq-serit-boy: 68px; --hq-bas-gen: 84px; --hq-serit-sol: calc(var(--hq-sb-sol) + var(--hq-bas-gen) + 8px); }
+  #hq-subnav {
+    inline-size: calc(100% - var(--oda-sag-guvenli, 68px));
+    block-size: var(--hq-serit-boy); flex-shrink: 0; align-items: center;
+    padding-block: 0;
+    border-block-end-color: var(--kenar);
+  }
+  /* Şeridin bıraktığı sağ pay zeminsizdi: duvar kâğıdı varken ✕'in arkasında kara/renkli
+     bir blok görünüyordu (goz 09-27). Payı şeridin zeminiyle boya — boy = şerit boyu token'ı. */
+  #tab-hq.active::before {
+    content: ""; position: absolute; inset-block-start: 0; inset-inline-end: 0;
+    inline-size: var(--oda-sag-guvenli, 68px); block-size: var(--hq-serit-boy, 68px);
+    background: var(--yuzey-1); border-block-end: 1px solid var(--kenar);
+  }
+  .hq-nav-btn.active { border-bottom-color: var(--mor-ink); }
+
+  /*  · KABUK: şerit kenarlarında solar — son görünen etiket ✕'in payında YARIM kesik
+     durmasın (ölçüldü 10-01: "Sağlı"/"Heal"). Maske şeridin KENDİ zeminini de siliyordu →
+     altından sayfa zemini görünüp x≈322'de koyu bant çıkıyordu (goz). Artık şeridin zemini
+     `#tab-hq.active::before` (tam genişlik, aşağıda) ve şerit şeffaf: maske yalnız etiketleri
+     siler, kenar renge değil şeridin zeminine iner (iki temada da). Sol uçta etiket sınırına
+     oturan kaydırma (scroll-snap) yarım harf bırakmaz; `hqMenuIsaretle` aynı sınıra oturtur. */
+  #hq-subnav {
+    position: relative; z-index: 1; background: transparent; backdrop-filter: none;
+    -webkit-mask-image: linear-gradient(to right, transparent calc(var(--hq-serit-sol, 60px) - 44px), #000 calc(var(--hq-serit-sol, 60px) - 4px), #000 calc(100% - 36px), transparent);
+            mask-image: linear-gradient(to right, transparent calc(var(--hq-serit-sol, 60px) - 44px), #000 calc(var(--hq-serit-sol, 60px) - 4px), #000 calc(100% - 36px), transparent);
+    scrollbar-width: none; scroll-padding-inline: var(--hq-serit-sol, 60px) 36px;
+    scroll-snap-type: x proximity;
+    /* Maske görüntüyü siler, TIKLAMAYI silmez: kaydırılan düğme başlığın ("Ayarlar") altında görünmez
+       ama dokunulabilir kalıyordu (390, Anahtar odası, 11-13). Clip maskenin şeffaf bölgesiyle aynı
+       sınırda → görüntü değişmez, isabet kesilir. */
+    clip-path: inset(0 0 0 calc(var(--hq-serit-sol, 60px) - 44px));
+  }
+  #hq-subnav::-webkit-scrollbar { display: none; }
+  .hq-nav-btn { scroll-snap-align: start; }
+  #tab-hq.active::before { inset-inline-start: 0; inline-size: 100%; }
+
+  /* T1 (10-11) · kaydırma okları: solan kenarın ÜSTÜNDE durur — o tarafta etiket olduğunu
+     söyler, basınca kaydırır. Bayrağı `_seritOk` yazar (intro-sequences.js); bayrak yoksa ok
+     yok, yani şeridin ucuna gelince kendiliğinden kalkar. Zemin şeridin zemini (::before ile
+     aynı token) → okun altından yarım etiket görünmez. 38px = şerit düğme boyu. */
+  #tab-hq.active[data-serit-sol] #hq-serit-geri,
+  #tab-hq.active[data-serit-sag] #hq-serit-ileri { display: grid; }
+  /* Sol ok açıkken solma ☰'nin arkasında bitmesin, okun altında bitsin: aksi hâlde ☰'nin yuvarlak
+     köşesinde bir önceki etiketin son harfi soluk görünüyordu (goz 10-11, "Lisans" → "s"). */
+  #tab-hq.active[data-serit-sol] #hq-subnav {
+    -webkit-mask-image: linear-gradient(to right, transparent calc(var(--hq-serit-sol, 60px) - 4px), #000 calc(var(--hq-serit-sol, 60px) + 28px), #000 calc(100% - 36px), transparent);
+            mask-image: linear-gradient(to right, transparent calc(var(--hq-serit-sol, 60px) - 4px), #000 calc(var(--hq-serit-sol, 60px) + 28px), #000 calc(100% - 36px), transparent);
+    clip-path: inset(0 0 0 calc(var(--hq-serit-sol, 60px) - 4px));
+    /* 11-15 (goz): ok açıkken etkin düğme okun SAĞINA oturur (ok SOL-3 … SOL+27) — snap payı ve solma bitişi +28 */
+    scroll-padding-inline-start: calc(var(--hq-serit-sol, 60px) + 28px);
+  }
+  .hq-serit-ok {
+    position: absolute; inset-block-start: calc((var(--hq-serit-boy, 68px) - 38px) / 2); z-index: 2;
+    place-items: center; inline-size: 44px; block-size: 38px; padding: 0;
+    border: 0; border-radius: 0; color: var(--mor-ink); cursor: pointer;
+  }
+  /* Zemin solmayı tamamlar: okun arkasında yarım etiket kalmaz. Sol ok ☰'nin sağ kenarına
+     (x≈53) kadar uzanır — dar boşlukta "Lisans"ın son harfi görünüyordu (goz 10-11). */
+  #hq-serit-ileri {
+    inset-inline-end: var(--oda-sag-guvenli, 68px);
+    background: linear-gradient(to right, transparent, var(--yuzey-1) 45%);
+    justify-items: end;
+  }
+  #hq-serit-geri {
+    /* ☰'nin sağ kenarı ≈53px: hap 57px'ten başlar, ☰'ye yapışmaz (goz 2. tur). */
+    inset-inline-start: calc(var(--hq-serit-sol, var(--nav-bosluk, 60px)) - 3px); inline-size: 30px;
+    background: linear-gradient(to left, transparent, var(--yuzey-1) 45%);
+    justify-items: start;
+  }
+  /* Basılacak yer görünsün: çıplak 7px'lik ok değil, şerit düğmesi diliyle küçük bir hap. */
+  .hq-serit-ok svg { box-sizing: border-box; width: 28px; height: 28px; padding: 5px;
+    border: 1px solid var(--kenar); border-radius: var(--r-tam, 999px); background: var(--yuzey-2);
+    fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  /* Renk sabit mor: basınca kalan odak oku siyaha çeviriyordu (goz 2. tur, iki ok iki renk). */
+  .hq-serit-ok:hover, .hq-serit-ok:focus { box-shadow: none; outline: none; }
+  .hq-serit-ok:hover svg { border-color: var(--mor-ink); }
+
+  /*  · KABUK: oda başlığı (ad + açıklama + eylem) telefonda ~125-250px yer
+     tutup kaymıyordu — şerit + başlık ekranın %20-31'iydi. Artık oda BİRLİKTE
+     kayar; yalnız şerit (47px, %5,6) yapışık kalır. MODLAR'ın tek-panel çözümü
+     (hq-modlar.css) bütün odalara genelleşti. `.oda-govde` iç kaydırması
+     kapanır: tek kaydırıcı = oda. */
+  #tab-hq .oda { overflow-y: auto; overscroll-behavior: contain; }
+  #tab-hq .oda { grid-template-rows: none; grid-auto-rows: auto; }
+  #tab-hq .oda > .oda-bas, #tab-hq .oda > .oda-govde,
+  #hq-settings-main > .oda-bas, #hq-settings-main > .oda-govde { flex: none; overflow: visible; min-block-size: auto; }
+}
+
+
+/* ═══ AYARLAR — style.css'ten taşındı ( FAZ C, 2026-09-01) ═══ */
+#tab-hq.active { display: flex; }
+#hq-subnav::-webkit-scrollbar { width: 4px; }
+#hq-subnav::-webkit-scrollbar-thumb { background: var(--kenar-guclu); border-radius: 2px; }
+.hq-panel { flex: 1; min-height: 0; }
+/* Tüm paneller gizli — data-hq attribute ile aktif panel gösterilir */
+#tab-hq .hq-panel { display: none !important; }
+#hq-panel-pushlog { flex-direction: column; overflow: hidden; }
+#hq-panel-saglik  { flex-direction: column; overflow-y: auto; }
+/* #hq-mode-new-btn'in altın/8px kuralı SİLİNDİ ( panel 7): ID özgüllüğüyle .dg'nin --dg-* değişkenlerini eziyordu → düğme uyarı rengiyle aynı altındı (goz tur 2) */
+#hq-modes-list { flex: 1; overflow-y: auto; padding: 6px 0; min-height: 0; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HQ / AYARLAR EKRANI — style.css'ten TEK PARÇA taşındı ( FAZ C/3)
+   Sıra korunarak geldi. Dosyanın SONUNA eklenmesi güvenli: taşınan 127
+   seçicinin hiçbiri hq.css'te (ne üst düzeyde ne @media'de) tanımlı değil —
+   ölçüldü, bu yüzden FAZ C/1'in "sona ekleme" tuzağı burada yok.
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* ═══════════ HQ ALT-SEKME + AYARLAR + MOD YÖNETİCİSİ ═══════════ */
+/* ⚠️ SOL MENÜ (`#hq-subnav` · `.hq-nav-grup` · `.hq-nav-btn*` · dar pencere
+   bloğu · reduced-motion) 2026-09-01'de TEK PARÇA olarak `css/hq.css`'e taşındı
+   ( FAZ C/2). Menü kuralı buraya geri EKLENMEZ — ikiye bölünmüş bir menü
+   FAZ C/1'de "Lisans" düğmesinin aktif zeminini kaybettirmişti. */
+
+
+#tab-hq[data-hq="dashboard"] #hq-panel-dashboard { display: flex !important; }
+#tab-hq[data-hq="key"]       #hq-panel-key        { display: flex !important; }
+#tab-hq[data-hq="license"]   #hq-panel-license    { display: flex !important; }
+#tab-hq[data-hq="ayarlar"]   #hq-panel-ayarlar   { display: flex !important; }
+#tab-hq[data-hq="modlar"]    #hq-panel-modlar     { display: flex !important; }
+#tab-hq[data-hq="memmgr"]    #hq-panel-memmgr     { display: flex !important; }
+/* GOOGLE (2026-09-14) — bu satır ZORUNLU, süs değil: `.hq-panel`
+   `display:none !important` ile kapalı gelir ve her panel kendi karşı-kuralıyla
+   açılır. Yazılmazsa içerik çizilir, ekran boş kalır (duvar panelinde ölçüldü). */
+#tab-hq[data-hq="google"]    #hq-panel-google     { display: flex !important; }
+#tab-hq[data-hq="yedekleme"] #hq-panel-yedekleme  { display: flex !important; }
+#tab-hq[data-hq="cihazlar"]  #hq-panel-cihazlar   { display: flex !important; }
+#tab-hq[data-hq="tts"]       #hq-panel-tts        { display: flex !important; }
+#tab-hq[data-hq="evol"]      #hq-panel-evol       { display: flex !important; }
+#tab-hq[data-hq="pushlog"]   #hq-panel-pushlog    { display: flex !important; }
+#tab-hq[data-hq="yuz"]       #hq-panel-yuz        { display: flex !important; }
+#tab-hq[data-hq="saglik"]    #hq-panel-saglik     { display: flex !important; }
+/* ⚠️ Panel eklerken BURAYI da ekle: JS'in style.display'i `!important` olan
+   `.hq-panel{display:none}` kuralını yenemez — panel çizilir ama görünmez
+   (08-27'de tema paneli tam bunu yaşadı: 3 kart DOM'daydı, ekran boştu). */
+#tab-hq[data-hq="tema"]      #hq-panel-tema       { display: flex !important; }
+/* 🔴 `padding: 22px 26px` KALDIRILDI (goz tur1 #1): öbür odalarda yok; oda başlığı/gövdesi kendi dolgusunu taşır.
+   Dolgu başlığı içeri çekiyordu → duvar açıkken cam başlık kapat (✕) düğmesinin altında kalıyordu
+   (ölçüldü: tema başlığı sağ kenar 1414, ✕ 1428; sistem/sağlık/lisans 1440). */
+#hq-panel-tema { flex-direction: column; overflow-y: auto; }
+#hq-panel-dashboard { flex-direction: column; }
+#hq-panel-yuz { flex-direction: column; overflow-y: auto; background: var(--bg); }
+/* `#hq-panel-modlar` 2026-08-28'de (FAZ 9) bu listeden ÇIKARILDI: mod listesi
+   224px'lik sütun olmaktan çıkıp yatay bir seçim şeridine indi, oda artık
+   dikey akıyor. Kural id özgüllüğünde olduğu için `.oda`nın column'unu
+   eziyordu ve form odanın sağ yarısına sıkışıyordu (ölçüldü: 359px). */
+#hq-panel-ayarlar { flex-direction: row; }
+#hq-panel-evol    { flex-direction: column; overflow: hidden; }
+
+
+
+/* ── Ayarlar paneli ──
+   `#hq-settings-side` (panel içindeki ikinci dikey liste) 2026-08-12'de
+   kaldırıldı — kategoriler sol menüde. `.hq-cat-btn` kuralları da onunla
+   birlikte gitti; karşılığı `.hq-nav-btn`. */
+#hq-panel-ayarlar { overflow: hidden; }
+/* İçerik ortalanır: 196px'lik menü çıktıktan sonra kalan alan 1440px'de
+   1200px'e yakın; ayar satırlarını o genişliğe yaymak okumayı zorlaştırır
+   (satır başı ile kontrol arası metrelerce boşluk olur). */
+#hq-settings-main { flex: 1; overflow-y: auto; padding: 22px 26px; }
+#hq-settings-main > * { max-width: 760px; margin-left: auto; margin-right: auto; }
+.hq-set-cat-title { font-family: var(--font-hud); font-size: 12px; letter-spacing: 0.18em; color: var(--accent); text-transform: uppercase; margin: 0 0 4px; }
+.hq-set-cat-sub { font-family: var(--font-hud); font-size: 8px; letter-spacing: 0.1em; color: var(--muted, var(--ink-3)); margin-bottom: 16px; }
+.hq-set-row {
+  display: flex; align-items: center; gap: 14px; padding: 11px 0;
+  border-bottom: 1px solid rgba(96,165,250,0.07);
+}
+.hq-set-label { flex: 1; font-family: var(--font-hud); font-size: 11px; color: var(--text, var(--ink-1)); display: flex; flex-direction: column; gap: 3px; }
+
+.hq-set-ctl { flex-shrink: 0; }
+/* toggle */
+.hq-toggle { position: relative; flex-shrink: 0; width: 38px; height: 20px; padding: 0; appearance: none; border-radius: 11px; background: var(--yuzey-2); border: 1px solid var(--mor-ink); cursor: pointer; transition: background .2s var(--e-out,cubic-bezier(.25,1,.4,1)); }
+/* Kapalı topuz --yuzey-2'ydi = rayla AYNI renk → anahtar içi boş bir çerçeve
+   gibi görünüyordu (ölçüldü). Topuz artık soluk mürekkep. */
+.hq-toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--ink-3); transition: transform .2s var(--e-out,cubic-bezier(.25,1,.4,1)), background .2s var(--e-out,cubic-bezier(.25,1,.4,1)); }
+.hq-toggle.on { background: var(--mor-zemin); border-color: var(--accent); }
+.hq-toggle.on::after { transform: translateX(18px); background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.hq-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* inputs */
+.hq-input, .hq-select {
+  font-family: var(--font-hud); font-size: 10px; color: var(--text, #c8dde8);
+  background: var(--yuzey-1); border: 1px solid rgba(96,165,250,0.22); border-radius: 3px;
+  padding: 5px 8px; outline: none; min-width: 130px;
+}
+.hq-input:focus, .hq-select:focus { border-color: var(--accent); }
+.hq-set-actions { margin-top: 20px; display: flex; gap: 10px; }
+
+/* ══ Geniş ekranda İKİ SÜTUN kuralı KALDIRILDI (2026-09-27) ══
+   `#hq-settings-main` artık bir `.oda` (başlık şeridi + kayan gövde); satırlar onun
+   doğrudan çocuğu değil, `.oda-govde` içinde. Kural yalnız başlık ile gövdeyi
+   grid'e sokuyordu — satırları hiç bölmüyordu (ölü). Satır ölçüsü: css/hq-ayarlar.css. */
+.hq-btn {
+  font-family: var(--font-hud); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 8px 14px; border-radius: 3px; cursor: pointer; border: 1px solid rgba(96,165,250,0.3);
+  background: rgba(96,165,250,0.06); color: var(--accent); transition: all .15s var(--e-out,cubic-bezier(.25,1,.4,1));
+}
+.hq-btn:hover { background: var(--mor-zemin); }
+.hq-btn.gold { border-color: var(--altin-ink); background: var(--altin-zemin); color: var(--gold); }
+.hq-btn.danger { border-color: var(--kirmizi-ink); background: var(--kirmizi-zemin); color: var(--kirmizi-ink); }
+.hq-btn.gold:hover { background: var(--altin-zemin); }
+.hq-btn.danger:hover { background: var(--kirmizi-zemin); }
+.hq-live-badge { font-size: var(--yazi-12); letter-spacing: 0.04em; color: var(--yesil-ink); }   /* 7px okunmuyordu ( M2) */
+.hq-live-badge::before { content: "● "; }
+/* Teşhis satırı (Görünüm & Performans → "Bu Makine"): değer değil BİLGİ taşır,
+   bu yüzden kontrol gibi değil metin gibi görünür. Uzun cümle sığsın diye
+   sarmalanır — tek satıra zorlanırsa dar pencerede kesilir. */
+.hq-set-teshis { font-family: var(--font-hud); font-size: 9px; line-height: 1.5;
+  letter-spacing: .04em; color: var(--text-dim, #7f9fb0); text-align: right;
+  max-width: 320px; display: inline-block; }
+
+/* ── Mod yöneticisi ── */
+#hq-panel-modlar { overflow: hidden; min-height: 0; }
+#hq-modes-side { width: 224px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--kenar); background: var(--yuzey-1); overflow: hidden; min-height: 0; }
+.hq-modes-side-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 10px; font-family: var(--font-hud); font-size: 10px; letter-spacing: 0.18em; color: var(--accent); border-bottom: 1px solid var(--kenar); flex-shrink: 0; }
+
+
+.hq-modes-sys { padding: 7px 12px; font-family: var(--font-hud); font-size: 8.5px; letter-spacing: 0.06em; color: var(--ink-2); background: var(--mor-zemin); border-bottom: 1px solid var(--kenar); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+
+#hq-mode-form-wrap { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 18px 22px; position: relative; }
+#hq-mode-form .ff { margin-bottom: 14px; }
+#hq-mode-form .ff > label { display: block; font-family: var(--font-hud); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted, var(--ink-3)); margin-bottom: 5px; }
+#hq-mode-form .ff input[type=text], #hq-mode-form .ff textarea, #hq-mode-form .ff select { width: 100%; font-family: var(--font-hud); font-size: 11px; color: var(--text, var(--ink-1)); background: var(--yuzey-1); border: 1px solid var(--mor-ink); border-radius: 3px; padding: 7px 9px; outline: none; }
+#hq-mode-form .ff input:focus, #hq-mode-form .ff textarea:focus { border-color: var(--accent); }
+#hq-mode-form .ff textarea { resize: vertical; min-height: 54px; line-height: 1.5; }
+#hq-mode-form .ff-row { display: flex; gap: 14px; }
+#hq-mode-form .ff-row > .ff { flex: 1; }
+.hq-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.hq-chip { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-hud); font-size: 10px; color: var(--accent); background: var(--mor-zemin); border: 1px solid var(--mor-ink); border-radius: 11px; padding: 3px 4px 3px 9px; }
+.hq-chip b { cursor: pointer; color: var(--ink-2); font-weight: 400; padding: 0 3px; }
+.hq-chip b:hover { color: var(--kirmizi-ink); }
+.hq-chip-input { font-family: var(--font-hud); font-size: 10px; color: var(--text); background: var(--yuzey-1); border: 1px dashed var(--mor-ink); border-radius: 11px; padding: 4px 10px; outline: none; min-width: 90px; }
+.hq-form-actions { display: flex; gap: 10px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--kenar); flex-wrap: wrap; }
+/* App picker */
+.hq-chips-wrap { position: relative; }
+.hq-app-picker-btn { font-family: var(--font-hud); font-size: 10px; color: var(--accent); background: var(--mor-zemin); border: 1px dashed var(--mor-ink); border-radius: 11px; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+.hq-app-picker-btn:hover { background: var(--mor-zemin); }
+.hq-app-drop { position: absolute; top: 100%; left: 0; z-index: 999; background: var(--yuzey-1); border: 1px solid var(--mor-ink); border-radius: 5px; min-width: 220px; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.7); margin-top: 4px; display: none; }
+.hq-app-drop.open { display: block; }
+.hq-app-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer; font-family: var(--font-hud); font-size: 10px; color: var(--text); border-bottom: 1px solid var(--kenar); }
+.hq-app-item:last-child { border-bottom: none; }
+.hq-app-item:hover { background: var(--mor-zemin); }
+.ai-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.ai-dot.ok { background: #4cffb0; }
+.ai-dot.no { background: rgba(255,255,255,0.18); }
+/* Workspace/Special selector */
+.hq-ws-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.hq-ws-btn { font-family: var(--font-hud); font-size: 10px; min-width: 36px; padding: 5px 8px; text-align: center; cursor: pointer; background: var(--mor-zemin); border: 1px solid var(--kenar); border-radius: var(--r-xs); color: var(--muted); transition: background 0.12s, border-color 0.12s, color 0.12s; }
+.hq-ws-btn.ws-live { border-color: var(--mor-ink); color: var(--text); }
+.hq-ws-btn.active-ws { background: var(--mor-zemin); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.hq-ws-btn:hover:not(.active-ws) { background: var(--mor-zemin); }
+.hq-special-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.hq-sp-btn { font-family: var(--font-hud); font-size: 9px; padding: 4px 11px; cursor: pointer; background: var(--altin-zemin); border: 1px solid var(--altin-ink); border-radius: var(--r-md); color: var(--ink-2); transition: all 0.12s; }
+.hq-sp-btn.active-sp { background: var(--altin-zemin); border-color: var(--altin-ink); color: var(--altin-ink); }
+.hq-sp-btn:hover:not(.active-sp) { background: var(--altin-zemin); }
+/* Kitty snippets */
+.hq-snippets { margin-top: 6px; }
+.hq-snippets > summary { font-family: var(--font-hud); font-size: 9px; letter-spacing: 0.08em; color: var(--muted); cursor: pointer; user-select: none; outline: none; }
+.hq-snippets > summary:hover { color: var(--text); }
+.hq-snippet-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.hq-snip { font-family: var(--font-hud); font-size: 9px; color: var(--yesil-ink); background: rgba(76,255,176,0.06); border: 1px solid rgba(76,255,176,0.18); border-radius: 3px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
+.hq-snip:hover { background: rgba(76,255,176,0.14); }
+/* `.hq-nav-btn` BÖLÜNDÜ ( FAZ C/2): menüyle birlikte css/hq.css'e gitti.
+   Burada bırakılsaydı, `transition`ı orada tanımlanan kural (sonra yüklenir)
+   aynı özgüllükte bunu ezer ve hareket kısıtı sessizce ölürdü. */
+@media (prefers-reduced-motion: reduce) { .hq-toggle::after { transition: none; } }
+/* HQ mod paneli mobil: dikey yığ.
+   ⚠️ Ayarlar paneli buradan ÇIKARILDI (2026-08-12): kategori listesi artık
+   panelin içinde değil sol menüde, panelin tek çocuğu içerik alanı.
+   `#hq-settings-side` kuralları ölü kaldığı için silindi — ölü CSS, sonraki
+   okuyucuya var olmayan bir yapı anlatır. */
+@media (max-width: 860px) {
+  #hq-panel-modlar { flex-direction: column; overflow-y: auto; }
+  #hq-modes-side { width: 100%; border-right: none; border-bottom: 1px solid var(--kenar); flex-direction: row; flex-wrap: wrap; }
+}
+
+/* FAZ 17 GEÇMİŞ paneli 67254f6'da söküldü; FAZ 18 hafıza kuralları → css/hq-hafiza.css (2026-09-27). */
+
+/* ── FAZ 19: TTS PANEL ── */
+#hq-panel-tts { overflow-y: auto; flex-direction: column; padding: 16px; gap: 14px; }
+.tts-section {
+  background: var(--yuzey-2); border: 1px solid rgba(96,165,250,0.1);
+  border-radius: 6px; padding: 14px 16px;
+}
+.tts-section-title {
+  font-family: var(--font-hud); font-size: 10px; letter-spacing: 0.18em;
+  color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.tts-chain {
+  display: flex; align-items: center; gap: 0; flex-wrap: wrap; margin-bottom: 4px;
+}
+.tts-node {
+  display: flex; align-items: center; gap: 6px; padding: 7px 12px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 5px; font-family: var(--font-hud); font-size: 10px;
+  color: rgba(255,255,255,0.5); transition: all .2s;
+}
+.tts-node.active { color: var(--yesil-ink); border-color: rgba(0,255,159,0.3); background: rgba(0,255,159,0.06); }
+.tts-node.inactive { color: var(--ink-3); }
+.tts-node-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.tts-arrow {
+  font-size: 10px; color: rgba(255,255,255,0.2); padding: 0 4px; flex-shrink: 0;
+}
+.tts-node-note { font-size: 9px; color: var(--altin-ink); margin-top: 6px; }
+.tts-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.tts-label {
+  font-family: var(--font-hud); font-size: 10px; color: rgba(255,255,255,0.5);
+  width: 120px; flex-shrink: 0;
+}
+.tts-input {
+  flex: 1; min-width: 160px; font-family: var(--font-hud); font-size: 11px;
+  color: var(--text); background: var(--yuzey-1); border: 1px solid rgba(96,165,250,0.2);
+  border-radius: var(--r-xs); padding: 6px 10px; outline: none;
+}
+.tts-input:focus { border-color: var(--accent); }
+.tts-btn {
+  font-family: var(--font-hud); font-size: 10px; letter-spacing: 0.1em;
+  color: var(--accent); background: var(--yuzey-2);
+  border: 1px solid rgba(96,165,250,0.25); border-radius: var(--r-xs);
+  padding: 6px 14px; cursor: pointer; transition: all .15s;
+}
+.tts-btn:hover { background: var(--mor-zemin); }
+.tts-btn.danger { color: var(--kirmizi-ink); border-color: var(--kirmizi-ink); background: var(--kirmizi-zemin); }
+.tts-btn.danger:hover { background: var(--kirmizi-zemin); }
+#tts-audio-player { width: 100%; margin-top: 8px; border-radius: var(--r-xs); display: none; }
+.tts-voice-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 4px;
+}
+.tts-voice-card {
+  background: var(--yuzey-1); border: 1px solid rgba(96,165,250,0.12);
+  border-radius: 5px; padding: 10px 12px; cursor: pointer; transition: all .15s;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.tts-voice-card:hover { border-color: var(--mor-ink); background: var(--mor-zemin); }
+.tts-voice-card.selected { border-color: var(--accent); background: var(--mor-zemin); }
+.tts-voice-card-char { font-family: var(--font-hud); font-size: 11px; color: var(--accent); }
+.tts-voice-card-voice { font-family: var(--font-hud); font-size: 9px; color: var(--ink-3); }
+#tts-ref-filename { font-family: var(--font-hud); font-size: 10px; color: var(--ink-3); }
+#tts-ref-status { font-family: var(--font-hud); font-size: 10px; color: var(--yesil-ink); display: none; }
+
+/* ── Güvenlik odası: açılış kilidi formu ────────────────────────────────
+   Kilit alanları dikey akar; düğmeler alta sarar. `.oda-bolum` zaten dikey
+   bir akış kurduğu için burada yalnız düğme satırının sarması tarif ediliyor —
+   kutu çizilmiyor (kart içinde kart kuralı). */
+.hq-kilit-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--b-4);
+  max-inline-size: 68ch;
+}
+.hq-kilit-form .hq-input { flex: 1 1 14rem; min-inline-size: 0; }
+.hq-kilit-form .hq-btn { flex: 0 0 auto; }
+
+/* Dürüstlük notu — "bu kilit diski şifrelemez". Uyarı tonunda ama alarm
+   değil: doğru kurulmuş bir özelliğin sınırını anlatıyor, hata bildirmiyor. */
+.oda-prose-uyari {
+  color: var(--ink-3);
+  border-inline-start: 2px solid var(--kenar);
+  padding-inline-start: var(--b-4);
+}
+
+
+/* ── YEDEKLEME paneli ( FAZ 4B, 2026-09-14) ──────────────────────────
+   Kaynak listesi: her satır bir klasör. Panelin geri kalanı ortak tasarım
+   sınıflarını kullanıyor (.ak-govde/.ak-form/.alan/.dg-*) — burada yalnız
+   listenin kendi düzeni var. */
+.y-liste { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; }
+.y-kaynak {
+  position: relative; padding: 10px 12px;
+  border: 1px solid var(--kenar); border-radius: var(--r-2);
+  background: var(--yuzey-2);
+}
+.y-kaynak-ad  { font-weight: 600; margin-bottom: 2px; }
+.y-kaynak-alt { color: var(--ink-3); font-size: var(--yazi-12); }
+.y-kaynak-alt code { word-break: break-all; }
+.y-kaynak .y-sil { position: absolute; top: 8px; right: 8px; }
+.y-etiket {
+  font-size: var(--yazi-11); color: var(--ink-3); border: 1px solid var(--kenar);
+  border-radius: var(--r-tam); padding: 1px 7px; margin-left: 6px; font-weight: 400;
+}
+/* Saat girdisi içeriği kadar yer kaplasın — .girdi %100 genişlikte ve tek
+   başına bir satırı bomboş bırakıyordu. */
+.girdi.girdi-dar { width: auto; min-width: 8ch; flex: 0 0 auto; }
+/* Onay kutusu + etiket aynı satırda; .alan varsayılanı dikey (label üstte). */
+.alan.alan-satir { flex-direction: row; align-items: center; gap: 8px; }

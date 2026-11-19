@@ -1,0 +1,138 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   FİTNES · BESLENME (G3) — gün seçici, kalori halkası + P/K/Y, öğün tabakları, son 7 gün.
+   Tabak halkası o öğünün kalori payını gösterir (protein mor · karb gri · yağ yeşil).
+   7 gün çubuğunda seçili gün altın, bugün mor, hedefi %5 aşan gün kırmızı.
+   ════════════════════════════════════════════════════════════════════════════ */
+#fstrip-pane-nutr { font-family: var(--f-mono); }
+#tb-gun { display: flex; align-items: center; justify-content: center; gap: 4px; }
+#tb-gun-ad { margin: 0; min-inline-size: 10em; text-align: center; font: 600 var(--yazi-16)/1.1 var(--f-sayi); letter-spacing: .06em; color: var(--f-metin); }
+.tb-ok {
+  inline-size: 44px; block-size: 44px; display: grid; place-items: center; padding: 0;
+  border: 0; border-radius: var(--r-2); background: none; color: var(--f-metin-3); cursor: pointer;
+}
+.tb-ok svg { inline-size: 20px; block-size: 20px; }
+.tb-ok:hover:not(:disabled) { color: var(--f-metin); background: var(--f-yuzey-2); }
+.tb-ok:disabled { opacity: .3; cursor: default; }
+
+#tb-ust { display: flex; align-items: center; gap: 20px; padding: 4px; }
+#tb-halka { inline-size: 124px; block-size: 124px; flex-shrink: 0; position: relative; }
+#tb-halka svg { inline-size: 100%; block-size: 100%; display: block; transform: rotate(-90deg); }
+#tb-halka circle { fill: none; stroke-width: 8; }
+#tb-halka .iz { stroke: var(--f-yuzey-2); }
+#tb-halka-dolu { stroke: var(--f-mor); stroke-linecap: round; transition: stroke-dasharray var(--sure-4) var(--egri), stroke var(--sure-2) var(--egri); }
+#tb-halka-dolu.asti { stroke: var(--f-kirmizi); }
+#tb-halka .ic { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+#tb-kcal { font: 600 1.9rem/1 var(--f-sayi); font-variant-numeric: tabular-nums; color: var(--f-metin); }
+#tb-hedef { margin-block-start: 4px; font-size: var(--yazi-11); letter-spacing: .06em; color: var(--f-metin-3); }
+#tb-kalan { margin-block-start: 3px; font-style: normal; font-size: var(--yazi-11); color: var(--f-yesil); font-variant-numeric: tabular-nums; }
+#tb-kalan.asti { color: var(--f-kirmizi); }
+#tb-makro { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; gap: 10px; }
+.tb-m { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; font-size: var(--yazi-11); letter-spacing: .08em; color: var(--f-metin-3); }
+.tb-m b { color: var(--f-metin); font-weight: 600; font-variant-numeric: tabular-nums; }
+.tb-m i { grid-column: 1 / -1; block-size: 4px; border-radius: 2px; background: var(--f-yuzey-2); overflow: hidden; }
+.tb-m i::after { content: ""; display: block; block-size: 100%; inline-size: var(--w, 0); background: var(--r); transition: inline-size var(--sure-4) var(--egri); }
+.tb-P { --r: var(--f-protein); } .tb-K { --r: var(--f-karb); } .tb-Y { --r: var(--f-yag); }
+#tb-hedef-btn {
+  align-self: flex-end; min-block-size: 32px; padding: 0 12px; border: 1px solid var(--f-cizgi-2); border-radius: var(--r-tam);
+  background: none; color: var(--f-metin-3); font: 600 var(--yazi-11)/1 var(--f-mono); letter-spacing: .12em; cursor: pointer;
+}
+#tb-hedef-btn:hover { color: var(--f-metin); border-color: var(--f-metin-3); }
+
+#fitnes-hizli:empty { display: none; }
+#tb-tabaklar { display: flex; flex-direction: column; gap: 8px; }
+.tb-kart {
+  display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-3);
+  background: var(--f-yuzey); animation: tb-gir var(--sure-3) var(--egri) backwards; animation-delay: calc(var(--i, 0) * 50ms);
+}
+@keyframes tb-gir { from { opacity: 0; transform: translateY(6px); } }
+.tb-kart.tb-bos { background: none; box-shadow: inset 0 0 0 1px var(--f-cizgi-2); align-items: center; }
+.tb-kart:has(#tb-form:not([hidden])) { align-items: flex-start; }
+.tb-tabak {
+  inline-size: 52px; block-size: 52px; flex-shrink: 0; position: relative; display: grid; place-items: center; padding: 0;
+  border: 0; border-radius: var(--r-tam); background: var(--f-yuzey-2); box-shadow: inset 0 0 0 1px var(--f-cizgi);
+  cursor: pointer; transition: transform var(--sure-2) var(--egri);
+}
+.tb-tabak:active { transform: scale(.94); }
+.tb-tabak::after { content: ""; position: absolute; inset: 6px; border-radius: var(--r-tam); background: var(--f-zemin); box-shadow: inset 0 0 0 1px var(--f-cizgi); }
+.tb-tabak span { position: relative; z-index: var(--z-p-taban, 1); font: 600 var(--yazi-11)/1 var(--f-mono); color: var(--f-metin); font-variant-numeric: tabular-nums; }
+.tb-kart.tb-bos .tb-tabak { background: none; }
+.tb-kart.tb-bos .tb-tabak span { font-size: var(--yazi-19); font-weight: 400; color: var(--f-metin-3); }
+.tb-ic { flex: 1; min-inline-size: 0; }
+.tb-bas { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.tb-bas b { font-size: var(--yazi-12); letter-spacing: .14em; color: var(--f-metin); }
+.tb-bas em { font-style: normal; font-size: var(--yazi-12); color: var(--f-metin-2); font-variant-numeric: tabular-nums; }
+.tb-liste { list-style: none; margin: 0; padding: 4px 0 0; }
+.tb-liste li { display: flex; align-items: center; gap: 4px; }
+.tb-s {
+  flex: 1; min-inline-size: 0; min-block-size: 36px; display: flex; align-items: center; gap: 8px; padding: 0;
+  border: 0; background: none; color: var(--f-metin-2); font: 400 var(--yazi-13)/1.4 var(--f-govde); text-align: start; cursor: pointer;
+}
+.tb-s .ad { flex: 1; min-inline-size: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-s small { flex-shrink: 0; font: 400 var(--yazi-11) var(--f-mono); color: var(--f-metin-3); font-variant-numeric: tabular-nums; }
+.tb-s .sil { display: none; flex-shrink: 0; padding: 3px 8px; border: 1px solid var(--f-kirmizi); border-radius: var(--r-1); color: var(--f-kirmizi); font: 600 var(--yazi-11) var(--f-mono); letter-spacing: .12em; }
+.tb-s.acik small { display: none; }
+.tb-s.acik .sil { display: inline-block; }
+.tb-eylem { display: flex; flex-wrap: wrap; gap: 6px; margin-block-start: 6px; }
+.tb-eylem button {
+  min-block-size: 32px; padding: 0 12px; border: 1px solid var(--f-cizgi-2); border-radius: var(--r-tam);
+  background: none; color: var(--f-metin-3); font: 500 var(--yazi-11)/1 var(--f-mono); letter-spacing: .12em; cursor: pointer;
+}
+.tb-eylem button:hover { color: var(--f-metin); border-color: var(--f-metin-3); }
+.tb-ic:has(#tb-form:not([hidden])) .tb-eylem { display: none; }
+
+#tb-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-block-start: 8px; }
+#tb-form[hidden] { display: none; }
+#tb-form input {
+  inline-size: 100%; min-inline-size: 0; block-size: 40px; padding: 0 10px; box-sizing: border-box;
+  border: 1px solid var(--f-cizgi-2); border-radius: var(--r-2); background: var(--f-zemin); color: var(--f-metin);
+  font: 400 var(--yazi-14) var(--f-govde); outline: none;
+}
+#tb-form input:focus { border-color: var(--f-mor); }
+#tb-ad { grid-column: 1 / -1; }
+.tb-alan { display: flex; flex-direction: column; gap: 3px; min-inline-size: 0; }
+.tb-alan span { font: 500 var(--yazi-11)/1 var(--f-mono); letter-spacing: .08em; color: var(--f-metin-3); }
+#tb-durum { grid-column: 1 / -1; font: 500 var(--yazi-11)/1.3 var(--f-mono); color: var(--f-kirmizi); }
+#tb-durum:empty { display: none; }
+#tb-form.hata #tb-ad, #tb-form.hata #tb-kcal-inp { border-color: var(--f-kirmizi); }
+#tb-form .tb-dugmeler { grid-column: 1 / -1; display: flex; gap: 6px; }
+#tb-form .tb-dugmeler button {
+  min-block-size: 40px; padding: 0 14px; border: 1px solid var(--f-cizgi-2); border-radius: var(--r-2);
+  background: none; color: var(--f-metin-2); font: 600 var(--yazi-11)/1 var(--f-mono); letter-spacing: .12em; cursor: pointer;
+}
+#tb-form .tb-dugmeler .ekle { margin-inline-start: auto; background: var(--mor-yuzey); border-color: var(--mor-yuzey); color: #fff; }
+#tb-form .tb-dugmeler .ekle:hover { background: var(--mor-yuzey-hov); }
+
+#tb-hafta { padding: 12px 4px 4px; border-block-start: 1px solid var(--f-cizgi); }
+.tb-hafta-bas { display: flex; justify-content: space-between; gap: 8px; font-size: var(--yazi-11); letter-spacing: .12em; color: var(--f-metin-3); }
+#tb-cubuk { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; block-size: 92px; margin-block-start: 8px; }
+#tb-cubuk .hedef { position: absolute; inset-inline: 0; border-block-start: 1px dashed var(--f-metin-3); pointer-events: none; }
+.tb-g { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; min-inline-size: 0; padding: 0; border: 0; background: none; cursor: pointer; }
+.tb-g:disabled { cursor: default; }
+.tb-g i { display: block; min-block-size: 2px; border-radius: 3px 3px 0 0; background: var(--f-metin-3); transition: block-size var(--sure-4) var(--egri); }
+.tb-g.yok i { background: var(--f-yuzey-3); }
+.tb-g.asti i { background: var(--f-kirmizi); }
+.tb-g.secili i { background: var(--f-altin); }
+.tb-g span { font-size: var(--yazi-12); letter-spacing: .04em; color: var(--f-metin-2); text-align: center; }
+.tb-g.bugun span { color: var(--f-mor); }
+.tb-g.secili span { color: var(--f-altin); }
+
+@media (max-width: 420px) {
+  #tb-ust { gap: 14px; }
+  #tb-halka { inline-size: 108px; block-size: 108px; }
+  #tb-kcal { font-size: 1.6rem; }
+}
+@media (min-width: 1000px) {
+  #fstrip-pane-nutr { display: none; }
+  #fstrip-pane-nutr.fstrip-pane-active { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 12px 24px; align-items: start; }
+  #fstrip-pane-nutr > #tb-gun { grid-column: 1; grid-row: 1; }
+  #fstrip-pane-nutr > #tb-ust { grid-column: 1; grid-row: 2; }
+  #fstrip-pane-nutr > #tb-hafta { grid-column: 1; grid-row: 3; }
+  #fstrip-pane-nutr > #fitnes-hizli { grid-column: 2; grid-row: 1; align-self: center; }
+  #fstrip-pane-nutr > #tb-tabaklar { grid-column: 2; grid-row: 2 / span 3; }
+  #tb-ust { flex-direction: column; align-items: stretch; }
+  #tb-halka { align-self: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tb-kart { animation: none; }
+  #tb-halka-dolu, .tb-m i::after, .tb-g i, .tb-tabak { transition: none; }
+}

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# yuki-oss pre-commit — stage'lenen dosyalarda kişisel veri / marka / sır kalıntısı yakalar.
+# Kurulum (YALNIZ bu depo, global git ayarı YOK):
+#   pre-commit install   (.pre-commit-config.yaml bu script'i çağırır)
+#   ya da: ln -sf ../../scripts/pre-commit .git/hooks/pre-commit
+# Tam depo taraması CI'da (.github/workflows/temizlik.yml) koşar; bu hook hızlı yerel kapıdır.
+set -euo pipefail
+kok="$(git rev-parse --show-toplevel)"
+
+# 1) Yeni eklenen/değişen dosyalarda kalıntı deseni (mevcut FAZ 2 kalıntıları bloke etmez)
+python3 "$kok/scripts/test_temizlik.py" --staged || {
+  echo "↳ düzelt ya da 'git commit --no-verify' (yalnız bilerek)"; exit 1; }
+
+# 2) Sır taraması (varsa) — stage'lenmiş içerik
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --no-banner -c "$kok/.gitleaks.toml" || {
+    echo "↳ gitleaks sır buldu"; exit 1; }
+fi

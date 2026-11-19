@@ -1,0 +1,134 @@
+/* ── SAĞLIK · YETENEK KARTLARI ( panel 10, 2026-09-28 — geliştirici taslak B'yi seçti) ─────────────
+ * Taslak B (2026-09-26 HQ taslakları). Yalnız ürün token'ları.
+ * Hüküm kartı (#sag-ozet) · yetenek ızgarası (#sag-liste) · hata günlüğü kartı · yeniden başlatma bölümü
+ * (#sag-yeniden-baslat; `.yb-*` sınıfları AYARLAR'daki #yb-serit ile ortak). Çizim: intro-sequences.js `_sagCiz`.
+ * 09-28'e kadar `sag-*` sınıflarının hiç kuralı yoktu — panel stilsiz ve satır içi stille çiziliyordu.
+ */
+
+/* Işıklar ortak: ogeler.css § 14 `.durum-isik` (ANAHTAR ile aynı durum = aynı ışık — goz tur 1 #2/#3/#8) */
+
+.sag-etiket { display: inline-flex; align-items: center; flex: none; padding: 2px 8px; border-radius: var(--r-tam);
+  font-size: var(--yazi-11); line-height: 1.5; white-space: nowrap; }
+.sag-etiket.iyi { color: var(--yesil-ink); background: var(--yesil-zemin); }
+.sag-etiket.uyari { color: var(--altin-ink); background: var(--altin-zemin); }
+.sag-etiket.kritik { color: var(--kirmizi-ink); background: var(--kirmizi-zemin); }
+.sag-etiket.kurulum { color: var(--mor-ink); background: var(--mor-zemin); }
+.sag-etiket.olculemedi { color: var(--ink-2); border: 1px dashed var(--kenar-guclu); padding: 1px 7px; }
+
+.sag-kucuk { margin: 0; font-size: var(--yazi-12); color: var(--ink-2); line-height: 1.5; text-wrap: pretty; }
+
+/* ── kartlar ── */
+.sag-kart { padding: var(--b-7); border: 1px solid var(--kenar); border-radius: var(--r-3); background: var(--yuzey-1); }
+.sag-hukum { display: flex; flex-direction: column; gap: var(--b-3); }
+.sag-hukum-bas { display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-4) var(--b-5); }
+.sag-hukum-metin { flex: 1 1 300px; min-width: 0; margin: 0; font-size: var(--yazi-16); font-weight: var(--ag-kalin);
+  color: var(--ink-1); line-height: 1.35; text-wrap: balance; }
+/* Işık başlığın İLK satırının ortasında (başlık iki satıra kırılınca bloğun ortasına kaymasın) */
+.sag-hukum-bas > .durum-isik { align-self: flex-start; margin-top: calc((var(--yazi-16) * 1.35 - 10px) / 2); }
+.sag-hukum > .sag-kucuk { padding-inline-start: calc(10px + var(--b-5)); }
+.sag-sayac { display: flex; flex-wrap: wrap; gap: 6px; }
+.sag-hata-metin { flex: 1 1 280px; margin: 0; font-size: var(--yazi-13); color: var(--ink-1); line-height: 1.5; }
+
+.sag-izgara { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--b-5); }
+.sag-izgara:empty { display: none; }
+.sag-yet { display: flex; flex-direction: column; min-width: 0; padding: var(--b-7) var(--b-7) var(--b-4);
+  border: 1px solid var(--kenar); border-radius: var(--r-3); background: var(--yuzey-1); }
+.sag-yet[data-durum="kritik"] { border-color: var(--kirmizi-ink); }
+.sag-yet[data-durum="uyari"] { border-color: var(--altin-ink); }
+.sag-yet[data-durum="kurulum"] { border-color: var(--mor-ink); }
+/* Aralık hükümle aynı (b-5): başlık metni hüküm ve satır metinleriyle aynı x'te başlasın (goz #11) */
+.sag-yet-ust { display: flex; align-items: center; gap: var(--b-5); }
+.sag-yet-ust h4 { flex: 1; min-width: 0; margin: 0; font-size: var(--yazi-16); font-weight: var(--ag-kalin); color: var(--ink-1); line-height: 1.3; }
+.sag-yet-cumle { margin: var(--b-3) 0 0; font-size: var(--yazi-13); color: var(--ink-2); line-height: 1.5; text-wrap: pretty; }
+
+/* ── denetim satırı: ışık · ad + durum cümlesi + çözüm · eylem ── */
+.sag-denetimler { list-style: none; margin: var(--b-5) 0 0; padding: 0; }
+.sag-satir { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 2px var(--b-5); align-items: start;
+  padding: var(--b-5) 0; border-block-start: 1px solid var(--kenar); }
+.sag-satir > .durum-isik { margin-top: calc((var(--yazi-13) * 1.5 - 10px) / 2); }
+.sag-satir > .durum-isik.kritik { box-shadow: 0 0 0 2px var(--kirmizi-zemin); }
+/* Sunucu cümlesindeki `kod` (model kimliği, klasör yolu) ANAHTAR'daki gibi kod çipi (goz #1) — mono yazıda
+   tire boşluğu da kalkıyor (Inter'de "alice - ai", goz #12) */
+.sag-oz code { font-family: var(--font-hud); font-size: var(--yazi-12); color: var(--ink-1); overflow-wrap: anywhere;
+  padding: 0 4px; border: 1px solid var(--kenar); border-radius: var(--r-1); background: var(--yuzey-2);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.sag-oz { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sag-ad { font-size: var(--yazi-13); font-weight: var(--ag-orta); color: var(--ink-1); line-height: 1.5; }
+.sag-ne, .sag-cozum, .sag-kur-uyari, .sag-sonuc { margin: 0; font-size: var(--yazi-12); line-height: 1.5; overflow-wrap: anywhere; text-wrap: pretty; }
+.sag-ne { color: var(--ink-2); }
+.sag-cozum { color: var(--ink-1); }
+.sag-kur-uyari { margin-top: var(--b-2); padding: var(--b-3) var(--b-4); border-radius: var(--r-2);
+  background: var(--altin-zemin); color: var(--altin-ink); }
+.sag-sonuc { margin-top: var(--b-2); color: var(--ink-1); }
+.sag-sonuc.ok { color: var(--yesil-ink); }
+.sag-sonuc.err { color: var(--kirmizi-ink); }
+.sag-sonuc.uyari { color: var(--altin-ink); }
+.sag-sonuc.surec { color: var(--mor-ink); }
+/* Bağlantı vuruş alanı masada 32px (tur 1: 17px ölçüldü), telefonda 44px (aşağıda) */
+.sag-bag { align-self: flex-start; display: inline-flex; align-items: center; min-height: 32px;
+  font-size: var(--yazi-12); color: var(--mor-ink); overflow-wrap: anywhere; }
+/* Düğmenin ortası satır başlığının ortasında (goz #10: 8px yukarıda başlıyordu, ne başlığa ne bloğa ortalıydı) */
+.sag-ey { grid-row: 1; grid-column: 3; display: flex; flex-direction: column; align-items: stretch; gap: var(--b-3);
+  margin-top: calc(var(--yazi-13) * 0.75 - 18px); }
+.sag-ey:empty { display: none; }
+.sag-ey .dg { min-height: 36px; padding: 6px 12px; white-space: nowrap; }
+/* Kuran düğme amber çerçeveli — "Düzelt"le aynı görünmemeli, geri alınamaz ve makineye dokunur */
+.sag-ey .sag-kur { border-color: var(--altin-ink); color: var(--altin-ink); white-space: normal; max-width: 200px; }
+
+/* ── hata günlüğü ── */
+.sag-gunluk { display: flex; flex-direction: column; gap: var(--b-4); }
+.sag-gunluk h3 { margin: 0; font-size: var(--yazi-14); font-weight: var(--ag-kalin); color: var(--ink-1); }
+.sag-gunluk-satir { display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-4) var(--b-5); }
+.sag-yay { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sag-yay b { font-size: var(--yazi-13); font-weight: var(--ag-kalin); color: var(--ink-1); line-height: 1.5; }
+.sag-yay .sag-kucuk { overflow-wrap: anywhere; }
+.sag-dugmeler { display: flex; flex-wrap: wrap; gap: var(--b-3); }
+/* Sessiz düğmeler kartta çerçeveli — çerçevesiz "Temizle" düz metin gibi okunuyordu (LİSANS tur 1 dersi) */
+.sag-gunluk .dg-sessiz { border: 1px solid var(--kenar-guclu); }
+.sag-log-durum { margin: 0; font-size: var(--yazi-12); line-height: 1.5; color: var(--ink-2); overflow-wrap: anywhere; }
+.sag-log-durum:empty { display: none; }
+.sag-log-durum[data-ton="ok"] { color: var(--yesil-ink); }
+.sag-log-durum[data-ton="uyari"] { color: var(--altin-ink); }
+.sag-log-durum[data-ton="err"] { color: var(--kirmizi-ink); }
+.sag-log { margin: 0; max-height: 320px; overflow: auto; padding: var(--b-5); border: 1px solid var(--kenar); border-radius: var(--r-2);
+  background: var(--yuzey-2); color: var(--ink-1); font-family: var(--font-hud); font-size: var(--yazi-12); line-height: 1.55;
+  white-space: pre-wrap; overflow-wrap: anywhere; }
+.sag-log[hidden] { display: none; }
+
+/* ── yeniden başlatma: bekleyen ayar varsa mor şerit (en üstte), yoksa sessiz bölüm (en altta) ── */
+.sag-yb:empty { display: none; }
+/* :not(:empty) şart — boş kapta üst çizgi sayfanın dibinde tek başına kalıyordu (tur 1) */
+.sag-yb:not(.yb-bekliyor):not(:empty) { order: 9; display: flex; flex-direction: column; gap: var(--b-3);
+  padding-block-start: var(--b-6); border-block-start: 1px solid var(--kenar); }
+.sag-yb.yb-bekliyor { order: -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-4) var(--b-6);
+  padding: var(--b-5) var(--b-6); border-radius: var(--r-2); background: var(--mor-zemin); }
+.yb-yay { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.yb-bas { font-size: var(--yazi-13); font-weight: var(--ag-kalin); color: var(--ink-1); line-height: 1.5; }
+.yb-alt, .yb-not, .yb-engel { margin: 0; max-inline-size: 110ch; font-size: var(--yazi-12); line-height: 1.5; color: var(--ink-2); text-wrap: pretty; }
+.sag-yb:not(.yb-bekliyor) .yb-alt, #yb-serit .yb-alt { font-size: var(--yazi-13); }
+.yb-not { color: var(--ink-1); }
+.yb-engel { color: var(--altin-ink); }
+.yb-eylem { display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-4); }
+.yb-durum { font-size: var(--yazi-12); color: var(--ink-2); line-height: 1.5; max-inline-size: 48ch; }
+.yb-durum:empty { display: none; }
+
+@media (max-width: 760px) {
+  .sag-izgara { grid-template-columns: minmax(0, 1fr); }
+  .sag-kart { padding: var(--b-6) var(--b-5); }
+  .sag-yet { padding: var(--b-6) var(--b-5) var(--b-3); }
+  .sag-hukum-metin { flex-basis: 100%; }
+  .sag-hukum-bas > .durum-isik + .sag-hukum-metin { flex-basis: calc(100% - 10px - var(--b-5)); }
+  .sag-hukum > .sag-kucuk { padding-inline-start: 0; }
+  /* Telefonda eylem satırın altına iner: dar ekranda sağ sütun metni tek kelimelik sütuna sıkıştırıyordu */
+  .sag-satir { grid-template-columns: 10px minmax(0, 1fr); }
+  .sag-ey { grid-row: auto; grid-column: 2; flex-direction: row; flex-wrap: wrap; margin-top: var(--b-3); }
+  .sag-ey .dg { flex: 1 1 auto; }
+  .sag-ey .sag-kur { max-width: none; }
+  .sag-dugmeler { flex: 1 1 100%; }
+  .sag-dugmeler .dg { flex: 1 1 0; min-width: 0; }   /* eşit genişlik (goz #15: 101/109/107px) */
+  .sag-yb.yb-bekliyor .yb-eylem, .sag-yb.yb-bekliyor .yb-eylem .dg { flex: 1 1 100%; }
+}
+@media (hover: none) {
+  #hq-panel-saglik .dg, #yb-serit .dg { min-height: var(--hedef, 44px); }
+  .sag-bag { min-height: var(--hedef, 44px); }
+}

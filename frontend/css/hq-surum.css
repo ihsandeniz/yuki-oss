@@ -1,0 +1,52 @@
+/* ── SÜRÜM VE GÜNCELLEME (HQ, updater-ui.js `#hq-upd-*`) ──────────────────────────────
+ * Eski adı hq-lisans.css. Açık kaynak sürümde lisans/paket merdiveni kaldırıldı (2026-10-17);
+ * yalnız sürüm bölümünün kuralları kaldı. `.lic-*` sınıf adları updater-ui.js ve index.html
+ * ile eşleşsin diye korundu (CSS adı, kademe anlamı yok).
+ */
+.lic-yay > b { display: block; line-height: 1.5; }
+.lic-yay { flex: 1 1 240px; min-width: 0; }
+.lic-yay b { font-size: var(--yazi-13); font-weight: var(--ag-kalin); color: var(--ink-1); }
+.lic-kucuk { margin: 2px 0 0; font-size: var(--yazi-12); color: var(--ink-2); line-height: 1.5; overflow-wrap: anywhere; }
+.lic-surum .dg-sessiz { border: 1px solid var(--kenar-guclu); }
+
+/* ── sürüm ve güncelleme ── */
+.lic-surum { padding: var(--b-7) var(--b-7) var(--b-3); border: 1px solid var(--kenar);
+  border-radius: var(--r-3); background: var(--yuzey-1); }
+.lic-surum h3 { margin: 0 0 var(--b-5); font-size: var(--yazi-14); font-weight: var(--ag-kalin); color: var(--ink-1); }
+.lic-surum-satir { display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-4) var(--b-5); padding: var(--b-5) 0;
+  border-block-start: 1px solid var(--kenar); }
+.lic-surum-satir .lic-yay { flex: 1 1 260px; }
+.lic-surum-satir label { cursor: pointer; }
+.lic-surum b { font-size: var(--yazi-13); font-weight: var(--ag-kalin); color: var(--ink-1); }
+.lic-surum select.girdi { width: auto; min-width: 240px; max-width: 100%; font-size: var(--yazi-13); }
+#hq-upd-version { font-size: var(--yazi-13); color: var(--ink-1); }
+#hq-upd-version .rozet { margin-inline-start: var(--b-3); }
+.upd-guncel { background: var(--yesil-zemin); color: var(--yesil-ink); }
+.upd-alt { display: block; margin-top: 2px; font-size: var(--yazi-12); color: var(--ink-2); }
+/* Tarayıcıda masaüstüne ait satırlar yok (updater-ui.js `upd-web`) — devre dışı düğme göstermek yerine */
+.lic-surum.upd-web .upd-masaustu { display: none; }
+.upd-sonuc { margin: var(--b-2) 0 0; font-size: var(--yazi-12); line-height: 1.5; color: var(--ink-2); overflow-wrap: anywhere; }
+.upd-sonuc:empty { display: none; }
+.upd-sonuc[data-ton="surec"] { color: var(--mor-ink); }
+.upd-sonuc[data-ton="ok"] { color: var(--yesil-ink); }
+.upd-sonuc[data-ton="uyari"] { color: var(--altin-ink); }
+.upd-sonuc[data-ton="err"] { color: var(--kirmizi-ink); }
+.upd-not { display: block; margin-block: var(--b-2); }
+.upd-soluk { color: var(--ink-2); }
+.upd-eylem { display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-4); margin-top: var(--b-4); }
+.upd-durum { color: var(--ink-2); }
+.upd-bag { color: var(--mor-ink); }
+
+@media (max-width: 760px) {
+  .lic-surum { padding: var(--b-6) var(--b-5) var(--b-2); }
+  .lic-surum select.girdi { min-width: 0; width: 100%; }
+}
+@media (hover: none) {
+  .lic-surum .dg { min-height: var(--hedef, 44px); }
+}
+/* Anahtar (toggle) görseli 40×24; vuruş alanı etiketle büyür (input etiketi tamamen kaplar) */
+.lic-surum .anahtar { min-width: 44px; min-height: 32px; justify-content: flex-end; }
+@media (hover: none) { .lic-surum .anahtar { min-height: var(--hedef, 44px); } }
+/* Topuz mor iz üstünde iki temada da beyaz: ortak bileşen açık temada --ink-1 (koyu) çiziyordu (goz tur 1).
+   Burada düzeltildi; kaynak ogeler.css (ortak bileşen) — başka panel .anahtar'ı kullanmaya başlarsa oraya taşınmalı. */
+.lic-surum .anahtar input:checked + .yol::after { background: #fff; }

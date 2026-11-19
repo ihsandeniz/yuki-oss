@@ -1,0 +1,5 @@
+{
+  "version": "1.0",
+  "_note": "Mod = uygulama aç + çalışma alanına geç + komut çalıştır. Kurulu sistem (Hyprland/GNOME/KDE/Windows) otomatik algılanır; her mod o sistemin yöntemiyle çalışır. Boş başlar — kullanıcı '+ YENİ' ile kendi modlarını ekler. trigger_keywords: sesle/yazıyla bunlardan biri söylenince Alice modu başlatır.",
+  "modes": []
+}

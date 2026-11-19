@@ -1,0 +1,138 @@
+{
+  "surum": 1,
+  "aciklama": "Kaçırılan fırsat dedektörü — kullanıcı bir şey ister, model aracı KULLANMADAN cevap verirse, o konuda bir araç varsa hatırlatılır. Yeni kural eklemek için yalnız bu dosyayı düzenle; motora (arac_ipucu.py) dokunma. Denetim: cd backend && python -m app.services.arac_ipucu --denetle",
+  "notlar": [
+    "Kalıplar KÜÇÜK HARFE çevrilmiş metne uygulanır (motor lower() yapar).",
+    "Türkçe ünsüz yumuşaması: kök ek alınca değişir (not→notu, takvim→takvime, kayıt→kaydı). Kalıbı mutasyondan ÖNCE kes ya da iki hâli de yaz.",
+    "araclar[] listesindeki adlar dispatcher'da GERÇEKTEN olmalı; --denetle bunu kontrol eder.",
+    "Kalıplar şimdilik yalnız Türkçe cümleleri yakalar; kart metni ipucu.<ad> anahtarıyla arayüz dilinde gösterilir (frontend/js/diller)."
+  ],
+  "kurallar": [
+    {
+      "ad": "not-al",
+      "kalip": "\\b(bunu not|not al|not et|not düş|notuma (yaz|ekle|kaydet)|günlüğ(e|üme) (yaz|ekle))",
+      "araclar": [
+        "create_note"
+      ],
+      "mesaj": "Bunu not olarak kaydedebilirim — istersen söyle."
+    },
+    {
+      "ad": "not-oku",
+      "kalip": "\\b(not(lar)?ım(da|ı)?( ne)?|ne not (almış|etmiş)|notlarıma bak|günlüğüm(de|ü))",
+      "araclar": [
+        "list_notes",
+        "get_note",
+        "read_journal"
+      ],
+      "mesaj": "Notlarını okuyabiliyorum — 'notlarımı listele' dersen getiririm."
+    },
+    {
+      "ad": "not-geri-getir",
+      "kalip": "\\b(sildiğim not|silinen not|notu geri (getir|al)|not(lar)?ı? çöp|çöpteki not)",
+      "araclar": [
+        "restore_note"
+      ],
+      "mesaj": "Silinen notlar çöpte durur — 'notu geri getir' dersen kimliğiyle geri alırım."
+    },
+    {
+      "ad": "todo-ekle",
+      "kalip": "\\b(yapılacak(lar)?a ekle|göreve? ekle|listeme ekle|todo ekle|görev oluştur)",
+      "araclar": [
+        "create_todo"
+      ],
+      "mesaj": "Bunu yapılacaklar listene ekleyebilirim."
+    },
+    {
+      "ad": "todo-listele",
+      "kalip": "\\b(yapılacak(lar)?ım|görevlerim|ne yapmam gerek|listemde ne)",
+      "araclar": [
+        "list_todos",
+        "search_todos"
+      ],
+      "mesaj": "Yapılacaklar listeni okuyabiliyorum."
+    },
+    {
+      "ad": "takvim",
+      "kalip": "\\b(takvim(e|de|im)|randevu|toplantı(m|ya|yı)?|etkinlik ekle)",
+      "araclar": [
+        "create_calendar_event",
+        "get_calendar_events"
+      ],
+      "mesaj": "Takvimini okuyup etkinlik ekleyebiliyorum."
+    },
+    {
+      "ad": "hatirlatma",
+      "kalip": "\\b(hatırlat|alarm kur|bana anımsat|unutmayayım)",
+      "araclar": [
+        "set_reminder",
+        "list_reminders"
+      ],
+      "mesaj": "Hatırlatıcı kurabilirim."
+    },
+    {
+      "ad": "fitness",
+      "kalip": "\\b(antrenman|antreman|spor yaptım|kaç kilo|öğün|kalori|kaç set|workout)",
+      "araclar": [
+        "log_workout_exercise",
+        "get_fitness_summary",
+        "log_meal"
+      ],
+      "mesaj": "Antrenman ve öğün kaydını tutabiliyorum."
+    },
+    {
+      "ad": "wiki",
+      "kalip": "\\b(wiki(de|ye|den)?|arşiv(de|imde) ara|ikinci beyin)",
+      "araclar": [
+        "wiki_search",
+        "wiki_read"
+      ],
+      "mesaj": "Wiki arşivinde arama yapabiliyorum."
+    },
+    {
+      "ad": "git",
+      "kalip": "\\b(commit|git (durum|log|status)|son değişiklik(ler)?|repo(da|nun)?)",
+      "araclar": [
+        "git_status",
+        "git_log"
+      ],
+      "mesaj": "Depo durumunu ve commit geçmişini okuyabiliyorum."
+    },
+    {
+      "ad": "pano",
+      "kalip": "\\b(panoya (kopyala|at)|kopyala(r mısın)?$|panoda ne)",
+      "araclar": [
+        "set_clipboard",
+        "get_clipboard"
+      ],
+      "mesaj": "Panoya yazıp panodan okuyabiliyorum."
+    },
+    {
+      "ad": "bildirim",
+      "kalip": "\\b(bildirim (gönder|at)|masaüstü uyarı|ekrana uyarı)",
+      "araclar": [
+        "send_notification"
+      ],
+      "mesaj": "Masaüstü bildirimi gönderebilirim."
+    },
+    {
+      "ad": "gorsel-analiz",
+      "kalip": "\\b(bu (resim|görsel|fotoğraf)|qr( kod)?|ocr|yazıyı oku)",
+      "araclar": [
+        "analyze_image",
+        "ocr_image",
+        "read_qr"
+      ],
+      "mesaj": "Görsel analizi, OCR ve QR okuma yapabiliyorum."
+    },
+    {
+      "ad": "sistem-izleme",
+      "kalip": "\\b(cpu|ram|bellek kullanım|sistem (yükü|durumu)|pil(im)?|batarya)",
+      "araclar": [
+        "get_system_info",
+        "monitor_system",
+        "get_battery"
+      ],
+      "mesaj": "Sistem kaynaklarını ve pil durumunu okuyabiliyorum."
+    }
+  ]
+}

@@ -1,0 +1,326 @@
+/* ═══ DUVAR KÂĞIDI — sekme bazlı arka plan (resim · GIF · video) ═══
+ *
+ * Yerleşim kararı: TEK global katman, sekme başına ayrı katman değil.
+ * Sekme panellerinin kendi CSS'ine dokunmamak için; 8 panelin her birine
+ * arka katman eklemek 8 ayrı z-index/overflow riski demekti.
+ *
+ * 🔴 Panellerin arka planı OPAK (ölçüldü: #tab-hq rgb(0,0,0), #tab-kripto
+ * rgb(2,6,20), …). Duvar kâğıdının görünmesi için `body.duvar-acik` iken
+ * şeffaflaştırılıyorlar; okunabilirliği katmanın içindeki PERDE sağlıyor.
+ * Perde tek yerde ayarlanır — her panel için ayrı renk hesabı yapılmaz.
+ */
+
+#duvar-katman {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;        /* tıklama her zaman içeriğe gider */
+  display: none;
+}
+body.duvar-acik #duvar-katman { display: block; }
+
+#duvar-medya-img,
+#duvar-medya-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;           /* en-boy oranını koru, boşluk bırakma */
+  display: none;
+  /* Bulanıklık kenarlarda saydam şerit bırakır → hafifçe büyüt. */
+  transform: scale(1.06);
+  transition: opacity .35s ease;
+}
+#duvar-medya-img.acik,
+#duvar-medya-video.acik { display: block; }
+
+#duvar-perde {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: .55;                /* JS ayardan yazar */
+  transition: opacity .3s ease;
+}
+
+/* ── Panelleri şeffaflaştır ─────────────────────────────────────
+ * Yalnız duvar açıkken. Kapalıyken tek bir kural bile devrede değil,
+ * yani özellik kapalıyken arayüz birebir eskisi gibi kalır.
+ * `z-index:1` şart: katman fixed ve z-index:0 — pozisyonlu kardeşler
+ * aynı seviyede kalırsa çizim sırası DOM'a kalır (bu depoda daha önce
+ * img'li container'da tam bu tuzağa düşüldü). */
+/* 🔴 SEKME LİSTESİ ÜRÜNE GÖRE (2026-09-08): kişiseldeki
+ * map · drive · kripto · odak ÜRÜNDE YOK (ürünleştirmede söküldü).
+ * Onları kopyalamak ölü seçici üretirdi — bu depo ölü CSS yüzünden üç ayrı
+ * araç körlüğü yaşadı (/179/184), yenisini ekleyerek başlamayalım.
+ * Ürünün gerçek sekmeleri (index.html `data-tab=`): chat · planner · hq ·
+ * map · ajan · yedek · galeri · dosya. */
+body.duvar-acik #app,
+body.duvar-acik #tab-hq,
+body.duvar-acik #tab-planner,
+body.duvar-acik #tab-galeri,
+body.duvar-acik #tab-dosya,
+body.duvar-acik #tab-yedek {
+  /* ⚠️ `!important` KORUNDU, kişiselden körlemesine kopyalanarak değil:
+   * kişiselde bir sekme arka planını INLINE style ile taşıyordu ve inline
+   * bildirim harici kuralı özgüllükten bağımsız ezer. Üründe o sekme YOK, ama
+   * `#tab-planner` `style.css:1683`'te `background:#0d0d12` taşıyor ve ileride
+   * bir panelin inline stille gelmesi bu kuralı sessizce öldürürdü. Kapsam dar
+   * (yalnız `body.duvar-acik`), bedeli yok, koruması gerçek. */
+  background-color: transparent !important;
+  position: relative;
+  z-index: 1;
+}
+/* 🔴 Panelin kendisini şeffaflaştırmak YETMEZ — bazı sekmelerde opak arka
+ * planı İÇERİDEKİ kap taşıyor. Ölçüldü 2026-09-07 (elementFromPoint + tüm
+ * sekmelerde büyük opak eleman taraması): sohbette `#chat-pane` rgb(2,7,8),
+ * haritada `#map-center` rgb(0,0,0). İlk sürümde yalnız `#app`/`#tab-*`
+ * şeffaflaştırılmıştı ve sohbet sekmesinde duvar HİÇ görünmüyordu —
+ * `duvar-acik` sınıfı vardı, `<img>` "acik" sınıfındaydı, ölçüm yeşildi.
+ * Yani sınıf doğruydu, piksel yanlıştı. */
+/* İÇ kaplar — ürün ölçümüyle (frontend/tests/test_duvar.py, piksel bazlı).
+ * `#map-center` kişiseldeydi, üründe YOK. */
+body.duvar-acik #chat-pane {
+  background-color: transparent !important;
+}
+
+/* 🔴 `#chat-pane` YETMİYOR — mesaj akışının KENDİSİ de opak (2026-09-10, ölçüldü).
+ * `sohbet.css:921` → `body:not(.hud-ring-mode) #messages { background: var(--yuzey-1) }`
+ * ve o kural **2026-08-21'de**, duvar kâğıdından (2026-09-08) **18 gün ÖNCE**
+ * yazılmış. Yani özellik, sohbet sekmesinde duvarı örtük hâlde YAYINLANDI:
+ * ekranın solunda (portre alanı) duvar görünüyor, sağdaki mesaj alanında
+ * hiç görünmüyordu. Gözle doğrulandı, iki temada da opak (koyu 0.19 /
+ * açık 0.985).
+ *
+ * 📏 Ders — bu dosyanın üstünde yazan dersin BİR KAT DAHA DERİNİ: "panelin
+ * kendisini şeffaflaştırmak yetmez" denmişti ve `#chat-pane` şeffaflaştırıldı;
+ * ama opaklığı taşıyan kap onun da İÇİNDEYDİ. Kapsayıcıyı temizlemek, içindeki
+ * her kabı temizlemek demek değil — ölçüm noktası kapsayıcıda değil **pikselde**
+ * olmalı (test_duvar.py bunu zaten yapıyor ve bu kusuru yakaladı).
+ *
+ * Okunabilirlik: mesaj balonları kendi arka planlarını taşıyor
+ * (`--bg-msg-user` / `--bg-msg-yuki`), metin duvarın üstünde çıplak kalmıyor;
+ * geri kalanı zaten perdenin işi. `#input-container`/`#input-area` ise yine
+ * DIŞARIDA — orası yazı yazılan yüzey (yukarıdaki gerekçe). */
+body.duvar-acik #messages {
+  background-color: transparent !important;
+}
+
+/* 🔴 ÜRÜNÜN GERÇEK ENGELLEYİCİSİ: `.kabuk` / `.kabuk-icerik` (2026-09-08, ÖLÇÜLDÜ).
+ * Kişiselde bu yapı YOK — orada opaklığı `#chat-pane` ve `#map-center` taşıyordu.
+ * Üründe tüm arayüz bir kabuk sarmalayıcının içinde ve o kabuk tam ekran opak.
+ * Bunları şeffaflaştırmadan duvar HİÇBİR ŞEKİLDE görünmüyordu — katman doğruydu
+ * (fixed, 1400×900, img yüklü, opacity 1), kabuk üstünü tamamen örtüyordu.
+ *
+ * 🔑 İKİ DERS BİRDEN, ikisi de bu turda bizzat yaşandı:
+ *   ① "Kişiselde şu kaptı" bilgisi hedefe TAŞINMAZ — hedefin kendi kabı ölçülür.
+ *   ② Ölçüm aracı renk BİÇİMİNE körse hiçbir şey bulamaz: ilk taramam
+ *      `rgba()` arıyordu, ürün ise `oklch()` döndürüyor → her opak kabı
+ *      "şeffaf" saydı ve "duvar hiçbir yerde örtülmüyor" dedi. Ekran görüntüsü
+ *      olmasa bu kusur YEŞİL BİR TESTLE BİRLİKTE teslim edilecekti.
+ *      (Aynı tuzak ledger'da yazılı: "renk regex'i oklch'te 0,0,0 verir".)
+ *
+ * ⚠️ `#input-container` / `#input-area` BİLEREK dışarıda: onlar yazı yazılan
+ * yüzey, arkasında duvar akarsa okunabilirlik düşer. Duvar onların ARKASINDA
+ * kalır — perde zaten bunun için var. */
+body.duvar-acik .kabuk,
+body.duvar-acik .kabuk-icerik {
+  background-color: transparent !important;
+}
+
+/* Sekme çubuğu da duvarın üstünde kalmalı */
+
+
+/* ═══ AYAR PANELİ (HQ › DUVAR) · ÖNİZLEME ÖNCE (2026-09-27, kişisel 54de771 yeniden yazıldı) ═══
+ * Solda "{SEKME} böyle görünecek" sahnesi + kaydırıcılar, sağda sekmeler + kitaplık.
+ * 🔴 Eski panel CSS'i üründe TANIMSIZ token kullanıyordu (`--border-card`, `--surface-1`,
+ * `--scrim-2`, `--c-ink-2` yedeksiz) → kenarlar hiç çizilmiyordu (09-27 harita). Kişisel
+ * token'lar da taşınmadı; yalnız ürün token'ları. Kabuk `.oda` (başlık şeridi + kayan gövde). */
+
+/* 🔴 Bu satır ZORUNLU, süs değil: `#tab-hq .hq-panel{display:none !important}` her paneli
+ * kapatır, her panel kendi karşı-kuralıyla açılır. Yazılmazsa içerik çizilir, ekran boş kalır. */
+#tab-hq[data-hq="duvar"] #hq-panel-duvar { display: flex !important; }
+
+.oda-govde.dv-govde {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr);
+  column-gap: var(--b-8, 40px);
+  row-gap: var(--b-6, 24px);
+  align-items: start;
+  align-content: start;
+}
+.dv-sol, .dv-sag { min-width: 0; }
+
+/* Duvarın ÖNÜNDE okunaklılık: HQ'ya duvar atanınca parlak görselde etiketler okunmuyordu
+ * (kişisel ölçüm). Opak değil — sonucu canlı görmek istiyoruz — bulanık koyu cam. */
+/* Sol sütunun TAMAMI camda: yalnız kaydırıcılar camdayken açık temada başlık ve mod
+   düğmeleri doğrudan duvarın üstünde kalıp okunmuyordu (09-27 tur 1) */
+body.duvar-acik #hq-panel-duvar .oda-bas,
+body.duvar-acik #hq-panel-duvar .dv-sol,
+body.duvar-acik #hq-panel-duvar .dv-sag {
+  background: color-mix(in srgb, var(--bg, #0b0b0f) 88%, transparent);   /* 78: açık temada gövde metni 4,0:1'e düşüyordu */
+  backdrop-filter: blur(10px);
+}
+body.duvar-acik #hq-panel-duvar .dv-sol,
+body.duvar-acik #hq-panel-duvar .dv-sag { padding: 14px; border-radius: var(--r-3, 10px); }
+/* AYARLAR odaları (Güvenlik, Mikrofon …) ve oda biçimli HQ panelleri (MODLAR, SİSTEM …; DUVAR hariç —
+   orada duvar görünmeli) da duvarın üstünde: oda başlığı ve gövdesi çıplak
+   duruyordu, açık temada metin duvar kâğıdına karışıyordu (YÜZ tur 1, 09-27 — panel 4
+   ölçülürken duvar kapalıydı). Başlık + gövde aynı cam, DUVAR panelindeki oranla. */
+body.duvar-acik #hq-settings-main > .oda-bas,
+body.duvar-acik #hq-settings-main > .oda-govde,
+body.duvar-acik #tab-hq .hq-panel.oda:not(#hq-panel-duvar) > .oda-bas,
+body.duvar-acik #tab-hq .hq-panel.oda:not(#hq-panel-duvar) > .oda-govde {
+  /* 93: 88'de açık temada küçük bölüm başlığı 3,6–4,0:1'e düşüyordu (YÜZ goz tur 1) */
+  background: color-mix(in srgb, var(--bg, #0b0b0f) 93%, transparent);
+  backdrop-filter: blur(10px);
+}
+/* İç boşluk YALNIZ gövdeye: başlığın kendi dolgusu ✕ için sağ güvenli payı taşıyor
+   (--oda-sag-guvenli) — onu ezince "Yeni mod" düğmesi ✕'in altına giriyordu (MODLAR tur 2) */
+body.duvar-acik #hq-settings-main > .oda-govde { padding: 14px 18px; }   /* panellerin .oda-govde'si kendi 32px dolgusunu taşır — ezilirse başlıkla hiza kayar (MODLAR goz) */
+/* İki blok TEK cam: ayrı yuvarlak köşeler uç uca gelince aradan duvar sivri bir diken
+   gibi görünüyordu (goz tur 1) → başlık yalnız üstte, gövde yalnız altta yuvarlak */
+body.duvar-acik #tab-hq .hq-panel.oda:not(#hq-panel-duvar) > .oda-bas,
+body.duvar-acik #hq-settings-main > .oda-bas { border-radius: var(--r-3, 10px) var(--r-3, 10px) 0 0; margin-block-end: 0;
+  border-block-end-color: transparent; }   /* gövdenin kendi ayracıyla çift çizgi oluyordu (goz tur 2) */
+body.duvar-acik #tab-hq .hq-panel.oda:not(#hq-panel-duvar) > .oda-govde,
+body.duvar-acik #hq-settings-main > .oda-govde { border-radius: 0 0 var(--r-3, 10px) var(--r-3, 10px); margin-block-start: 0; }
+
+/* ── Sol: sahne ── */
+.dv-h { margin: 0 0 12px; font: var(--ag-kalin, 600) var(--yazi-19)/1.2 var(--font); color: var(--ink-1); }
+.dv-mod-satir { display: inline-flex; gap: 2px; padding: 3px; margin-bottom: 14px; border: 1px solid var(--kenar); border-radius: var(--r-tam); }
+.dv-mod-btn {
+  min-height: 34px; padding: 0 14px; border: 0; border-radius: var(--r-tam); background: none; cursor: pointer;
+  font: 500 var(--yazi-13) var(--font); color: var(--ink-2);
+}
+.dv-mod-btn:hover { color: var(--ink-1); }
+.dv-mod-btn.aktif { background: var(--altin-zemin); color: var(--altin-ink); }
+.dv-mod-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+
+.dv-sahne {
+  /* --dv-oran = pencere eni/boyu (duvar.js) · tavan 58vh: telefonda dikey sahne ekranı doldurmasın */
+  position: relative; overflow: hidden; aspect-ratio: var(--dv-oran, 1.6); border-radius: var(--r-3, 10px);
+  width: min(100%, calc(58vh * var(--dv-oran, 1.6))); margin-inline: auto;
+  border: 1px solid var(--kenar-guclu); background: var(--yuzey-2);
+}
+.dv-sahne-zemin { position: absolute; inset: 0; }
+.dv-sahne-zemin > img, .dv-sahne-zemin > video { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.04); }
+.dv-sahne-perde { position: absolute; inset: 0; background: #000; pointer-events: none; }
+/* Arayüz taslağı: gerçek sekmenin kabaca iskeleti — duvarın ÜSTÜNDE nasıl duracağı görülsün */
+.dv-sahne-ui { position: absolute; inset: 0; display: flex; flex-direction: column; pointer-events: none; }
+/* İskelet TEMANIN renkleriyle: sabit siyah/beyaz çizilince açık temayı hiç temsil etmiyordu, parlak
+   görselde çubuklar zeminle eriyordu (goz 09-27). Kartlar gerçek HQ kartları gibi kendi camını taşır. */
+.dv-sahne-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--kenar); background: color-mix(in srgb, var(--bg) 80%, transparent); }
+.dv-sahne-bar b { font: 700 11px var(--font-hud); letter-spacing: .14em; color: var(--ink-1); }
+.dv-sahne-bar span { width: 38px; height: 6px; border-radius: 3px; background: var(--ink-3); opacity: .6; }
+.dv-sahne-gov { flex: 1; display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; padding: 16px; align-content: start; }
+.dv-sahne-gov div { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 8px; background: color-mix(in srgb, var(--yuzey-1) 78%, transparent); border: 1px solid var(--kenar); }
+.dv-sahne-gov i { display: block; height: 7px; border-radius: 4px; background: var(--ink-3); opacity: .55; }
+.dv-sahne-gov i.b { width: 45%; height: 10px; background: var(--ink-1); opacity: .8; }
+.dv-sahne-etiket {
+  position: absolute; left: 12px; bottom: 12px; max-width: calc(100% - 24px); padding: 4px 10px; border-radius: var(--r-tam);
+  background: rgba(0,0,0,.6); color: #fff; font: 11px var(--font-hud); letter-spacing: .04em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Boşken iskelet gizli: soluk hâli bile mesajın satırlarıyla çakışıyordu (goz tur 2) */
+.dv-sahne:has(.dv-sahne-bos) .dv-sahne-gov { visibility: hidden; }
+/* Dar (dikey) sahnede tek kart — iki sütun 200px'e sıkışıyordu */
+.dv-sahne[style*="--dv-oran:0"] .dv-sahne-gov { grid-template-columns: 1fr; }
+.dv-sahne[style*="--dv-oran:0"] .dv-sahne-gov > div + div { display: none; }
+.dv-sahne-bos {
+  /* zemin: metin iskelet çubuklarının üstüne biniyordu (tur3) */
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  z-index: 1; position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  padding: 20px; text-align: center; background: color-mix(in srgb, var(--yuzey-2) 88%, transparent);
+}
+.dv-sahne-bos b { font: 600 var(--yazi-14) var(--font); color: var(--ink-1); }
+.dv-sahne-bos span { font: var(--yazi-13)/1.5 var(--font); color: var(--ink-2); }
+
+.dv-kaydiricilar { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; margin-top: 16px; }
+.dv-kaydirici { display: flex; flex-direction: column; gap: 4px; }
+.dv-kaydirici > span { display: flex; justify-content: space-between; align-items: baseline; font: 500 var(--yazi-13) var(--font); color: var(--ink-1); }
+.dv-kaydirici b { font: 600 var(--yazi-13) var(--font-hud); color: var(--cyan); }
+.dv-kaydirici small { font: var(--yazi-12)/1.4 var(--font); color: var(--ink-2); }
+.dv-kaydirici input[type=range] { width: 100%; min-height: 32px; accent-color: var(--cyan); }
+
+/* ── Sağ: sekmeler + kitaplık ── */
+.dv-hud {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 8px; margin-bottom: 8px;
+  border-bottom: 1px solid var(--kenar); font: 11px var(--font-hud); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2);
+}
+.dv-hud span { color: var(--cyan); letter-spacing: .08em; }
+.dv-hud-kit { margin-top: 22px; }
+.dv-sekmeler { display: flex; flex-direction: column; gap: 4px; }
+.dv-sekme-satir {
+  display: grid; grid-template-columns: 76px minmax(0, 1fr) 44px; align-items: center; gap: 10px;
+  min-height: 44px; padding: 4px 8px; border: 1px solid transparent; border-radius: var(--r-2, 8px);
+  background: none; cursor: pointer; text-align: left; color: inherit;
+}
+.dv-sekme-satir:hover { background: var(--yuzey-2); }
+.dv-sekme-satir.secili { border-color: var(--altin); background: var(--altin-zemin); }
+.dv-sekme-satir b { font: 700 11px var(--font-hud); letter-spacing: .12em; color: var(--ink-1); }
+.dv-sekme-satir span { font: var(--yazi-13) var(--font); color: var(--ink-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dv-sekme-satir span.yok { color: var(--ink-2); }
+.dv-kucuk { width: 44px; height: 28px; border-radius: 4px; background: var(--yuzey-3, var(--yuzey-2)) center / cover no-repeat; overflow: hidden; border: 1px solid var(--kenar); }
+/* Duvarsız sekmenin karesi boş ÇERÇEVE — dolu beyaz kutu beyaz bir duvar gibi okunuyordu */
+.dv-kucuk:not([data-duvar-onizleme]) { background: none; border: 1px dashed var(--kenar-guclu); }
+.dv-kucuk video { width: 100%; height: 100%; object-fit: cover; }
+.dv-kaldir {
+  margin: 8px 0 0; min-height: 32px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: var(--yazi-12) var(--font); color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px;
+}
+.dv-kaldir:hover { color: var(--kirmizi-ink); }
+
+.dv-ipucu { margin: 0 0 10px; font: var(--yazi-12)/1.5 var(--font); color: var(--ink-2); }
+.dv-kit { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.dv-oge { position: relative; aspect-ratio: 16 / 10; border-radius: var(--r-2, 8px); overflow: hidden; border: 1px solid var(--kenar); background: var(--yuzey-2); }
+.dv-oge.secili { border-color: var(--cyan); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyan) 45%, transparent); }
+.dv-oge-sec { position: absolute; inset: 0; padding: 0; border: 0; background: none; cursor: pointer; }
+.dv-oge-sec:disabled { cursor: default; opacity: .55; }
+.dv-oge-sec img, .dv-oge-sec video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dv-oge-sec:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.dv-rozet { position: absolute; left: 6px; bottom: 6px; padding: 1px 6px; border-radius: 3px; background: rgba(0,0,0,.65); color: #fff; font: 10px var(--font-hud); letter-spacing: .1em; }
+/* ✕ HER ZAMAN görünür (eskiden yalnız hover'da → telefonda silinemiyordu) */
+.dv-oge-sil {
+  position: absolute; top: 4px; right: 4px; width: 32px; height: 32px; padding: 0; border: 1px solid rgba(255,255,255,.55); border-radius: 50%;
+  background: rgba(0,0,0,.72); color: #fff; font-size: 13px; cursor: pointer;   /* çerçeve: koyu görselde daire kayboluyordu */
+}
+.dv-oge-sil:hover { background: var(--kirmizi-ink); }
+.dv-oge.sor {
+  grid-column: 1 / -1; aspect-ratio: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 10px 12px; border-color: var(--kirmizi-ink); background: var(--yuzey-1);
+}
+.dv-oge-mini { width: 64px; height: 40px; flex: none; border-radius: 4px; overflow: hidden; background: var(--yuzey-2); }
+.dv-oge-mini img, .dv-oge-mini video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dv-oge.sor p { flex: 1 1 160px; margin: 0; font: var(--yazi-13)/1.4 var(--font); color: var(--ink-1); }
+.dv-oge.sor small { display: block; color: var(--kirmizi-ink); font-size: var(--yazi-12); }
+.dv-yukle {
+  aspect-ratio: 16 / 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  padding: 8px; border: 1px dashed var(--kenar-guclu); border-radius: var(--r-2, 8px); cursor: pointer; text-align: center;
+}
+.dv-yukle:hover, .dv-yukle.surukleniyor { border-color: var(--cyan); background: color-mix(in srgb, var(--cyan) 8%, transparent); }
+.dv-yukle b { font: 600 var(--yazi-13) var(--font); color: var(--ink-1); }
+.dv-yukle small { white-space: pre-line;  font: var(--yazi-12)/1.35 var(--font); color: var(--ink-2); }
+.dv-kit:empty + .dv-durum { margin-top: 0; }
+.dv-durum { margin: 10px 0 0; font: var(--yazi-12)/1.4 var(--font); color: var(--ink-2); }
+.dv-durum:empty { display: none; }
+.dv-durum.ok  { color: var(--yesil-ink); }
+.dv-durum.err { color: var(--kirmizi-ink); }
+/* Liste okunamadı / boş durum iki sütunu da kaplar — sol sütuna göre ortalanıyordu */
+.oda-govde.dv-govde > .bos { grid-column: 1 / -1; }
+.dv-sahne-bos .dg { margin-top: 6px; pointer-events: auto; }
+
+@media (max-width: 900px) {
+  .oda-govde.dv-govde { grid-template-columns: minmax(0, 1fr); }
+  .dv-kaydiricilar { grid-template-columns: 1fr; }
+}
+@media (hover: none) {
+  .dv-oge-sil { top: 2px; right: 2px; width: 44px; height: 44px; font-size: 15px; }
+  .dv-kaydirici input[type=range] { min-height: 44px; }
+  .dv-mod-btn, .dv-kaldir { min-height: 44px; }
+}
+
+/* Hareket azaltma tercihi — video duvar kâğıdı hareketin ta kendisidir */
+@media (prefers-reduced-motion: reduce) {
+  #duvar-medya-img, #duvar-medya-video, #duvar-perde { transition: none; }
+}

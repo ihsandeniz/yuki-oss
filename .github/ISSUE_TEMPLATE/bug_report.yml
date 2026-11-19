@@ -1,0 +1,42 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not paste API keys, logs with keys, or personal data. Security issues → SECURITY.md."
+  - type: input
+    id: version
+    attributes:
+      label: Yuki version
+      description: "⚙ Settings → Version, or the release you installed"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Linux (Wayland), Linux (X11), Windows 10/11, Other]
+    validations:
+      required: true
+  - type: input
+    id: provider
+    attributes:
+      label: LLM provider / model
+      placeholder: "e.g. openrouter / gemma-…, ollama / llama3"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect, what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots (optional, remove secrets)

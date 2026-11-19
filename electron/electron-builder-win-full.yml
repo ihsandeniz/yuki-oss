@@ -1,0 +1,126 @@
+# ============================================================================
+# TAM OFFLINE build — Windows portable zip · whisper modeli GÖMÜLÜ (~870MB tek dosya)
+# İnternetsiz kurulum / güvenlik isteyen kullanıcı için. Hafif sürüm → electron-builder-win.yml
+# ⚠️ Backend exclude listesi electron-builder-win.yml ile SENKRON (tek fark: models-cache dahil).
+# ============================================================================
+appId: io.github.ihsandeniz.yukioss
+productName: Yuki
+directories:
+  output: dist
+
+# Paketin hangi SKU olduğu — uygulama içi TAM güncelleme bunu bilmek zorunda
+# (indireceği varlığın adını buradan kurar). Çalışma anında tespit etmeye
+# çalışmak kırılgandı: AppImage adından okunabilir ama Windows zip'te
+# kurulum dizini hiçbir ipucu taşımıyor. Build zamanı damga tek doğru kaynak.
+extraMetadata:
+  yukiSku: win-x64-offline
+
+files:
+  - "**/*"
+  - "!**/node_modules/**"
+  - "!**/*.test.js"        # test dosyaları müşteri paketine girmez
+
+# Backend (Windows pybundle-win + gömülü whisper modeli) + frontend → resources/.
+extraResources:
+  # Ayar şablonu — 142 satırlık GERÇEK şablon (kök .env.example).
+  # ⚠️ Aşağıdaki `../backend` girdisinin `!.env.*` filtresi BUNU kapsamaz;
+  # o filtre backend dizinine uygulanır ve geliştiricinin gerçek .env'ini dışarıda
+  # tutar — gevşetilmemeli. Şablon bu yüzden AYRI bir girdiyle geliyor.
+  # `uygulama.js::envSablonunuYerlestir` bunu ilk açılışta userData'ya kopyalar.
+  - from: ../.env.example
+    to: .env.example
+  # Süreç bekçisi — `YUKI_BEKCI=1` iken motor bunun altında başlar (electron/bekci.js).
+  # İkili scripts/bekci-getir.py ile gelir; SURUM shell_id'de (delta resources/'a dokunamaz).
+  - from: bekci-bin/win
+    to: bekci
+  - from: ../backend
+    to: backend
+    filter:
+      - "**/*"
+      # models-cache DAHİL — tam offline (whisper modeli gömülü)
+      - "!pybundle/**"        # Linux bundle (bin/python3) — Windows installer'a GİRMESİN
+      - "!venv/**"            # eski 5.8G torch'lu venv
+      - "!**/__pycache__/**"
+      - "!**/*.pyc"
+      - "!.env"              # Geliştirici'ın gerçek key'i ASLA paketlenmez
+      - "!.env.*"
+      - "!*.pem"             # vapid/private anahtarlar ASLA paketlenmez (runtime'da üretilir)
+      - "!token.json"        # oauth token sızmasın
+      - "!data/**"           # kişisel/runtime veri
+      - "!anim_cache/**"
+      - "!media_uploads/**"
+      - "!*.log"
+      - "!notes.json"        # kişisel not/görev artıkları
+      - "!todos.json"
+      # Sigorta — kişisel modüller kaynaktan silindi; ileride re-sync olursa yine sızmasın
+      - "!app/ela/**"                 # HDC kişi/yüz tanıma — kişisel ("geliştirici" kimliği)
+      - "!app/services/trading/**"    # trading — üründe yok (ölü)
+      - "!app/services/ela_service.py"
+      - "!app/services/iris_capture.py"
+      # NOT: `!app/services/face_multi_auth.py` 2026-09-06'da KALDIRILDI:
+      #      yüz tanıma artık ürünün kendi özelliği (Free). Dışlama kalsaydı
+      #      paket açılışta ImportError verirdi — v0.6.11'i öldüren hatanın aynısı.
+      - "!app/api/ela_api.py"
+      - "!app/api/trading_v2.py"
+      - "!app/api/wiki_api.py"
+      - "!app/api/drive.py"           # "gdrive:Pc geliştirici Arch" kişisel remote
+      - "!test_*.py"
+      - "!tests/**"               # 🔴 2026-08-02 ÖLÇÜLDÜ: satılan zip'te resources/backend/tests/ = 23 dosya.
+                                  # `!test_*.py` yalnız KÖKTEKİ dosyaları yakalıyor, alt dizini değil.
+                                  # test_licensing.py lisans doğrulamasının yol haritasını veriyor
+                                  # (gerçek anahtar yok — testler Ed25519'u runtime üretiyor).
+      - "!.pytest_cache/**"       # 8 dosya; v/cache/nodeids TÜM test adlarını sızdırıyor (11,5 KB)
+      - "!pytest.ini"             # dev test yapılandırması — müşteri paketinde işi yok
+      - "!*.backup"               # modes.json.backup ("Test Modu" geliştirme artığı); kod okumuyor              # dev/test artığı scriptler (sır sızıntısı riski)
+      - "!**/.lean-ctx/**"        # lean-ctx gelistirme onbellegi (graph.db) — 2026-09-23 v0.6.16+v0.7.0 paketinde olculdu, bos ama gelistirme artigi
+      - "!scripts/licensing/**"   # issuer araçları (mint_license/gen_keypair) — müşteri paketinde işi yok
+      - "!app/api/bio.py"         # main.py'de KAYITLI DEĞİL — ÖLÇÜLDÜ 2026-09-01.
+      # ⚠️ monitor.py 2026-09-10'da bu listeden ÇIKARILDI: artık main.py'ye
+      # kayıtlı (Dalga 3 → HQ SİSTEM paneli, Free). Burada kalsaydı uç
+      # geliştirmede çalışır, MÜŞTERİDE 404 olurdu — sessiz ve yalnız
+      # paketlenmiş kurulumda görünen bir arıza.
+      # ⚠️ devices_api.py 2026-09-18'de AYNI SEBEPLE çıkarıldı: artık
+      # kayıtlı (cihaz yönetimi, Ultra). Yanındaki services/cihaz_eslestirme.py
+      # de pakete girmek zorunda — kapının kendisi orada.
+                                           # kaynakta üst kademe için duruyor) → müşteri paketine girmesin
+      - "!**/site-packages/playwright/**"  # 104M (node.exe 88M + driver) — tarayıcı ikilileri zaten pakette yok
+      - "!**/site-packages/playwright-*.dist-info/**"  # 34 KB metadata — paket dışlanınca kayıt da gitmeli (importlib.metadata "kurulu" demesin)
+                                           # (browse_web varsayılan kapalı; açılırsa net TR hata döner)
+      - "!search_voice.py"
+      - "!scratchpad/**"              # geliştirme scratch
+  - from: ../frontend
+    to: frontend
+    filter:
+      - "**/*"
+      # 2026-08-01: ÖLÇÜLDÜ — bu iki klasöre kod tabanında SIFIR referans var ama
+      # frontend filtresiz kopyalandığı için 24 MB yedek her müşteriye iniyordu
+      # (satılan pakette doğrulandı: resources/frontend/assets/characters/backup_*).
+      # Dosyalar diskte KALIR, yalnız pakete girmez.
+      - "!assets/characters/backup_old/**"
+      - "!assets/characters/backup_mp4/**"
+      - "!tests/**"                          # 2026-09-23 OLCULDU: v0.7.0 paketinde frontend/tests/ (3 test + .pyc) — koddan referans yok
+      - "!tasarim-kanit.html"                # gelistirici tasarim-kaniti sayfasi (docs/tasarim-2026-08-20/05-FAZLAR.md) — musteriye gerekmez
+      # 🔴 2026-08-03 ÖLÇÜLDÜ (satılan Yuki-0.5.7-lite.AppImage, --appimage-mount):
+      # assets/*_OLD.* = 3 dosya / 2.458.004 bayt (2,5 MB) her müşteriye iniyordu.
+      # Koda `_OLD` referansı SIFIR (assets dışı tüm frontend tarandı). backup_*
+      # klasörleri 08-01'de dışlanmıştı ama aynı sınıfın DOSYA hâli kaçmıştı —
+      # klasör deseni yazarken dosya desenini de yaz.
+      - "!assets/**/*_OLD.*"
+      # 2026-08-08: yukarıdaki üç filtrenin hedefleri artık `_arsiv-medya/`ya taşındı
+      # (frontend/assets 121 MB → 32 MB). Filtreler ikinci savunma hattı olarak duruyor:
+      # dosya geri gelirse yine pakete girmez. Ölçüm satırları o günün gerçeğidir.
+
+win:
+  target: zip
+  icon: ../frontend/assets/yuki.ico
+  artifactName: Yuki-${version}-win-x64-offline.zip   # tam: model gömülü
+
+# NSIS installer ayarları (CI/gerçek Windows'ta target: nsis yapılınca) — electron-builder-win.yml ile aynı
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  artifactName: Yuki-Setup-${version}-offline.exe
+  shortcutName: Yuki

@@ -1,0 +1,429 @@
+/* ============================================================================
+   YUKI · TASARIM TOKEN'LARI
+   Kaynak: docs/tasarim-2026-08-20/01-TASARIM-DILI.md — tek doğruluk kaynağı orası.
+   Bu dosya elle "iyileştirilmez"; değer değişecekse önce o belge değişir.
+
+   Ton: sessiz operasyon odası — zarif-taktiksel, kontrollü sükûnet.
+   Palet: mor (kimlik+eylem) · altın (nadir vurgu) · kırmızı (yalnız tehlike)
+          + beyaz (metin) + siyah (zemin). Beş renk, 22 token.
+
+   Renkler OKLCH. Yandaki hex, araclar/palet-olc.mjs ile hesaplandı — süs değil,
+   bir tarayıcı OKLCH'i beklenmedik çevirirse karşılaştırma noktası.
+
+   KONTRAST: 14/14 kapı geçti (WCAG 2.1). Üç tur sürdü; ilk iki tur düştü.
+   Ölçüm: node docs/tasarim-2026-08-20/araclar/palet-olc.mjs
+   ========================================================================= */
+
+:root {
+  /* ---------------------------------------------------------------------
+     YÜZEY — koyu, mora hafif çalan nötr.
+     Saf siyah (#000) BİLEREK kullanılmadı: OLED'de iz bırakır, keskin
+     kenarlarda halelenme yapar, uzun oturumda göz yorar.
+     Nötrlere 0.010–0.016 kroma mor yönünde katıldı — "renkli" görünmez,
+     ama yüzeyler markanın kendi ailesinden olur.
+     --------------------------------------------------------------------- */
+  --bg:            oklch(0.145 0.010 295);   /* #0a090e  uygulama zemini        */
+  --yuzey-1:       oklch(0.190 0.012 295);   /* #141319  panel, menü kartı      */
+  --yuzey-2:       oklch(0.248 0.014 295);   /* #1f1e26  yükseltilmiş yüzey     */
+  --yuzey-3:       oklch(0.285 0.016 295);   /* #2a2931  yüzen katman (popover) */
+
+  /* ---------------------------------------------------------------------
+     KENAR — iki tane, çünkü iki ayrı iş yapıyorlar.
+     --kenar        dekoratif ayırıcı; kontrast eşiği YOK
+     --kenar-guclu  input/kontrol sınırı; WCAG 1.4.11 gereği ≥3:1 ZORUNLU
+     Tek token olsaydı ya ayırıcılar bağırırdı ya input sınırı görünmezdi.
+     --------------------------------------------------------------------- */
+  --kenar:         oklch(0.340 0.014 295);   /* #38373f  1px, düşük opasite     */
+  --kenar-guclu:   oklch(0.510 0.020 295);   /* #605e6a  3.20:1 yüzey-1 üstünde */
+
+  /* ---------------------------------------------------------------------
+     METİN — 3 kademe. Dördüncü bir "yer tutucu grisi" BİLEREK yok:
+     yer tutucu da 4.5:1 istiyor, ayrı token açmak onu sessizce
+     eşiğin altına düşüren bir davet olurdu. Yer tutucu = --ink-3.
+     --------------------------------------------------------------------- */
+  --ink-1:         oklch(0.970 0.004 295);   /* #f5f5f8  birincil · 18.15:1     */
+  --ink-2:         oklch(0.800 0.010 295);   /* #bebcc4  ikincil  · 10.58:1     */
+  --ink-3:         oklch(0.680 0.012 295);   /* #98979f  soluk + yer tutucu     */
+                                             /*          6.85:1 bg · 4.99 y-3   */
+
+  /* ---------------------------------------------------------------------
+     MOR — kimlik ve eylem. İKİYE AYRILDI, bu kritik:
+       --mor-ink     kendisi METİN olan mor  (ikon, bağlantı, odak halkası)
+       --mor-yuzey   ÜSTÜNE metin yazılan mor (birincil düğme)
+     Tek token'la başlamıştık: beyaz metin mor düğmede 3.91 çıktı, AA'yı
+     geçmedi. Bir rengin hem okunur metin hem okunur zemin olması,
+     aynı L değerinde mümkün değil.
+     --------------------------------------------------------------------- */
+  --mor-ink:       oklch(0.720 0.150 295);   /* #ac8ff8  7.61:1 bg üstünde      */
+  --mor-ink-hov:   oklch(0.790 0.110 295);   /*          kroma düşük: gamut     */
+  --mor-yuzey:     oklch(0.470 0.165 295);   /* #643fab  beyaz metinle 6.74:1   */
+  --mor-yuzey-hov: oklch(0.530 0.175 295);   /* #764fc4  5.22:1                 */
+  --mor-yuzey-bas: oklch(0.410 0.150 295);   /* #533191  8.66:1                 */
+  --mor-zemin:     oklch(0.290 0.070 295);   /* #2e234a  seçili satır arkası    */
+
+  /* ---------------------------------------------------------------------
+     ALTIN — nadir vurgu. Ekran başına EN ÇOK 2 altın öğe (ölçüm kapısı).
+     🔴 KURAL: altın yüzeyin üstüne DAİMA koyu metin.
+        Beyaz metin altın üstünde 1.72:1 — okunmaz. İstisnası yok.
+     --------------------------------------------------------------------- */
+  --altin:         oklch(0.800 0.135 85);    /* #e5b64a  koyu metinle 10.52:1   */
+  --altin-ink:     oklch(0.820 0.130 85);    /* #ebbd57  altın METİN · 11.27:1  */
+  --altin-zemin:   oklch(0.330 0.055 85);    /* #423310  Ultra rozeti arkası    */
+
+  /* ---------------------------------------------------------------------
+     KIRMIZI — YALNIZ tehlike. Vurgu değil, "dikkat çek" değil, rozet değil.
+     Kırmızıyı vurgu olarak harcarsan, gerçek hata geldiğinde söyleyecek
+     rengin kalmaz.
+     --------------------------------------------------------------------- */
+  --kirmizi-ink:   oklch(0.700 0.170 27);    /* #f66d62  hata metni · 6.88:1    */
+  --kirmizi-yuzey: oklch(0.470 0.170 27);    /* #a51f1e  yıkıcı düğme · 6.83:1  */
+  --kirmizi-zemin: oklch(0.300 0.080 27);    /* #4f1a17  hata kutusu arkası     */
+
+  /* 🔴 2026-08-28 (FAZ 9): kırmızı/altın YÜZEYLERİN üstündeki metin token'ı
+     eksikti ve bu eksik ölçümle yakalandı. `.dg-yikici` metnini `--ink-1`'den
+     alıyordu; `--ink-1` temaya göre değişiyor, `--kirmizi-yuzey` değişmiyor →
+     açık temada "Tüm ayarları sıfırla" düğmesi 2.22:1'e düşüyordu (ölçüldü,
+     kontrast-turu.py · acik-gelistirici). Yorumdaki "6.83:1" yalnız KOYU tema
+     için doğruymuş — sabit bir yüzeyin üstündeki metin de sabit olmalı.
+     Bu ikisi bilerek tema-bağımsızdır; temayla dönerlerse aynı kusur döner. */
+  --kirmizi-ustu:  oklch(0.970 0.010 27);    /* kırmızı yüzey üstü metin · 6.9:1 */
+  --altin-ustu:    oklch(0.180 0.010 85);    /* altın yüzey üstü metin · 10.5:1  */
+
+  /* YEŞİL — yalnız "tamamlandı / gelir" gibi olumlu DURUM. Kırmızının
+     karşılığı; vurgu ya da dekorasyon değil. (Bütçe ve fitnes ekranları
+     zaten kullanıyordu ama token'ı yoktu — sabit hex'lerle dağılmıştı.) */
+  --yesil-ink:     oklch(0.740 0.150 150);   /* #58c97a  olumlu durum metni */
+  --yesil-zemin:   oklch(0.300 0.060 150);   /* #16351f  olumlu kutu arkası */
+
+  /* =====================================================================
+     RADIUS — "kaba görünmesin, düz çizgiden yumuşak iyidir"
+     Sıfır radius yok. Tek istisna: pencere ekran kenarına payı sıfırlanarak
+     yaslanırsa o kenarın radius'u (bkz. 03-PENCERE-MODLARI § 3.3).
+     ===================================================================== */
+  --r-1:   6px;    /* rozet, chip, ikon kutusu        */
+  --r-2:  10px;    /* düğme, input, select            */
+  --r-3:  14px;    /* liste satırı, mesaj balonu      */
+  --r-4:  20px;    /* panel, katlanabilir bölüm       */
+  --r-5:  28px;    /* uygulama kabuğu                 */
+  --r-tam: 999px;  /* hap düğme, avatar, gösterge     */
+
+  /* İç içe radius: iç = dış − boşluk. Dış 28px + 12px boşluk → iç 16px.
+     Eşit radius'lu iç içe kutular köşede paralel gitmez; göz bunu "kaba" okur. */
+
+  /* =====================================================================
+     TİPOGRAFİ — sabit rem ölçeği. clamp() BİLEREK yok:
+     ürün arayüzünde akışkan tipografi zarar verir — dar panelde küçülen
+     başlık "uyumlu" değil, bozuk görünür. Ölçek sabit; kök boyut pencere
+     moduna göre üç ayrık kademede değişir (temel.css).
+     Oran ~1.19 · 7 kademe.
+     ===================================================================== */
+  --yazi-11: 0.6875rem;   /* rozet, sayaç, zaman damgası   */
+  --yazi-12: 0.750rem;    /* etiket, yardımcı metin        */
+  --yazi-13: 0.8125rem;   /* ikincil gövde, tablo          */
+  --yazi-14: 0.875rem;    /* GÖVDE — varsayılan            */
+  --yazi-16: 1.000rem;    /* vurgulu gövde, alt başlık     */
+  --yazi-19: 1.1875rem;   /* panel başlığı                 */
+  --yazi-23: 1.4375rem;   /* ekran başlığı                 */
+
+  /* Ağırlık: 700 yok — koyu zeminde kalın metin kanar (halation). */
+  --ag-normal: 400;
+  --ag-orta:   500;
+  --ag-kalin:  600;
+
+  --satir-sik:  1.35;     /* başlık, tek satırlık etiket   */
+  --satir-orta: 1.5;      /* arayüz metni                  */
+  --satir-genis:1.65;     /* okunacak paragraf             */
+
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* =====================================================================
+     BOŞLUK — 4 tabanlı, 11 kademe.
+     "Boşluk cömert, yoğunluk kontrollü" — sessiz operasyon odası tonu
+     hiyerarşiyi çizgiyle değil boşlukla kurar.
+     ===================================================================== */
+  --b-1:   2px;
+  --b-2:   4px;
+  --b-3:   6px;
+  --b-4:   8px;
+  --b-5:  12px;
+  --b-6:  16px;
+  --b-7:  20px;
+  --b-8:  24px;
+  --b-9:  32px;
+  --b-10: 40px;
+  --b-11: 48px;
+
+  /* =====================================================================
+     Z-INDEX — semantik ölçek. Çıplak sayı yazmak yasak (ölçüm kapısı S3).
+     Mevcut kodda 41 farklı değer vardı, en yükseği 99999.
+     ===================================================================== */
+  --z-taban:     0;
+  --z-yuksek:   10;    /* kart hover, kayan öğe        */
+  --z-yapisik: 100;    /* sticky başlık, sekme çubuğu  */
+  --z-cekmece: 200;    /* yan çekmece                  */
+  --z-perde:   300;    /* modal arkası karartma        */
+  --z-modal:   400;
+  --z-acilir:  500;    /* dropdown, popover            */
+  --z-bildirim:600;    /* toast                        */
+  --z-ipucu:   700;    /* tooltip                      */
+
+  /* =====================================================================
+     HAREKET — 90–260ms bandı. Üstü yok: kullanıcı akış içinde,
+     koreografi izlemiyor. Zıplama/elastik yok; üstel ease-out.
+     ===================================================================== */
+  --sure-1:  90ms;    /* anlık geri bildirim: basılı, chip   */
+  --sure-2: 140ms;    /* hover, küçük durum değişimi         */
+  --sure-3: 190ms;    /* katlama, panel geçişi               */
+  --sure-4: 260ms;    /* sekme geçişi, çekmece               */
+
+  --egri:       cubic-bezier(0.22, 1, 0.36, 1);   /* ease-out-quint      */
+  --egri-giris: cubic-bezier(0.16, 1, 0.30, 1);   /* girişte biraz daha  */
+
+  /* =====================================================================
+     GÖLGE — çok az. "Çizgi inceldikçe güven artar": derinlik gölge
+     yığınıyla değil yüzey tonuyla kurulur. Bunlar yalnız GERÇEKTEN
+     yüzen katmanlar için (popover, çekmece).
+     ===================================================================== */
+  --golge-1: 0 1px 2px oklch(0 0 0 / 0.30);
+  --golge-2: 0 4px 12px oklch(0 0 0 / 0.35);
+  --golge-3: 0 12px 32px oklch(0 0 0 / 0.45);
+
+  /* Perde — modal/popover arkasındaki karartma. Gölgeden ayrı token, çünkü
+     ayrı bir iş yapıyor: gölge derinlik anlatır, perde "arkası şu an
+     etkileşimsiz" der. Aynı değeri paylaşsalar bile ayrı kalmalılar. */
+  --perde: oklch(0 0 0 / 0.35);
+
+  /* =====================================================================
+     HEDEF BOYUTU — Fitts yasası + WCAG 2.5.8
+     Mevcut kodda 10×24px düğmeler var; --hedef-min bunun 2.4 katı.
+     ===================================================================== */
+  --hedef-min:  24px;  /* WCAG 2.5.8 mutlak asgari  */
+  --hedef:      44px;  /* hedeflenen               */
+  --hedef-dar:  40px;  /* mini modda — tıklama alanı ::before ile 44'e çıkar */
+  /* 🔵 Dar kabuğun ALT ŞERİDİ — 2026-09-13 (geliştirici: "telefon ekranına
+     gelince menü alt tarafa geçiyor ve gereksiz çok büyük kalıyor").
+     Ölçüm (390×844): şerit 60px · buton 86×48 — yani dar ekranda buton
+     masaüstündekinden (48×44) BÜYÜK çiziliyordu. 36px WCAG asgarisinin (24px)
+     1,5 katı; şeridi 60→48px'e indirir, sohbete +24px kazandırır.
+     ⚠️ YALNIZ yatay alt şeritte kullanılır — 620px üstündeki dikey rayda
+     `--hedef` (44px) geçerlidir, oraya taşıma. */
+  --hedef-mini: 36px;
+
+  /* Odak halkası — HER YERDE aynı. Tek tanım, istisnasız. */
+  --odak-kalinlik: 2px;
+  --odak-offset:   2px;
+
+  /* Tarayıcıya temayı bildir: form kontrolleri, kaydırma çubuğu ve
+     yerleşik arayüzler buna göre çizilir. Yoksa açık temada koyu scrollbar
+     kalır ve "yarım çevrilmiş" görünür. */
+  color-scheme: dark;
+}
+
+/* ===========================================================================
+   TEMA KADEMELERİ — koyu · orta · açık   (2026-08-27, geliştirici isteği)
+
+   Şikâyet aynen: "çok dark tema da yapmış olabiliriz, bazı insanlar açık tema
+   da sevebilir." Üç kademe bu yüzden var — ikisi değil:
+     koyu  gece / karanlık oda            (varsayılan, yukarıdaki :root)
+     orta  gündüz kapalı alan             (kömür değil kurşun gri)
+     acik  aydınlık oda / açık tema seven
+
+   🔴 AÇIK TEMA TERS ÇEVİRME DEĞİLDİR. Koyu temanın mor/altın/yeşil metin
+   renkleri açık zeminde 1.5–2.4:1 verir — okunmaz. Bu yüzden vurgu renkleri
+   açıkta ayrıca KOYULAŞTIRILDI. Yüzey sırası da tersine döner: koyuda
+   yükseltilmiş yüzey AÇILIR, açıkta BEYAZA yaklaşır ve ayrımı gölge yapar.
+
+   Değerler göz kararı değil: `node araclar/tema-olc.mjs` üç temanın da
+   25 kontrast kapısını ölçer (gövde 4.5:1 · kontrol sınırı 3:1 · altın
+   üstüne koyu metin) ve sRGB gamut taşmasını bildirir. Üçü de 25/25.
+   Değer değiştirecek olan ÖNCE o script'i koşar.
+   =========================================================================== */
+
+:root[data-tema="orta"], [data-tema="orta"] {
+  --bg:            oklch(0.255 0.010 295);   /* #232227 */
+  --yuzey-1:       oklch(0.300 0.012 295);   /* #2e2d33 */
+  --yuzey-2:       oklch(0.345 0.013 295);   /* #39383f */
+  --yuzey-3:       oklch(0.385 0.014 295);   /* #44424b */
+  --kenar:         oklch(0.440 0.014 295);   /* #53515a */
+  --kenar-guclu:   oklch(0.580 0.018 295);   /* #7b7884 · 3.4:1 */
+
+  /* Metin kademeleri hafif KISILDI: koyu zeminde 18:1 kontrast göz yorar
+     (ince yazıda halelenme). 9:1 hâlâ AAA üstü, ama yumuşak. */
+  --ink-1:         oklch(0.945 0.005 295);   /* #edecf0 */
+  --ink-2:         oklch(0.830 0.010 295);   /* #c7c6cd */
+  --ink-3:         oklch(0.765 0.012 295);   /* #b3b1ba */
+
+  --mor-ink:       oklch(0.760 0.112 295);
+  --mor-ink-hov:   oklch(0.820 0.072 295);
+  --mor-zemin:     oklch(0.360 0.065 295);
+  --altin-ink:     oklch(0.840 0.125 85);
+  --kirmizi-ink:   oklch(0.740 0.155 27);
+  --altin-zemin:   oklch(0.380 0.050 85);    /* 08-28: eksikti — kardeşleriyle hizalandı */
+  --kirmizi-zemin: oklch(0.360 0.075 27);
+  --yesil-ink:     oklch(0.780 0.140 150);
+  --yesil-zemin:   oklch(0.370 0.055 150);
+
+  color-scheme: dark;
+}
+
+:root[data-tema="acik"], [data-tema="acik"] {
+  /* Saf beyaz zemin DEĞİL: parlak ekranda kamaştırır, kâğıt tonu daha sakin. */
+  --bg:            oklch(0.955 0.004 295);   /* #f0f0f3 */
+  --yuzey-1:       oklch(0.985 0.003 295);   /* #fafafc */
+  --yuzey-2:       oklch(0.994 0.002 295);   /* #fdfdfe */
+  --yuzey-3:       oklch(1.000 0.000 295);   /* #ffffff — popover, gölgeyle ayrışır */
+  --kenar:         oklch(0.880 0.008 295);   /* #d8d6dc */
+  --kenar-guclu:   oklch(0.640 0.020 295);   /* #8d8a97 · 3.1:1 */
+
+  --ink-1:         oklch(0.240 0.012 295);   /* #1f1e24 · 14.9:1 */
+  --ink-2:         oklch(0.430 0.014 295);   /* #504e57 */
+  --ink-3:         oklch(0.530 0.016 295);   /* #6c6a74 · 4.9:1 */
+
+  /* Vurgular koyulaştı — koyu temanınkiler burada okunmaz (mor 2.4:1). */
+  --mor-ink:       oklch(0.470 0.180 295);   /* #663bb3 */
+  --mor-ink-hov:   oklch(0.400 0.185 295);
+  --mor-zemin:     oklch(0.920 0.034 295);   /* açık lila — seçili satır */
+  --altin-ink:     oklch(0.520 0.108 85);    /* altın METİN; --altin yüzeyi aynı kalır */
+  --kirmizi-ink:   oklch(0.500 0.200 27);
+  --altin-zemin:   oklch(0.935 0.035 85);    /* 08-28: eksikti — açık temada altın kutu arkası */
+  --kirmizi-zemin: oklch(0.930 0.030 27);
+  --yesil-ink:     oklch(0.480 0.118 150);
+  --yesil-zemin:   oklch(0.930 0.030 150);
+
+  /* Gölgeler açık temada daha yumuşak olmalı: koyu temanın 0.45 alfası
+     beyaz zeminde kirli bir leke gibi görünür. */
+  --golge-1: 0 1px 2px oklch(0 0 0 / 0.08);
+  --golge-2: 0 4px 12px oklch(0 0 0 / 0.10);
+  --golge-3: 0 12px 32px oklch(0 0 0 / 0.14);
+  --perde:   oklch(0.2 0 0 / 0.28);
+
+  color-scheme: light;
+}
+
+[data-tema="koyu"] {
+  /* Kök varsayılanı (koyu) iç öğeye MİRAS KALMAZ — tema önizleme kartı kendi
+     kapsamında koyu paleti isteyince bu blok gerekir. Değerler :root ile
+     birebir aynı; ayrışırlarsa önizleme yalan söyler. */
+  --bg:            oklch(0.145 0.010 295);
+  --yuzey-1:       oklch(0.190 0.012 295);
+  --yuzey-2:       oklch(0.248 0.014 295);
+  --yuzey-3:       oklch(0.285 0.016 295);
+  --kenar:         oklch(0.340 0.014 295);
+  --kenar-guclu:   oklch(0.510 0.020 295);
+  --ink-1:         oklch(0.970 0.004 295);
+  --ink-2:         oklch(0.800 0.010 295);
+  --ink-3:         oklch(0.680 0.012 295);
+  --mor-ink:       oklch(0.720 0.150 295);
+  --mor-zemin:     oklch(0.290 0.070 295);
+
+  /* 🔴 2026-08-31 — BU 11 TOKEN EKSİKTİ ve blok kendi sözünü tutmuyordu
+     ("Değerler :root ile birebir aynı; ayrışırlarsa önizleme yalan söyler").
+     `[data-tema="acik"]` on birini de tanımlıyor; kapsanmış koyu bunları
+     tanımlamayınca AÇIK temanın altında koyu bir kapsam açtığında altın/
+     kırmızı/yeşil metinler ve gölgeler AÇIK değerlerinde kalıyordu — yani
+     kapsanmış "koyu" yarım koyuydu. Ölçüldü: HALKA yüzeyi koyuya
+     sabitlendiğinde 41 ihlalin 34'ü bu eksiklikten sürdü.
+     Değerler :root'tan BİREBİR kopyalandı; ayrışmasınlar. */
+  --mor-ink-hov:   oklch(0.790 0.110 295);
+  --altin-ink:     oklch(0.820 0.130 85);
+  --altin-zemin:   oklch(0.330 0.055 85);
+  --kirmizi-ink:   oklch(0.700 0.170 27);
+  --kirmizi-zemin: oklch(0.300 0.080 27);
+  --yesil-ink:     oklch(0.740 0.150 150);
+  --yesil-zemin:   oklch(0.300 0.060 150);
+  --golge-1: 0 1px 2px oklch(0 0 0 / 0.30);
+  --golge-2: 0 4px 12px oklch(0 0 0 / 0.35);
+  --golge-3: 0 12px 32px oklch(0 0 0 / 0.45);
+  --perde: oklch(0 0 0 / 0.35);
+}
+
+/* ===========================================================================
+   ESKİ İSİM KÖPRÜSÜ — 2026-08-27
+
+   `style.css` + `theme-violet.css` kendi renk sözlüğünü taşıyor (--accent,
+   --text-dim, --muted, --bg-panel…) ve o sözlük SABİT MAVİ. Sonuç: kabuk mor
+   kimlikte, sohbet ekranının yarısı hâlâ mavi; üstelik hiçbiri tema anahtarını
+   takip etmiyordu — açık temada koyu paneller ve okunmayan metinler kalıyordu
+   (ölçüldü: char-btn 1.07:1, mic-hint 3.76:1).
+
+   Burada eski adlar yeni token'lara BAĞLANIYOR. tokens.css bu iki dosyadan
+   SONRA yüklendiği için bu blok kazanır ve üç tema da tüm arayüzü kapsar.
+
+   ⚠️ Eski adlar SİLİNMEDİ, yalnız yönlendirildi: 1400+ seçici onlara kancalı
+   (FAZ 6 ölçümü). Ad değiştirmek taşıma ile dönüştürmeyi aynı adımda yapmak
+   olurdu — style.css arşivlemesi ayrı iş kalemi, kendi ölçümüyle gelir.
+   =========================================================================== */
+/* 🔴 2026-08-31 — seçiciye `[data-tema="koyu"]` EKLENDİ (kapsanmış koyu).
+   Bu köprü yalnız `:root`'ta bildiriliyordu. Takma adlar İNDİREKT
+   (`--text-bright: var(--ink-1)`) ve custom property **bildirildiği yerde**
+   çözülür: `:root`'ta çözülünce alt kapsamda `--ink-1`i koyuya çevirmek
+   `--text-bright`i DEĞİŞTİRMEZ — alt öğeler çözülmüş değeri miras alır.
+   `color`ın kalıtım tuzağının aynısı, bir kat derinde.
+   Ölçüldü: HALKA yüzeyi `data-tema="koyu"` ile sabitlendiğinde ata zincirinin
+   TAMAMI doğru (oklch 0.970) iken `b#hr-g-state-val` hâlâ oklch(0.24) —
+   çünkü kuralı `color: var(--text-bright)` ve o ad :root'ta AÇIK değere
+   bağlanmıştı. hud-ring.css bu eski adları çok kullanıyor (--muted ×17 ·
+   --text-bright ×11 · --text ×10).
+   Aynı kusur AYARLAR'daki tema önizleme kartını da vuruyordu — kart kendi
+   kapsamında koyu paleti ister ama takma adlar :root'ta kalıyordu.
+   Selektöre eklemek, blogu KOPYALAMADAN çözer: aynı bildirimler artık
+   kapsanmış öğede de koşar ve oradaki koyu token'larla çözülür. */
+:root, :root[data-tema="orta"], :root[data-tema="acik"], [data-tema="koyu"] {
+  /* vurgu ailesi → marka moru */
+  --accent:       var(--mor-ink);
+  --accent-blue:  var(--mor-ink);
+  --accent-sky:   var(--mor-ink-hov);
+  --accent-alt:   var(--mor-ink-hov);
+  --accent-dim:   var(--mor-yuzey);
+  --cyan:         var(--mor-ink);
+  --cyan-mid:     var(--mor-yuzey);
+  --cyan-dim:     oklch(from var(--mor-ink) l c h / 0.12);
+  --p-cyan-500:   var(--mor-ink);
+  --p-cyan-400:   var(--mor-ink-hov);
+  --p-cyan-600:   var(--mor-yuzey);
+  --p-purple:     var(--mor-ink);
+
+  /* metin ailesi */
+  --text:         var(--ink-1);
+  --text-bright:  var(--ink-1);
+  --text-dim:     var(--ink-2);
+  --text-muted:   var(--ink-3);
+  --muted:        var(--ink-3);
+
+  /* yüzey ailesi */
+  --bg-base:      var(--bg);
+  --bg-panel:     var(--yuzey-1);
+  --bg-panel-alt: var(--yuzey-2);
+
+  /* kenar ailesi */
+  --border-hud:   var(--kenar);
+  --border-dim:   var(--kenar);
+  --border-glow:  var(--kenar-guclu);
+
+  /* altın/uyarı/başarı */
+  --p-gold-500:   var(--altin);
+  --gold:         var(--altin-ink);
+
+  /* mesaj balonları — köprülenmemişlerdi; koyu seçimde OS açık temadaysa
+     eski açık tema değerleri kalıyordu (ölçüldü 08-27, iki tema sistemi
+     yarışıyordu). Alfa yüzey token'ından türetiliyor: her temada tutarlı. */
+  --bg-msg-yuki:  var(--yuzey-2);
+  --bg-msg-user:  var(--mor-zemin);
+  --muted-2:      var(--ink-3);
+
+  /* 08-28: köprüsüz kalan eski palet değişkenleri. Tanımlı oldukları için
+     `var(--p-green, var(--yesil-ink))` gibi yedekli yazımlar bile SABİT hex'e
+     düşüyordu — yedek hiç çalışmıyordu. */
+  --p-green:      var(--yesil-ink);
+  --p-red:        var(--kirmizi-ink);
+  --p-orange:     var(--altin-ink);
+  --p-gold-400:   var(--altin-ink);
+  --p-gold-600:   var(--altin);
+  --p-cyan-glow:  oklch(from var(--mor-ink) l c h / 0.18);
+  --p-gold-glow:  oklch(from var(--altin) l c h / 0.18);
+  --p-black-950:  var(--bg);
+  --p-black-900:  var(--yuzey-1);
+  --p-black-800:  var(--yuzey-2);
+  --p-black-700:  var(--yuzey-3);
+}

@@ -1,0 +1,44 @@
+/* ⑤ MÜHÜR + DÖKÜM — görüntü canvas'ta; burada Fraunces + ad katmanı.
+   Fraunces uygulamanın kendi kopyasından (assets/fonts/gozlemevi/, kimlik/okunakli-yazi main'de).
+   Görüntü/ad için başka font dosyası yok. */
+@font-face { font-family: 'YA Fraunces'; font-weight: 400 700; font-display: block;
+  src: url('../../assets/fonts/gozlemevi/fraunces-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'YA Fraunces'; font-weight: 400 700; font-display: block;
+  src: url('../../assets/fonts/gozlemevi/fraunces-latinext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'YA Fraunces'; font-style: italic; font-weight: 400 700; font-display: block;
+  src: url('../../assets/fonts/gozlemevi/fraunces-italik-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'YA Fraunces'; font-style: italic; font-weight: 400 700; font-display: block;
+  src: url('../../assets/fonts/gozlemevi/fraunces-italik-latinext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+.ya-muhur-dokum { background: #050409; }
+.ya-muhur-dokum.ya-cikista { background: transparent; }
+.ya-muhur-dokum .ya-atla { color: #e8c36a; }
+
+.md-baslik {
+  position: absolute; right: clamp(16px, 4vw, 72px); top: 50%; transform: translateY(-50%);
+  text-align: right; z-index: 5; opacity: 0;
+}
+/* .md-ad/.md-alt .md-baslik'a kapsalı: model menüsü de .md-ad kullanır, global kural
+   menüye 60-96px altın serif olarak sızıyordu (10-23). */
+.md-baslik .md-ad {
+  font: 700 clamp(48px, 6.4vw, 96px)/1 'YA Fraunces', Georgia, serif; letter-spacing: .22em; margin-right: -.22em;
+  background: linear-gradient(180deg, #fff3cf 0%, #e8c36a 45%, #9a7429 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+/* oss: css/hq-modlar.css'teki global .md-alt (flex + üst çizgi + dolgu) buraya sızıyordu
+   (390'da alt yazı sola kayıp üstünde çizgi çıkıyordu) — o özellikler burada sıfırlanır. */
+.md-baslik .md-alt {
+  display: block; border-top: 0; padding-top: 0; gap: 0;
+  margin-top: 14px; white-space: nowrap; opacity: 0;
+  font: italic 500 clamp(14px, 1.25vw, 18px)/1.4 'YA Fraunces', Georgia, serif; color: #efe6cf;
+  text-shadow: 0 1px 12px rgba(5, 4, 9, .9);
+}
+@media (max-width: 639px) {
+  .md-baslik { left: 16px; right: 16px; top: auto; bottom: max(7vh, 40px); transform: none; text-align: center; }
+  .md-baslik .md-ad { font-size: 60px; }
+  .md-baslik .md-alt { font-size: 14px; margin-top: 8px; white-space: normal; }
+}

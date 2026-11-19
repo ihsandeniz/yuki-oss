@@ -1,0 +1,66 @@
+/* ── Sekme başlığı — Gözlemevi başlık dili, 8 sekmede TEK kural (11-13) ──────────────────────────
+ * Her sekmenin sol üst köşesinde, ☰'ın sağında aynı kimlik: küçük Martian Mono ÜST ETİKET +
+ * Fraunces italik AD. Sohbet · Plan · Ayar · Harita · Ajan · Yedek · Galeri · Dosya bu dosyayı bağlar;
+ * sayfalar boy/aile/ağırlık/renk YAZMAZ, yalnız yerleşimi (sol kenar, üst boşluk) bu belirteçlerle kurar.
+ *
+ *   <div class="sekme-baslik">
+ *     <span class="sekme-baslik__etiket">GÖZLEMEVİ</span>
+ *     <span class="sekme-baslik__ad">Plan</span>
+ *   </div>
+ *
+ * Ölçü: frontend/tests/test_sekme_baslik.py (8 sekme × 390/1280, hesaplanan stil + kutu çakışması).
+ * Yazı dosyaları css/fontlar-gozlemevi.css'te; inmezse Georgia / JetBrains Mono yedeği.
+ * Seçici gücü bilerek iki sınıf (.sekme-baslik .sekme-baslik__…): sayfaların eski tek-sınıf / tek-kimlik
+ * başlık kuralları sökülmüştür; yenisi gelirse bu kuralı ezmesin diye.
+ */
+:root {
+  --sb-sol: 64px;              /* ☰ (18 + 36) + 10 — sayfa koordinatında başlığın sol kenarı */
+  --sb-ust: 17px;              /* üst etiketin üstü; blok ☰ ile aynı ortada durur            */
+  --sb-ad-font: "Fraunces", Georgia, "Noto Serif", serif;
+  --sb-etiket-font: "Martian Mono", "JetBrains Mono", ui-monospace, monospace;
+  --sb-ad-boy: 22px;
+  --sb-ad-agirlik: 500;
+  --sb-etiket-boy: 10px;
+  --sb-etiket-agirlik: 500;
+  --sb-etiket-ara: .2em;
+  --sb-ara: 3px;               /* etiket ile ad arası */
+  /* Renk belirteci YOK (bilerek): ad --ink-1, etiket --ink-2 — sayfanın KENDİ mürekkebi, başlığın durduğu
+     yüzeyde çözülür. Temadan bağımsız hep koyu kalan yüzeyler (Plan Gözlemevi, Halka) mürekkebi yerel
+     tanımlar; :root'ta tema-renk eşlemesi yapılsaydı açık temada koyu zemine koyu yazı düşerdi (ölçüldü). */
+}
+
+/* Kap: sıfır özgüllük — sayfanın gizleme/yerleşim kuralı (ör. galeri dar ekranda başlığı gizler) her zaman kazanır. */
+:where(.sekme-baslik) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--sb-ara);
+  flex: none;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  text-align: start;
+}
+.sekme-baslik .sekme-baslik__etiket {
+  display: block;
+  margin: 0;
+  font: normal var(--sb-etiket-agirlik) var(--sb-etiket-boy) / 1.2 var(--sb-etiket-font);
+  font-variation-settings: "wdth" 87.5;
+  letter-spacing: var(--sb-etiket-ara);
+  text-transform: uppercase;
+  text-shadow: none;
+  color: var(--sb-etiket-renk, var(--ink-2, #b4b1bf));
+  white-space: nowrap;
+}
+.sekme-baslik .sekme-baslik__ad {
+  display: block;
+  margin: 0;
+  font: italic var(--sb-ad-agirlik) var(--sb-ad-boy) / 1.1 var(--sb-ad-font);
+  letter-spacing: .01em;
+  text-transform: none;
+  text-shadow: none;
+  color: var(--sb-ad-renk, var(--ink-1, #e7e5ee));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

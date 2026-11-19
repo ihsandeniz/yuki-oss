@@ -1,0 +1,702 @@
+/* ============================================================================
+   YUKI · ÖĞELER
+   Bileşen sözlüğü. tokens.css + temel.css'ten SONRA yüklenir.
+
+   İLKE: aynı iş = aynı görünüm. İki ekranda farklı görünen "Kaydet" düğmesi
+   varsa biri yanlıştır. Yeni bir düğme tipi eklemeden önce, mevcut üçünden
+   birinin neden yetmediği yazılmalı.
+
+   Her etkileşimli öğe 7 durum taşır:
+   varsayılan · hover · odak · basılı · seçili · devre dışı · yükleniyor
+   ========================================================================= */
+
+/* ===========================================================================
+   1 · YÜZEY & PANEL
+   Hiyerarşi ÇERÇEVEYLE değil, yüzey tonu + boşlukla kurulur.
+   🔴 Kart içinde kart YASAK. Bir bölümü ayırmak için kutu çizme —
+      arka planını bir kademe değiştir.
+   =========================================================================== */
+
+.yuzey {
+  border-radius: var(--r-4);
+  background: var(--yuzey-1);
+  padding: var(--b-6);
+}
+
+.yuzey-2 { background: var(--yuzey-2); }
+
+/* İç içe radius: dış − boşluk. .yuzey 20px radius + 16px boşluk → iç 4px…
+   ölçekte en yakın --r-1 (6px). Otomatik hesap isteyen için: */
+.yuzey > .ic { border-radius: calc(var(--r-4) - var(--b-6)); }
+
+.panel-bas {
+  display: flex;
+  align-items: center;
+  gap: var(--b-4);
+  margin-block-end: var(--b-6);
+  font-size: var(--yazi-19);
+  font-weight: var(--ag-kalin);
+  color: var(--ink-1);
+}
+.panel-bas .sayi {
+  margin-inline-start: auto;
+  font-size: var(--yazi-12);
+  color: var(--ink-3);
+}
+
+/* Ayırıcı — yalnız liste satırları arasında. Bölüm ayırmak için boşluk kullan. */
+.ayirici { border-block-start: 1px solid var(--kenar); }
+
+/* ===========================================================================
+   2 · DÜĞME — 3 tip. Dördüncüsü yok.
+   =========================================================================== */
+
+.dg {
+  --dg-yuzey: transparent;
+  --dg-ink: var(--ink-2);
+  --dg-kenar: transparent;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--b-3);
+
+  min-height: var(--hedef);
+  min-width: var(--hedef);
+  padding: 0 var(--b-6);
+
+  border: 1px solid var(--dg-kenar);
+  border-radius: var(--r-2);
+  background: var(--dg-yuzey);
+  color: var(--dg-ink);
+
+  font-size: var(--yazi-13);
+  font-weight: var(--ag-orta);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+
+  transition:
+    background-color var(--sure-2) var(--egri),
+    border-color     var(--sure-2) var(--egri),
+    color            var(--sure-2) var(--egri),
+    scale            var(--sure-1) var(--egri);
+}
+
+/* — tip 1: birincil — ekranda EN ÇOK bir tane */
+.dg-birincil {
+  --dg-yuzey: var(--mor-yuzey);
+  /* 🔴 --ink-1 DEĞİL: o tema-duyarlı ve açık temada KOYU olur → koyu metin
+     koyu mor düğmede 2.24:1 (ölçüldü 08-27, tema turu). Mor yüzey her üç
+     temada da aynı koyulukta olduğu için metni sabit beyaz kalmalı. */
+  --dg-ink: #fff;                   /* mor yüzey üstünde 6.74:1 — ölçüldü */
+  font-weight: var(--ag-kalin);
+}
+.dg-birincil:hover:not(:disabled) { --dg-yuzey: var(--mor-yuzey-hov); }
+.dg-birincil:active:not(:disabled) { --dg-yuzey: var(--mor-yuzey-bas); }
+
+/* — tip 2: ikincil */
+.dg-ikincil {
+  --dg-yuzey: var(--yuzey-2);
+  --dg-ink: var(--ink-1);
+  --dg-kenar: var(--kenar);
+}
+.dg-ikincil:hover:not(:disabled) { --dg-yuzey: var(--yuzey-3); --dg-kenar: var(--kenar-guclu); }
+.dg-ikincil:active:not(:disabled) { --dg-yuzey: var(--yuzey-1); }
+
+/* — tip 3: sessiz — yalnız metin */
+.dg-sessiz:hover:not(:disabled) { --dg-yuzey: var(--yuzey-2); --dg-ink: var(--ink-1); }
+.dg-sessiz:active:not(:disabled) { --dg-yuzey: var(--yuzey-1); }
+
+/* — varyant: yıkıcı. Kırmızı YALNIZ onay adımında dolu gelir;
+     listede sessiz tip + kırmızı ikon yeter. */
+.dg-yikici {
+  --dg-yuzey: var(--kirmizi-yuzey);
+  /* `--ink-1` DEĞİL: o temayla dönüyor, yüzey dönmüyordu → açık temada 2.22:1
+     (ölçüldü 2026-08-28). Sabit yüzeyin üstü sabit metin ister. */
+  --dg-ink: var(--kirmizi-ustu);    /* 6.9:1 — üç temada da */
+}
+.dg-yikici:hover:not(:disabled) { --dg-yuzey: oklch(from var(--kirmizi-yuzey) calc(l + 0.06) c h); }
+
+/* — varyant: sessiz + tehlikeli. Liste satırındaki "sil / iptal et" için.
+     🔴 2026-08-28 (FAZ 9): bu eksikti ve eksikliği kusur üretti — satır içi
+     silme düğmeleri `.dg-yikici` alınca her satırda dolgu kırmızı bir kutu
+     çıkıyordu. Yıkıcı EYLEM ile yıkıcı SEÇENEK aynı şey değil: eylem (onay
+     ekranındaki "Sil") bağırmalı, seçenek (listedeki her satırın yanındaki
+     çöp kutusu) beklemeli. Renk niyet gösterildiğinde gelir — hover/odakta. */
+.dg-sessiz.dg-tehlike:hover:not(:disabled),
+.dg-sessiz.dg-tehlike:focus-visible:not(:disabled) {
+  --dg-yuzey: var(--kirmizi-zemin);
+  --dg-ink: var(--kirmizi-ink);
+}
+
+/* — varyant: altın. Ekran başına ≤2 altın öğe kuralına tabi.
+     🔴 Üstüne DAİMA koyu metin — beyaz 1.72:1 ile okunmaz. */
+.dg-altin {
+  --dg-yuzey: var(--altin);
+  /* `--bg` DEĞİL: açık temada --bg açılır, altın üstünde açık metin okunmaz.
+     Aynı kusur sınıfı, aynı çözüm (2026-08-28). */
+  --dg-ink: var(--altin-ustu);      /* 10.5:1 — üç temada da */
+  font-weight: var(--ag-kalin);
+}
+.dg-altin:hover:not(:disabled) { --dg-yuzey: oklch(from var(--altin) calc(l + 0.05) c h); }
+
+/* — basılı: ölçek. 1px aşağı kayma YOK — düzeni oynatır, göz onu titreme okur. */
+.dg:active:not(:disabled) { scale: 0.98; }
+
+/* — devre dışı: doygun renk yok, yalnız opaklık */
+.dg:disabled,
+.dg[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+
+/* — yükleniyor: metin yerinde kalır, yanında gösterge belirir.
+     Metni gizleyip çark koymak düğmenin genişliğini oynatır. */
+.dg[data-durum="yukleniyor"] { cursor: progress; }
+.dg[data-durum="yukleniyor"]::after {
+  content: '';
+  width: 0.9em; height: 0.9em;
+  border: 2px solid currentColor;
+  border-block-start-color: transparent;
+  border-radius: var(--r-tam);
+  animation: dg-doner 640ms linear infinite;
+}
+@keyframes dg-doner { to { rotate: 360deg; } }
+
+/* — ikon düğme. aria-label ZORUNLU (ölçüm kapısı E1). */
+.dg-ikon { padding: 0; width: var(--hedef); }
+.dg-ikon svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.5; }
+
+/* Mini modda görsel 40px, tıklama alanı ::before ile 44px kalır. */
+@container kabuk (max-width: 379px) {
+  .dg { min-height: var(--hedef-dar); padding-inline: var(--b-5); }
+  .dg-ikon { width: var(--hedef-dar); }
+}
+
+/* ===========================================================================
+   3 · FORM
+   =========================================================================== */
+
+.alan { display: flex; flex-direction: column; gap: var(--b-3); }
+
+.alan > label {
+  font-size: var(--yazi-12);
+  font-weight: var(--ag-orta);
+  color: var(--ink-2);
+}
+
+.girdi {
+  min-height: var(--hedef);
+  padding: var(--b-4) var(--b-5);
+  border: 1px solid var(--kenar-guclu);   /* 3.20:1 — WCAG 1.4.11 */
+  border-radius: var(--r-2);
+  background: var(--yuzey-1);
+  color: var(--ink-1);
+  font-size: var(--yazi-14);
+  transition: border-color var(--sure-2) var(--egri),
+              background-color var(--sure-2) var(--egri);
+}
+.girdi::placeholder { color: var(--ink-3); opacity: 1; }
+/*                    ^ --ink-3 = 6.85:1. Varsayılan soluk gri KABUL EDİLMEZ. */
+
+.girdi:hover:not(:disabled) { border-color: var(--ink-3); }
+.girdi:focus-visible { border-color: var(--mor-ink); background: var(--bg); }
+.girdi:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.girdi[aria-invalid="true"] { border-color: var(--kirmizi-ink); }
+
+textarea.girdi { min-height: calc(var(--hedef) * 2); resize: vertical; line-height: var(--satir-orta); }
+
+.alan-hata {
+  display: flex; align-items: center; gap: var(--b-3);
+  font-size: var(--yazi-12);
+  color: var(--kirmizi-ink);          /* 6.88:1 */
+}
+
+.alan-ipucu { font-size: var(--yazi-12); color: var(--ink-3); }
+
+/* Anahtar (toggle) — native checkbox üstüne, klavye erişimi korunarak. */
+.anahtar { position: relative; display: inline-flex; align-items: center; }
+.anahtar input {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0; cursor: pointer;
+}
+.anahtar .yol {
+  width: 40px; height: 24px;
+  border-radius: var(--r-tam);
+  background: var(--yuzey-3);
+  transition: background-color var(--sure-2) var(--egri);
+}
+.anahtar .yol::after {
+  content: '';
+  display: block;
+  width: 18px; height: 18px;
+  margin: 3px;
+  border-radius: var(--r-tam);
+  background: var(--ink-2);
+  transition: translate var(--sure-2) var(--egri),
+              background-color var(--sure-2) var(--egri);
+}
+.anahtar input:checked + .yol { background: var(--mor-yuzey); }
+.anahtar input:checked + .yol::after { translate: 16px 0; background: var(--ink-1); }
+.anahtar input:focus-visible + .yol {
+  outline: var(--odak-kalinlik) solid var(--mor-ink);
+  outline-offset: var(--odak-offset);
+}
+.anahtar input:disabled + .yol { opacity: 0.45; }
+
+/* ===========================================================================
+   4 · SEKME — kayan gösterge (K8: hangisi aktif belirgin)
+   Aktiflik ÜÇ kanaldan okunur: arka plan · metin rengi · alt gösterge.
+   Tek kanal (renk) renk körlüğünde kaybolur.
+   🔴 Alt gösterge, sol şerit DEĞİL — yan şerit border yasak.
+   =========================================================================== */
+
+.sekmeler { display: flex; gap: var(--b-2); }
+
+.sekme {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--b-3);
+  min-height: var(--hedef);
+  padding: 0 var(--b-6);
+  border: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--ink-3);
+  font-size: var(--yazi-13);
+  font-weight: var(--ag-orta);
+  cursor: pointer;
+  transition: background-color var(--sure-2) var(--egri),
+              color var(--sure-2) var(--egri);
+}
+
+.sekme:hover:not([aria-selected="true"]) { background: var(--yuzey-2); color: var(--ink-2); }
+
+.sekme[aria-selected="true"] {
+  background: var(--mor-zemin);     /* kanal 1 */
+  color: var(--mor-ink);            /* kanal 2 — 5.54:1 ölçüldü */
+  font-weight: var(--ag-kalin);
+}
+
+.sekme[aria-selected="true"]::after {   /* kanal 3 */
+  content: '';
+  position: absolute;
+  inset-inline: var(--b-5);
+  inset-block-end: 0;
+  height: 2px;
+  border-radius: var(--r-tam);
+  background: var(--mor-ink);
+  /* Sekmeden sekmeye AKAR, sıçramaz (Chromium 122 ✅) */
+  view-transition-name: sekme-gosterge;
+}
+
+.sekme:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Sekme geçişi — 260ms, her seferinde aynı.
+   (Eski davranış: sekme başına bir kez 1700ms sinematik overlay. Kaldırıldı.) */
+::view-transition-old(sekme) { animation: sekme-cik var(--sure-4) var(--egri) both; }
+::view-transition-new(sekme) { animation: sekme-gir var(--sure-4) var(--egri-giris) both; }
+@keyframes sekme-cik { to   { opacity: 0; translate: 0 -6px; } }
+@keyframes sekme-gir { from { opacity: 0; translate: 0  8px; } }
+
+/* ===========================================================================
+   5 · KATLAMA (K3: "kalabalık ve kaos olmasın")
+   Native <details> — klavye ✅ ekran okuyucu ✅ Ctrl+F ile açılır ✅
+
+   🔴 Chromium 122'de `interpolate-size` YOK (129 gerekiyor), yani
+      height:auto animasyonlanamaz. Çözüm: grid-template-rows 0fr → 1fr.
+      max-height hilesinin aksine içerik kırpılmaz ve gecikme olmaz.
+   =========================================================================== */
+
+.katlanir {
+  border-radius: var(--r-4);
+  background: var(--yuzey-1);
+}
+
+.katlanir-bas {
+  display: flex;
+  align-items: center;
+  gap: var(--b-4);
+  min-height: var(--hedef);
+  padding: var(--b-4) var(--b-6);
+  border-radius: var(--r-4);
+  font-size: var(--yazi-14);
+  font-weight: var(--ag-orta);
+  color: var(--ink-1);
+  cursor: pointer;
+  list-style: none;
+  transition: background-color var(--sure-2) var(--egri);
+}
+.katlanir-bas::-webkit-details-marker { display: none; }
+.katlanir-bas:hover { background: var(--yuzey-2); }
+
+/* Ok — durumu gösterir, süs değil */
+.katlanir-bas::before {
+  content: '';
+  width: 8px; height: 8px;
+  border-inline-end: 1.5px solid var(--ink-3);
+  border-block-end: 1.5px solid var(--ink-3);
+  rotate: -45deg;
+  transition: rotate var(--sure-3) var(--egri);
+}
+.katlanir[open] > .katlanir-bas::before { rotate: 45deg; }
+
+/* Kaç öğe gizli — katlanmış bölümün içeriği hakkında bilgi verir (K4) */
+.katlanir-sayi {
+  margin-inline-start: auto;
+  padding: var(--b-1) var(--b-4);
+  border-radius: var(--r-tam);
+  background: var(--yuzey-3);
+  font-size: var(--yazi-11);
+  color: var(--ink-3);
+}
+
+.katlanir-sar {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--sure-3) var(--egri);
+}
+.katlanir[open] .katlanir-sar { grid-template-rows: 1fr; }
+
+.katlanir-govde { overflow: hidden; }
+.katlanir-govde > * { padding-inline: var(--b-6); }
+.katlanir-govde > :last-child { padding-block-end: var(--b-6); }
+
+/* ===========================================================================
+   6 · ROZET
+   =========================================================================== */
+
+.rozet {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--b-2);
+  padding: var(--b-1) var(--b-4);
+  border-radius: var(--r-tam);
+  background: var(--yuzey-3);
+  color: var(--ink-2);
+  font-size: var(--yazi-11);
+  font-weight: var(--ag-orta);
+  line-height: 1.6;
+}
+
+.rozet-mor    { background: var(--mor-zemin);     color: var(--mor-ink); }
+.rozet-altin  { background: var(--altin-zemin);   color: var(--altin-ink); }   /* 6.97:1 */
+.rozet-kirmizi{ background: var(--kirmizi-zemin); color: var(--kirmizi-ink); } /* 4.89:1 */
+
+/* Kademe rozeti: Free nötr · Pro mor · Ultra altın */
+.rozet[data-kademe="free"]  { background: var(--yuzey-3);      color: var(--ink-2); }
+.rozet[data-kademe="pro"]   { background: var(--mor-zemin);    color: var(--mor-ink); }
+.rozet[data-kademe="ultra"] { background: var(--altin-zemin);  color: var(--altin-ink); }
+
+/* Durum noktası — renk TEK BAŞINA bilgi taşımaz, yanında metin olur */
+.durum-nokta {
+  width: 8px; height: 8px;
+  border-radius: var(--r-tam);
+  background: var(--ink-3);
+  flex: none;
+}
+.durum-nokta[data-durum="bagli"]   { background: var(--mor-ink); }
+.durum-nokta[data-durum="calisiyor"]{ background: var(--altin); }
+.durum-nokta[data-durum="hata"]    { background: var(--kirmizi-ink); }
+
+/* ===========================================================================
+   7 · KİLİT (kademe kapısı)
+   Gizlemek yerine gri kilit: kullanıcı neyi kaçırdığını görür.
+   =========================================================================== */
+
+[data-locked="1"] {
+  position: relative;
+  opacity: 0.55;
+  cursor: pointer;
+}
+[data-locked="1"]:hover { opacity: 0.75; }
+[data-locked="1"]::after {
+  content: '';
+  position: absolute;
+  inset-block-start: var(--b-3);
+  inset-inline-end: var(--b-3);
+  width: 14px; height: 14px;
+  background: currentColor;
+  /* Lucide "lock" — emoji DEĞİL (ölçüm kapısı S7) */
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='11' x='3' y='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+/* Kendi kilit simgesini taşıyan öğe (⋯ menüsü `.mi-kilit`) ikinciyi almaz —
+   iki kilit üst üste biniyordu. */
+[data-locked="1"]:has(.mi-kilit)::after { content: none; }
+
+/* ===========================================================================
+   8 · LİSTE SATIRI — kart yerine. "Kutu sayısı çok olmasın" (K2)
+   =========================================================================== */
+
+.satir {
+  display: flex;
+  align-items: center;
+  gap: var(--b-5);
+  min-height: var(--hedef);
+  padding: var(--b-4) var(--b-5);
+  border-radius: var(--r-3);
+  transition: background-color var(--sure-2) var(--egri);
+}
+.satir:hover { background: var(--yuzey-2); }
+
+.satir[aria-selected="true"] {
+  background: var(--mor-zemin);
+  color: var(--mor-ink);
+}
+/* 🔴 Sol şerit YOK. Seçili durum arka plan + metin rengiyle okunur. */
+
+.satir-govde { min-width: 0; flex: 1; }     /* min-width:0 → uzun metin taşmaz */
+.satir-bas { color: var(--ink-1); font-weight: var(--ag-orta); }
+.satir-alt { font-size: var(--yazi-12); color: var(--ink-3); }
+
+/* ===========================================================================
+   9 · BOŞ DURUM — arayüzü ÖĞRETİR, "kayıt yok" demez.
+   =========================================================================== */
+
+.bos {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--b-5);
+  padding: var(--b-11) var(--b-7);
+  text-align: center;
+}
+.bos-ikon { width: 32px; height: 32px; color: var(--ink-3); stroke: currentColor; stroke-width: 1.25; }
+.bos-bas { font-size: var(--yazi-16); font-weight: var(--ag-kalin); color: var(--ink-1); }
+.bos-metin { max-width: 42ch; font-size: var(--yazi-13); color: var(--ink-3); }
+/* Tek eylem — iki seçenek sunmak boş durumu karar ekranına çevirir. */
+
+/* ===========================================================================
+   10 · İSKELET — ortada dönen çark YOK.
+   İçeriğin şeklini gösterir; sayfa zıplamaz.
+   =========================================================================== */
+
+.iskelet {
+  border-radius: var(--r-2);
+  background: linear-gradient(90deg,
+    var(--yuzey-2) 25%, var(--yuzey-3) 37%, var(--yuzey-2) 63%);
+  background-size: 400% 100%;
+  animation: iskelet-akis 1400ms ease-in-out infinite;
+}
+@keyframes iskelet-akis { from { background-position: 100% 50%; } to { background-position: 0 50%; } }
+.iskelet-satir { height: 1em; margin-block: 0.25em; }
+.iskelet-satir:last-child { width: 60%; }
+
+/* Reduced-motion'da akış durur ama iskelet görünür kalır — temel.css halleder. */
+
+/* ===========================================================================
+   11 · POPOVER — modal'a düşmeden önce buraya bak.
+   Native Popover API (Chromium 114+ ✅): odak yönetimi, Esc ile kapanma,
+   dışa tıklama — hepsi tarayıcıdan gelir.
+   =========================================================================== */
+
+[popover] {
+  margin: 0;
+  padding: var(--b-4);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-4);
+  background: var(--yuzey-3);
+  color: var(--ink-2);
+  box-shadow: var(--golge-3);
+
+  opacity: 0;
+  scale: 0.97;
+  transition: opacity var(--sure-2) var(--egri),
+              scale   var(--sure-2) var(--egri),
+              display var(--sure-2) allow-discrete,
+              overlay var(--sure-2) allow-discrete;
+}
+[popover]:popover-open { opacity: 1; scale: 1; }
+
+/* Giriş animasyonu — @starting-style (Chromium 117+ ✅) */
+@starting-style {
+  [popover]:popover-open { opacity: 0; scale: 0.97; }
+}
+
+[popover]::backdrop { background: var(--perde); }
+
+/* ===========================================================================
+   12 · BİLDİRİM (toast)
+   =========================================================================== */
+
+.bildirim-kap {
+  position: fixed;
+  /* --bildirim-kacin: sohbetin giriş alanının yüksekliği (bildirim.js ölçer);
+     alan görünmüyorsa 0 → eski yer. */
+  inset-block-end: max(var(--b-7), calc(var(--bildirim-kacin, 0px) + var(--b-4)));
+  inset-inline-end: var(--b-7);
+  z-index: var(--z-bildirim);
+  display: flex;
+  flex-direction: column;
+  gap: var(--b-4);
+  pointer-events: none;
+}
+.bildirim {
+  display: flex;
+  align-items: center;
+  gap: var(--b-5);
+  max-width: 42ch;
+  padding: var(--b-5) var(--b-6);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-3);
+  background: var(--yuzey-3);
+  box-shadow: var(--golge-2);
+  pointer-events: auto;
+  animation: bildirim-gir var(--sure-4) var(--egri-giris) both;
+  /* Renk/ölçü BURADA kapanır. Bildirim iki ayrı sayfada (index + planner)
+     kullanılıyor ve o sayfaların gövde yazı tipi/rengi farklı — miras alsaydı
+     aynı mesaj iki yerde iki türlü okunurdu. */
+  color: var(--ink-1);
+  font-size: var(--yazi-13);
+  line-height: 1.45;
+}
+@keyframes bildirim-gir { from { opacity: 0; translate: 0 12px; } }
+
+.bildirim-metin { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+
+.bildirim[data-tip="hata"]   { border-color: var(--kirmizi-ink); }
+.bildirim[data-tip="uyari"]  { border-color: var(--altin-ink); }
+.bildirim[data-tip="olumlu"] { border-color: var(--yesil-ink); }
+/* Renk TEK kanal değil: hata ayrıca kapanma düğmesi taşır ve kendiliğinden
+   kaybolmaz. Yalnız kenar rengiyle ayırmak renk körlüğünde sınıfı yok ederdi. */
+
+/* Hata bildirimi kendiliğinden KAYBOLMAZ — kullanıcı kapatır.
+   Sessiz başarısızlık yasağının (C4) yarısı budur. */
+.bildirim-kapat {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-1);
+  background: transparent;
+  color: var(--ink-3);
+  font-size: var(--yazi-16);
+  line-height: 1;
+  cursor: pointer;
+}
+.bildirim-kapat:hover { background: var(--yuzey-2); color: var(--ink-1); }
+.bildirim-kapat:focus-visible { outline: 2px solid var(--mor-ink); outline-offset: 2px; }
+
+/* Eylemli bildirim (UI-F001): "Sil / Vazgeç", "Geri al". Metin kısa, düğme
+   44px vuruş alanı — onay adımı yanlış düğmeye basılarak geçilmesin. */
+.bildirim-eylem {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 var(--b-5);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--ink-1);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bildirim-eylem:hover { background: var(--yuzey-2); }
+.bildirim-eylem:focus-visible { outline: 2px solid var(--mor-ink); outline-offset: 2px; }
+.bildirim-eylem-birincil { border-color: var(--altin-ink); }
+
+.bildirim-cikis { animation: bildirim-cik 180ms var(--egri-giris) both; }
+@keyframes bildirim-cik { to { opacity: 0; translate: 0 8px; } }
+
+/* Hareket kapalıyken çıkış animasyonu KOŞMAZ; bildirim.js düğümü animasyona
+   değil zamanlayıcıya bağlı sildiği için burada yalnız görsel susturulur. */
+@media (prefers-reduced-motion: reduce) {
+  .bildirim, .bildirim-cikis { animation: none; }
+}
+
+/* ===========================================================================
+   13 · KABUK & GÖMÜLÜ MENÜ (K9: "menü uygulamanın parçası olsun")
+   Menü ayrı bir çubuk değil, yüzeyin içinde duran bir kart.
+   Menü ile içerik arasında ÇİZGİ YOK — boşluk ve yüzey farkı ayırıyor.
+   =========================================================================== */
+
+.kabuk {
+  display: flex;
+  gap: var(--b-5);
+  height: 100vh;
+  height: 100dvh;
+  padding: var(--b-5);
+  border-radius: var(--r-5);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* Panel/Mini modda cam: pencere masaüstünün üstünde yüzüyor
+   (frame:false + transparent:true + alwaysOnTop). Arkanın hafif seçilmesi
+   "bu bir katman" bilgisini TAŞIR — dekorasyon değil.
+   Tam ekranda arkada bir şey yok → cam da yok. */
+:root[data-pencere="panel"] .kabuk,
+:root[data-pencere="mini"]  .kabuk {
+  background: color-mix(in oklab, var(--bg) 82%, transparent);
+  backdrop-filter: blur(20px) saturate(130%);
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--b-2);
+  padding: var(--b-4);
+  border-radius: var(--r-4);        /* 28 − 12 = 16 ≈ --r-4 */
+  background: var(--yuzey-1);
+  flex: none;
+}
+
+.icerik {
+  flex: 1;
+  min-width: 0;
+  border-radius: var(--r-4);
+  background: var(--yuzey-1);
+  overflow: auto;
+}
+
+/* Pencereyi sürüklemenin TEK yolu (frame:false) — kaybolursa kullanıcı
+   pencereyi hareket ettiremez. Sürükleme şeridindeki düğmeler no-drag olmalı. */
+.surukle { -webkit-app-region: drag; }
+.surukle button, .surukle a, .surukle input { -webkit-app-region: no-drag; }
+
+/* --- Konteyner eşikleri: öğe daralınca KAYBOLMAZ, taşınır --------------- */
+
+/* Dar tam ve altı: menü dikey raydan yatay alt çubuğa iner */
+@container kabuk (max-width: 619px) {
+  .kabuk { flex-direction: column-reverse; }
+  .menu { flex-direction: row; justify-content: space-around; }
+  .menu .etiket { display: none; }
+}
+
+/* Mini: etiketler gider, yalnız ikon */
+@container kabuk (max-width: 379px) {
+  .kabuk { padding: var(--b-3); gap: var(--b-3); border-radius: var(--r-4); }
+  .menu { padding: var(--b-2); }
+}
+
+/* Geniş: nefes payı */
+@container kabuk (min-width: 1400px) {
+  .kabuk { padding: var(--b-7); gap: var(--b-7); }
+  .menu { padding: var(--b-5); min-width: 200px; }
+}
+
+/* ===========================================================================
+   14 · DURUM IŞIĞI — "çalışıyor mu" sorusunun tek cevabı (2026-09-28, SAĞLIK goz tur 1)
+   Aynı durum her panelde AYNI ışıkla çizilir: ANAHTAR'ın "Yuki cevap veremez" hükmü altın
+   halkayla, SAĞLIK'ınki haleli kırmızıyla çıkıyordu (goz #3). Panele özel ışık sınıfı yazma;
+   buradakini kullan (`<span class="durum-isik kritik" aria-hidden="true">`).
+   Durum RENK + BİÇİMLE ayrılır (renk körü ve açık temada altın ≈ yeşil parlaklık — goz #2):
+     iyi         dolu yeşil
+     uyari       içi boş altın halka (ANAHTAR'ın "yok" deseni)
+     kritik      dolu kırmızı + hale
+     olculemedi  kesikli gri halka — "yolunda" DEĞİL, ölçülemedi
+     kurulum     mor halka + iç nokta — henüz kurulmadı (ilk açılış), alarm değil davet
+   Boyut her yerde 10px; satır içinde küçültme — kesikli halka 8px'te görünmez oluyordu (goz #8).
+   =========================================================================== */
+.durum-isik { display: inline-block; flex: none; width: 10px; height: 10px; border-radius: 50%; box-sizing: border-box; }
+.durum-isik.iyi { background: var(--yesil-ink); }
+.durum-isik.uyari { background: transparent; border: 2px solid var(--altin-ink); }
+.durum-isik.kritik { background: var(--kirmizi-ink); box-shadow: 0 0 0 3px var(--kirmizi-zemin); }
+.durum-isik.olculemedi { background: transparent; border: 2px dashed var(--ink-2); }
+/* 5. durum "kurulum bekliyor" (geliştirici 09-28): henüz kurulmadı — arıza değil, davet. Mor halka + içte nokta:
+   uyarının boş altın halkasından renk DIŞINDA da (iç nokta) ayrılır. Kırmızı yalnız gerçek arızada. */
+.durum-isik.kurulum { background: radial-gradient(circle, var(--mor-ink) 0 2px, transparent 2.5px); border: 2px solid var(--mor-ink); }

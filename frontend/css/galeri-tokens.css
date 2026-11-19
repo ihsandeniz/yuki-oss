@@ -1,0 +1,225 @@
+/* ============================================================================
+   Yuki — TASARIM TOKEN'LARI  (tek kaynak)
+   Karar: 2026-08-18 · "Quiet Ops Room dili tüm uygulamaya"
+   Brief: PRODUCT.md § Design Principles
+
+   🔴 KURAL: yeni renk / boyut / süre / z-index yazma. Buradan al.
+      Buradaki bir role uymayan bir ihtiyaç çıkarsa ÖNCE bu dosyaya rol ekle.
+      Sebep: bu dosyadan önce 215 benzersiz hex, 46 font-size ve ~130 farklı
+      süre değeri vardı; her alt sistem kendi sözlüğünü kurmuştu.
+
+   Bu dosya EN ÖNCE yüklenir (index.html), böylece diğer tüm CSS var() kullanabilir.
+   ⚠️ Değiştirirsen index.html'deki tokens.css?v= anahtarını ARTIR.
+============================================================================ */
+
+:root {
+
+  /* ══ RENK — ROLLER ═══════════════════════════════════════════════════════
+     PRODUCT.md ilke 2: "Altın konuşur, cyan veri taşır.
+     Aynı ekranda ikisi eşit sesle konuşmaz."
+
+     ALTIN  = SEÇİLİ · aktif durum · kullanıcının dokunduğu şey
+     CYAN   = canlı/akan veri (ISS, uçuş, sinyal, ölçüm) — YALNIZCA bu
+     NÖTR   = geri kalan HER ŞEY — yapı, etiket ve BAŞLIK dahil
+
+     ⚠️ 2026-08-18 (FAZ 3 + FAZ 6) — bu satır düzeltildi. Önceki hâli
+        "ALTIN = başlık · seçili · aktif" diyordu ve uygulamada bu tutmadı:
+        HQ'da her kart başlığı, MAP'te sekiz kart başlığı altın olunca
+        ekranda 14 altın eleman birikiyor ve "altın = aktif" işareti
+        anlamını yitiriyordu. Başlık artık versal + tracking + ayraç
+        çizgisiyle okunur (ilke 3: hiyerarşi renkle değil boşluk ve
+        tipografiyle). Altın yalnız SEÇİLİ olana ayrıldı — o zaman bir
+        ekranda 1-2 altın kalır ve gerçekten konuşur.
+        🔴 Bir DEĞER de altın olmaz: sıcaklık ya da mesafe seçili bir şey
+           değildir, canlı okumadır → cyan.
+     ────────────────────────────────────────────────────────────────────── */
+
+  --c-gold:            #f0b429;   /* konuşan renk  */
+  --c-gold-soft:       #ffc857;   /* hover / vurgu */
+  --c-gold-dim:        rgba(240, 180, 41, 0.55);
+  --c-gold-ghost:      rgba(240, 180, 41, 0.12);   /* seçili satır zemini */
+
+  --c-data:            #00d4ff;   /* canlı veri — dekorasyon DEĞİL */
+  --c-data-soft:       #7fe4ff;
+  --c-data-dim:        rgba(0, 212, 255, 0.55);
+  --c-data-ghost:      rgba(0, 212, 255, 0.10);
+
+  /* ── Nötr kademe — hiyerarşi renkle değil BUNUNLA kurulur (ilke 3) ── */
+  --c-ink:             #f2f3f5;   /* gövde metni · 18.9:1 zeminde  */
+  --c-ink-2:           #b8bcc4;   /* ikincil veri ·  10.4:1        */
+  --c-ink-3:           #7a7f88;   /* sessiz/pasif ·   4.6:1 (AA sınırı) */
+  --c-ink-4:           #4a4e56;   /* yalnız dekoratif — METİN İÇİN KULLANMA */
+
+  /* ── Veri serisi rampası — YALNIZ çok serili grafik/legend (FAZ 3) ──
+       Tek seri her zaman --c-data'dır; bu sete gerek yoktur. Üç ölçü aynı
+       grafikte yan yana çizilince birbirinden ayrılmak ZORUNDA olduğu için
+       var. Sıra anlamlıdır: 1 = birincil ölçü.
+       🔴 Semantik renklerle KARIŞTIRMA. Seri rengi "bu hangi ölçü" der,
+          semantik renk "durum ne" der. HQ'da GPU serisi yeşildi (#10b981) ve
+          aynı ekranda sağlık rozeti de yeşildi: iki ayrı anlam tek renkte
+          çakışıyordu. Üçüncü ses artık nötr.
+       ⚠️ Bunları JS canvas okuyor (js/intro-sequences.js _getCSSColor).
+          Adını değiştirirsen grafik SESSİZCE görünmez olur — strokeStyle=''
+          hata vermez, sadece çizmez. Yeniden adlandırma = orayı da güncelle. */
+  --series-1:          var(--c-data);
+  --series-2:          var(--c-gold);
+  --series-3:          var(--c-ink-2);
+
+  /* ── Semantik — YALNIZCA durum bildirir, dekorasyon asla ── */
+  --c-ok:              #2fd48f;
+  --c-warn:            #f0b429;   /* bilerek altınla aynı: uyarı = dikkat */
+  --c-err:             #ff5a6e;
+  --c-off:             var(--c-ink-3);
+
+  /* ── Yüzeyler — zemin siyah, katmanlar saydam beyazla yükselir ── */
+  --surface-0:         #000000;                        /* zemin              */
+  --surface-1:         rgba(255, 255, 255, 0.03);      /* panel              */
+  --surface-2:         rgba(255, 255, 255, 0.06);      /* kart               */
+  --surface-3:         rgba(255, 255, 255, 0.09);      /* hover / yükseltilmiş */
+  --surface-sunken:    rgba(0, 0, 0, 0.45);            /* girdi alanı        */
+
+  /* ── Perdeler — YÜKSELTMEZ, ÖRTER (FAZ 1'de eklendi) ──
+       surface-1..3 saydam BEYAZtır: siyah zemin üstünde çalışır, ama
+       3D tuval / video sprite / harita üstünde içerik arkadan sızar ve
+       metin okunmaz olur. Canlı bir şeyin üstüne oturan her panel
+       buradan beslenir. Örtücülük opaklıkla kurulur, renkle değil.
+       ⚠️ Karıştırma: surface-* = katman hissi · scrim-* = okunabilirlik. */
+  --surface-panel:     rgba(0, 0, 0, 0.82);   /* canlı tuval üstünde panel  */
+  --scrim-1:           rgba(0, 0, 0, 0.30);   /* hafif — zemin hâlâ görünür */
+  --scrim-2:           rgba(0, 0, 0, 0.60);   /* orta — okuma güvenli       */
+  --scrim-3:           rgba(0, 0, 0, 0.85);   /* ağır — zemin susar         */
+
+  /* ── Sınırlar — ilke 3: "çizgi inceldikçe güven artar" ──
+       1px, düşük opasite. Kalın renkli border ve köşe bracket'i YASAK
+       (PRODUCT.md anti-reference). */
+  --border-quiet:      rgba(255, 255, 255, 0.08);   /* ayraç        */
+  --border-card:       rgba(255, 255, 255, 0.14);   /* kart sınırı  */
+  --border-strong:     rgba(255, 255, 255, 0.22);   /* odak/vurgu   */
+  --border-active:     rgba(240, 180, 41, 0.45);    /* seçili       */
+  --border-data:       rgba(0, 212, 255, 0.35);     /* canlı veri kartı */
+
+
+  /* ══ TİPOGRAFİ ═══════════════════════════════════════════════════════════
+     Karar: her kademe ~+2px. Eskisi 7–11px'te sıkışıktı.
+     Oran 1.08–1.22 (product register: dar ölçek, çok eleman).
+     ────────────────────────────────────────────────────────────────────── */
+
+  --fs-2xs:   10px;   /* mikro rozet · birim eki      (eskiden 7–8px)  */
+  --fs-xs:    11px;   /* HUD etiketi                  (eskiden 9px)    */
+  --fs-sm:    12px;   /* HUD değeri — EN ÇOK KULLANILAN (eskiden 10px) */
+  --fs-md:    13px;   /* ikincil metin · buton        (eskiden 11px)   */
+  --fs-lg:    15px;   /* gövde · sohbet metni         (eskiden 13px)   */
+  --fs-xl:    18px;   /* bölüm başlığı                (eskiden 16px)   */
+  --fs-2xl:   22px;   /* ekran başlığı                (eskiden 20px)   */
+
+  /* ilke 4: "veri yoğunluğu ≠ görsel gürültü — daha büyük satır aralığı" */
+  --lh-tight:   1.25;   /* başlık · tek satırlık HUD değeri */
+  --lh-normal:  1.5;    /* arayüz metni                     */
+  --lh-relaxed: 1.7;    /* sohbet · uzun okuma              */
+
+  --ls-hud:     0.08em;  /* HUD etiketi — versal, seyrek     */
+  --ls-normal:  0;
+  --ls-tight:  -0.01em;  /* büyük başlık                     */
+
+  --fw-normal:  400;
+  --fw-medium:  500;
+  --fw-bold:    700;
+
+  /* Aileler — mevcut zincir korunuyor (kimlik).
+     ⚠️ Inter + Space Mono şu an Google CDN'den geliyor, Chakra Petch yerel.
+        Çevrimdışı tutarsızlık: BL kaydı açıldı, bu turun işi değil. */
+  --font-ui:    var(--font-main, 'Inter', system-ui, sans-serif);
+  --font-hud:   'Space Mono', ui-monospace, monospace;
+  --font-disp:  'Chakra Petch', var(--font-hud);
+
+
+  /* ══ BOŞLUK — 4px tabanlı ════════════════════════════════════════════════ */
+  --sp-1:   4px;
+  --sp-2:   8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  24px;
+  --sp-6:  32px;
+  --sp-7:  48px;
+  --sp-8:  64px;
+
+  --r-sm:   4px;
+  --r-md:   8px;
+  --r-lg:  12px;
+  --r-pill: 999px;
+
+  /* ── Dokunma/tıklama hedefi — WCAG 2.2 · 2.5.8 (AA) asgarisi ──
+     Tıklanabilir hiçbir şeyin İKİ kenarı da bunun altına inmez. Görsel boyut
+     daha küçük kalabilir; o zaman hedef `::after` ile büyütülür (states.css
+     § hedef alanı). ⚠️ Hedefi büyütürken komşu hedefle ÇAKIŞTIRMA — üstteki
+     eleman tıklamayı çalar; yan yana düğmede kutuyu gerçekten büyüt. */
+  --hedef-min: 24px;
+
+
+  /* ══ HAREKET ═════════════════════════════════════════════════════════════
+     ilke 5: "durum değişimi hissedilir, dekorasyon edilmez — 150-250ms".
+     🔑 --ease KORUNDU: mevcut kodda 185 kez kullanılan imza eğri.
+        Dağınık olan easing değil SÜRELERDİ (~130 farklı değer).
+     ────────────────────────────────────────────────────────────────────── */
+
+  --ease:         cubic-bezier(.25, 1, .4, 1);      /* imza — ease-out-quart */
+  --ease-in:      cubic-bezier(.4, 0, 1, 1);
+  --ease-spring:  cubic-bezier(.34, 1.56, .64, 1);  /* yalnız onay/başarı anı */
+
+  --dur-1:  120ms;   /* mikro: hover · focus · renk            */
+  --dur-2:  180ms;   /* standart durum değişimi                */
+  --dur-3:  260ms;   /* panel · kart girişi                    */
+  --dur-4:  400ms;   /* mod geçişi — üst sınır, aşma           */
+
+  /* ── NABIZ — sürekli ritim, GEÇİŞ DEĞİL (2026-09-12) ──────────────────
+     --dur-* bir olayın süresidir (hover, panel açılışı). Bunlar ise
+     Yuki ayaktayken DURMAYAN ambient ritimdir; ölçekleri ayrı olduğu
+     için --dur-* ailesine sokulmadı.
+     🔑 Süre DURUMU taşır: uyurken ağır, konuşurken hızlı. Dekorasyon
+        değil — okuyan kişi hızdan Yuki'nin ne yaptığını anlar.
+     ⚠️ Genliği burada ARTIRMA: idle neredeyse durgun olmalı, yoksa
+        sürekli kıpırdayan arayüz dikkat çalar (product register:
+        "motion conveys state, not decoration"). */
+  --nabiz-uyku:   5.2s;   /* boşta — fark edilmemeli, yalnız "ölü değil" */
+  --nabiz-dinle:  1.6s;   /* dinliyor                                    */
+  --nabiz-dusun:  1.0s;   /* işliyor                                     */
+  --nabiz-konus:  0.75s;  /* yanıt veriyor                               */
+  --nabiz-uyari:  2.4s;   /* gecikmiş görev — Yuki'nin durumundan BAĞIMSIZ */
+
+
+  /* ══ KATMAN — anlamlı merdiven ═══════════════════════════════════════════
+     🔴 Ham sayı yazma (9999, 99999 …). Yeni katman gerekiyorsa buraya ekle.
+     ────────────────────────────────────────────────────────────────────── */
+  --z-base:      0;
+  --z-raised:   10;   /* kart hover, seçili satır         */
+  --z-sticky:  100;   /* yapışkan başlık, sekme çubuğu    */
+  --z-panel:   200;   /* yüzen paneller                   */
+  --z-drag:    300;   /* sürüklenen widget + snap bölgesi */
+  --z-dropdown:400;   /* menü, model seçici               */
+  --z-scrim:   500;   /* modal arka perdesi               */
+  --z-modal:   600;
+  --z-toast:   700;
+  --z-tooltip: 800;
+  --z-auth:    900;   /* giriş ekranı — her şeyin üstünde  */
+
+
+  /* ══ IŞIMA — ölçülü ══════════════════════════════════════════════════════
+     PRODUCT.md anti-reference: "kalın glow", "cyberpunk neon aşırılığı".
+     Glow bir DURUM işaretidir (canlı/aktif), süs değil. */
+  --glow-gold:  0 0 12px rgba(240, 180, 41, 0.28);
+  --glow-data:  0 0 12px rgba(0, 212, 255, 0.30);
+  --shadow-panel: 0 8px 32px rgba(0, 0, 0, 0.55);
+}
+
+
+/* ── Hareket azaltma: süreler ölür, geçiş anlık olur ──
+   Not: bu global kapıdır. Bileşen bazlı reduced-motion kuralları
+   (hud-ring.css vb. 12 yerde) yerinde kalır, bu onları ezmez. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-1: 1ms;
+    --dur-2: 1ms;
+    --dur-3: 1ms;
+    --dur-4: 1ms;
+  }
+}

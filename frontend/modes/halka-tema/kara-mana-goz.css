@@ -1,0 +1,529 @@
+/* ════════════════════════════════════════════════════════════════════
+   HALKA teması — KARA MANA · GÖZ (kara-mana-goz) · ürün portu 2026-10-04
+   Kaynak: kişisel AliceAi halka-tema/kara-mana-goz.css (2026-10-03, geliştirici seçti).
+   Seçici: hud-ring.js `_temaYaz` → <html data-halka-tema="kara-mana-goz">. Üründe
+   VARSAYILAN DEĞİL (varsayılan "buz" = ürünün kendi halkası, hiçbir kural eşleşmez).
+   Süs katmanı (.kg-sus) halka-tema/kara-mana-goz.js'ten gelir.
+   Kara delik çekirdek · altın toplanma diski · mercek kemeri · karakter renginde damarlar ·
+   altın korlar; halka mor "karanlık madde"ye kayar. Göz: düşünürken yarı açık tarar,
+   konuşurken tam açık altın iris + sesle atan dikey bebek. YUKI gizlenmez.
+
+   🔴 RENK SABİT YOK — kişisel sürümde ~90 hex/rgba vardı. Hepsi aşağıdaki `--kg-*`
+   paletine bağlandı; palet ÜRÜN token'larından (tokens.css) ve karakter renginden
+   (--gm-accent) türer. Kişiselin cyan'ı = karakter rengi (Yuki'de buz mavisi):
+   tema her karakterde o karakterin damarlarıyla çizilir.
+   ⚠️ Palet `#chat-pane`'de TANIMLANIR, body'de değil: custom property bildirildiği
+   öğede çözülür (tokens.css notu). HALKA koyu palete `#chat-pane[data-tema=koyu]`
+   ile sabitleniyor; body'de tanımlansaydı açık temada `--mor-ink` koyu morla
+   çözülür, koyu zemin üstünde mor yazı okunmazdı.
+   ⚠️ JS'teki SVG maskelerinde #fff/#000 KALDI: onlar renk değil, maske parlaklığı.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Palet (yalnız token'dan türetilir) ──────────────────────────── */
+html[data-halka-tema="kara-mana-goz"] body.hud-ring-mode #chat-pane {
+  --kg-altin:        var(--altin);
+  --kg-altin-acik:   color-mix(in oklab, var(--altin) 70%, white);
+  --kg-altin-isik:   color-mix(in oklab, var(--altin) 32%, white);
+  --kg-altin-koyu:   color-mix(in oklab, var(--altin) 60%, black);
+  --kg-altin-derin:  color-mix(in oklab, var(--altin) 18%, black);
+  --kg-mor:          var(--mor-ink);
+  --kg-mor-acik:     var(--mor-ink-hov);
+  --kg-mor-derin:    var(--mor-yuzey);
+  /* 2026-11-13 (arayüz turu "kişiseldeki gibi"): boşluk tonları --bg'den (neredeyse renksiz) değil
+     --mor-yuzey'den türer — kişiselin mor-siyah zemini (#0d0620 → #060211 → #020007).
+     --bg.den türeyince sahne düz siyah okunuyordu (ölçüldü: rgb 0,0,1 · kişisel 4,0,16).
+     oklab L doğrusal karışır: oranlar kişiselin L değerlerinden (≈0,155 · 0,105 · 0,06 ÷ 0,47). */
+  --kg-mor-gece:     color-mix(in oklab, var(--mor-yuzey) 33%, black);
+  --kg-bosluk:       color-mix(in oklab, var(--mor-yuzey) 22%, black);
+  --kg-bosluk-derin: color-mix(in oklab, var(--mor-yuzey) 13%, black);
+  --kg-buz:          var(--gm-accent, var(--mor-ink-hov));
+  --kg-buz-acik:     color-mix(in oklab, var(--kg-buz) 45%, white);
+  --kg-isik:         var(--ink-1);
+  --kg-lavanta:      color-mix(in oklab, var(--mor-ink) 14%, var(--ink-1));
+  --kg-lavanta-soluk:color-mix(in oklab, var(--mor-ink) 30%, var(--ink-2));
+  --kg-cam:          color-mix(in oklab, var(--kg-bosluk) 94%, transparent);
+  /* Karakter rengi KORUNUR ama mor boşluğa çekilir (5 karakter ayrışmaya devam eder) */
+  --hr-accent:       color-mix(in oklab, var(--gm-accent, var(--mor-ink-hov)) 34%, var(--mor-ink));
+  --hr-deep:         var(--kg-bosluk-derin);
+}
+/* hud-ring.css `#hr-stage.hr-idle` accent'i karakter rengine geri çeker — burada ezilir */
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-idle {
+  --hr-accent: color-mix(in oklab, var(--gm-accent, var(--mor-ink-hov)) 34%, var(--mor-ink));
+}
+
+/* ── Sahne zemini: mor-siyah boşluk + seyrek yıldız ──────────────── */
+html[data-halka-tema="kara-mana-goz"] body.hud-ring-mode #chat-pane {
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 42%, var(--kg-mor-gece) 0%, var(--kg-bosluk) 46%, var(--kg-bosluk-derin) 100%);
+}
+html[data-halka-tema="kara-mana-goz"] body.hud-ring-mode #chat-pane::after { opacity: 0.32; }
+html[data-halka-tema="kara-mana-goz"] #hr-particles {
+  background-image:
+    radial-gradient(circle, color-mix(in oklab, var(--kg-isik) 60%, transparent) 0 0.8px, transparent 1.4px),
+    radial-gradient(circle, color-mix(in oklab, var(--kg-mor) 55%, transparent) 0 1px, transparent 1.6px),
+    radial-gradient(circle, color-mix(in oklab, var(--kg-isik) 35%, transparent) 0 0.6px, transparent 1.2px),
+    radial-gradient(circle, color-mix(in oklab, var(--kg-buz) 40%, transparent) 0 0.8px, transparent 1.4px),
+    radial-gradient(circle, color-mix(in oklab, var(--kg-altin) 35%, transparent) 0 0.7px, transparent 1.3px);
+  /* aralıklar aralarında asal → ızgara deseni seçilmez */
+  background-size: 137px 119px, 211px 173px, 89px 157px, 293px 257px, 389px 331px;
+  background-position: 0 0, 71px 103px, 37px 11px, 157px 41px, 263px 199px;
+  opacity: 0.5;
+  animation: none;
+}
+
+/* Kütle çekim halesi: halkanın arkasında, merkezde ölü bir boşluk bırakan
+   soluk mor bulut (parlama ölçülü — büyük alanda yoğun glow yok) */
+html[data-halka-tema="kara-mana-goz"] #hr-ring-wrap::before {
+  z-index: -1;
+  background:
+    radial-gradient(circle closest-side,
+      transparent 0 20%,
+      color-mix(in oklab, var(--kg-mor) 16%, transparent) 24%,
+      color-mix(in oklab, var(--kg-mor-derin) 9%, transparent) 40%,
+      color-mix(in oklab, var(--kg-mor-derin) 5%, transparent) 62%,
+      transparent 86%);
+}
+
+/* ── Halka katmanları: karanlık madde, geri çekilmiş ─────────────── */
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-tick-ring   { opacity: 0.6; }
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-mandala     { opacity: 0.16; filter: none; }
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-fili        { opacity: 0.45; }
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-seg-ring    {
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--hr-accent) 70%, transparent));
+}
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-sat-ring    { opacity: 0.5; }
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-lotus       { opacity: 0.16; filter: none; }
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-node-ring   { opacity: 0.55; }
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-starburst   { opacity: 0; }
+/* cyan: ses spektrumu + düğüm halkası (cyan ile altın birlikte yaşasın) */
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-spectrum    { opacity: 0.8; filter: drop-shadow(0 0 2px color-mix(in oklab, var(--kg-buz) 60%, transparent)); }
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-bar         { fill: var(--kg-buz); }
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-node-ring   { stroke: var(--kg-buz); }
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-rune-outer text { opacity: 0.62; }
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-rune-inner text { fill: var(--kg-buz); opacity: 0.62; }
+/* Kardinal elmaslar altın — dört yönde sabit "çapa" */
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-anchor-nodes {
+  stroke: var(--kg-altin);
+  filter: drop-shadow(0 0 3px color-mix(in oklab, var(--kg-altin) 55%, transparent));
+}
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-cardinal-cross { stroke: var(--kg-altin); opacity: 0.35; }
+/* Kepler: içteki katmanlar dıştakilerden hızlı döner (çekim hissi) */
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-node-ring  { animation-duration: calc(var(--hr-spin) * 0.32); }
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-rune-inner { animation-duration: calc(var(--hr-spin) * 0.5); }
+
+/* Zaman çemberi: çok soluk, uzak */
+html[data-halka-tema="kara-mana-goz"] #hr-time { opacity: 0.55; }
+
+/* ── Çekirdek: olay ufku ──────────────────────────────────────────
+   Merkezdeki parıltı dairesi (r=86) saf boşluğa döner. Altındaki çokyüzlü
+   boşluğun içinde hayalet gibi kalır. İsim boşluğun önünde, soğuk beyaz. */
+html[data-halka-tema="kara-mana-goz"] #hr-ring .hr-core-glow {
+  fill: var(--kg-bosluk-derin);
+}
+html[data-halka-tema="kara-mana-goz"] #hr-poly {
+  opacity: 0.12;
+  filter: none;
+}
+html[data-halka-tema="kara-mana-goz"] #hr-poly polygon { stroke: var(--kg-mor); }
+html[data-halka-tema="kara-mana-goz"] #hr-core-name {
+  fill: var(--kg-lavanta);
+  font-weight: 500;
+  animation: kg-isim 4.8s ease-in-out infinite;
+}
+@keyframes kg-isim {
+  0%, 100% { text-shadow: 0 0 6px color-mix(in oklab, var(--kg-mor) 90%, transparent), 0 0 16px color-mix(in oklab, var(--kg-mor) 45%, transparent); }
+  50%      { text-shadow: 0 0 8px color-mix(in oklab, var(--kg-buz) 85%, transparent), 0 0 20px color-mix(in oklab, var(--kg-mor) 50%, transparent); }
+}
+
+/* ════════════════ SÜS KATMANI (kara-mana-goz.js) ════════════════
+   .kg-sus z-index'SİZ ve opacity'SİZ kalmalı: ikisinden biri yığın bağlamı açar
+   ve halkanın ARKASINDAKİ canvas (z -1) halkanın önüne fırlar. Solma/gizleme
+   yalnız içteki gruplara uygulanır. */
+.kg-sus { display: none; }   /* tema özniteliği yoksa (klasik) kapsayıcı görünmez */
+html[data-halka-tema="kara-mana-goz"] .kg-sus {
+  display: block;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* mercek canvas'ı: halkanın arkasında, masaüstünde halkadan %30 taşar (yıldız
+   yayları halkanın dışına da uzansın), kenarları yumuşakça söner */
+html[data-halka-tema="kara-mana-goz"] .kg-gok {
+  position: absolute;
+  left: -40%; top: -40%;
+  width: 180%; height: 180%;
+  z-index: -1;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(circle closest-side, var(--kg-bosluk-derin) 86%, transparent 100%);
+          mask-image: radial-gradient(circle closest-side, var(--kg-bosluk-derin) 86%, transparent 100%);
+}
+@media (max-width: 1100px) {
+  /* dar ekranda taşma yok: canvas halkanın karesinde kalır */
+  html[data-halka-tema="kara-mana-goz"] .kg-gok { left: 0; top: 0; width: 100%; height: 100%; }
+}
+html[data-halka-tema="kara-mana-goz"] .kg-svg {
+  position: absolute;
+  inset: 0;
+  z-index: 1;               /* halkanın üstü; zaman çemberi (2), site (3), çark (4) altı */
+  width: 100%; height: 100%;
+  overflow: visible;
+  display: block;
+}
+/* düz CSS yıldızları canvas'ın ARKASINA (merkezde bükülmemiş yıldız kalmasın) */
+html[data-halka-tema="kara-mana-goz"] #hr-particles { z-index: -2; }
+html[data-halka-tema="kara-mana-goz"] #hr-ring-wrap::before { background: none; }
+
+/* ── Olay ufku: kenar + foton halkası (n=1, n=2) ─────────────────── */
+html[data-halka-tema="kara-mana-goz"] .kg-ufuk-kenar { stroke: color-mix(in oklab, var(--kg-altin-isik) 45%, transparent); stroke-width: 1; }
+html[data-halka-tema="kara-mana-goz"] .kg-foton {
+  stroke: var(--kg-altin-isik);
+  filter: drop-shadow(0 0 2.5px color-mix(in oklab, var(--kg-altin) 85%, transparent));
+  transform-origin: 300px 300px;
+}
+html[data-halka-tema="kara-mana-goz"] .kg-foton-1 { stroke-width: 1.5; opacity: 0.95; }
+html[data-halka-tema="kara-mana-goz"] .kg-foton-2 { stroke-width: 0.6; opacity: 0.6; }
+html[data-halka-tema="kara-mana-goz"] .kg-mercek { filter: drop-shadow(0 0 4px color-mix(in oklab, var(--kg-altin) 45%, transparent)); }
+html[data-halka-tema="kara-mana-goz"] .kg-halkalar { filter: drop-shadow(0 0 2.5px color-mix(in oklab, var(--kg-altin) 50%, transparent)); }
+html[data-halka-tema="kara-mana-goz"] .kg-leke { animation: kg-don 14s linear infinite; }
+@keyframes kg-don { to { transform: rotate(-360deg); } }
+
+/* ── Kararlı yörünge (ISCO): sekme çarkının düğmeleri buna oturur ──
+   Boştayken foton halkasının içine katlanmış (scale 100/228) ve görünmez;
+   çark açılınca düğmelerle aynı yaylanmayla dışarı açılır, 7 altın yuva
+   düğmelerin tam altına gelir. */
+html[data-halka-tema="kara-mana-goz"] .kg-isco {
+  transform-origin: 300px 300px;
+  transform: scale(0.4386);
+  opacity: 0;
+  transition: transform 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.18), opacity 0.3s ease-out;
+}
+html[data-halka-tema="kara-mana-goz"] .kg-isco * { vector-effect: non-scaling-stroke; }
+html[data-halka-tema="kara-mana-goz"] #hr-ring-wrap.hr-wheel-open .kg-isco { transform: scale(1); opacity: 1; }
+html[data-halka-tema="kara-mana-goz"] .kg-isco-halka { stroke: color-mix(in oklab, var(--kg-altin-isik) 55%, transparent); stroke-width: 1; }
+html[data-halka-tema="kara-mana-goz"] .kg-isco-ince  { stroke: color-mix(in oklab, var(--kg-buz) 45%, transparent); stroke-width: 1; stroke-dasharray: 2 7; }
+html[data-halka-tema="kara-mana-goz"] .kg-yuva { stroke: var(--kg-altin); stroke-width: 2.2; stroke-linecap: round; filter: drop-shadow(0 0 3px color-mix(in oklab, var(--kg-altin) 70%, transparent)); }
+html[data-halka-tema="kara-mana-goz"] .kg-yuva-cent { stroke: var(--kg-buz); stroke-width: 1.4; stroke-linecap: round; }
+/* çark açıkken disk/damar/kor/jet geri çekilir, foton + ISCO parlak kalır */
+html[data-halka-tema="kara-mana-goz"] .kg-disk, html[data-halka-tema="kara-mana-goz"] .kg-damarlar, html[data-halka-tema="kara-mana-goz"] .kg-korlar, html[data-halka-tema="kara-mana-goz"] .kg-jetler { transition: opacity 0.3s; }
+html[data-halka-tema="kara-mana-goz"] #hr-ring-wrap.hr-wheel-open .kg-disk,
+html[data-halka-tema="kara-mana-goz"] #hr-ring-wrap.hr-wheel-open .kg-damarlar,
+html[data-halka-tema="kara-mana-goz"] #hr-ring-wrap.hr-wheel-open .kg-korlar { opacity: 0.26; }
+
+/* ── Cyan damarlar — "çatırtı" (yalnız opacity) ─────────────────── */
+html[data-halka-tema="kara-mana-goz"] .kg-damarlar {
+  transform-origin: 300px 300px;
+  transition: transform 0.9s cubic-bezier(0.3, 0.7, 0.2, 1), opacity 0.3s;
+}
+html[data-halka-tema="kara-mana-goz"] .kg-damar {
+  stroke: var(--kg-buz);
+  stroke-width: 1.7;
+  stroke-linejoin: bevel;
+  stroke-linecap: round;
+  opacity: 0.5;
+  filter: drop-shadow(0 0 3px color-mix(in oklab, var(--kg-buz) 80%, transparent));
+  animation: kg-cat 5.2s steps(1, end) infinite;
+  animation-delay: calc(var(--kg-i) * -0.83s);
+}
+html[data-halka-tema="kara-mana-goz"] .kg-kol { stroke-width: 1; }
+@keyframes kg-cat {
+  0%   { opacity: 0.50; }
+  6%   { opacity: 1; }
+  9%   { opacity: 0.60; }
+  13%  { opacity: 0.92; }
+  22%  { opacity: 0.55; }
+  55%  { opacity: 0.50; }
+  60%  { opacity: 0.80; }
+  64%  { opacity: 0.50; }
+}
+
+/* ── Altın korlar — dıştan içeri sarmal ─────────────────────────── */
+html[data-halka-tema="kara-mana-goz"] .kg-kor {
+  fill: var(--kg-altin-acik);
+  transform-origin: 300px 300px;
+  animation-name: kg-dus;
+  animation-timing-function: cubic-bezier(0.55, 0, 0.85, 0.4);
+  animation-iteration-count: infinite;
+}
+html[data-halka-tema="kara-mana-goz"] .kg-kor-yogun { visibility: hidden; }
+@keyframes kg-dus {
+  0%   { transform: rotate(0deg) scale(1);     opacity: 0; }
+  12%  { opacity: 0.9; }
+  80%  { opacity: 0.75; }
+  100% { transform: rotate(118deg) scale(0.36); opacity: 0; }
+}
+
+/* ── Ufuk nabzı + şok halkaları (düşünürken) ─────────────────────── */
+html[data-halka-tema="kara-mana-goz"] .kg-sok {
+  stroke: var(--kg-altin-acik);
+  stroke-width: 1.8;
+  vector-effect: non-scaling-stroke;
+  transform-origin: 300px 300px;
+  opacity: 0;
+}
+
+/* ── Kutup jetleri (konuşurken) ─────────────────────────────────── */
+html[data-halka-tema="kara-mana-goz"] .kg-jet {
+  transform: scaleY(0);
+  opacity: 0;
+  transition: transform 0.5s cubic-bezier(0.16, 0.9, 0.24, 1), opacity 0.25s ease-out;
+}
+html[data-halka-tema="kara-mana-goz"] .kg-jet-hale  { opacity: 0.22; transform-origin: 300px 300px; }
+html[data-halka-tema="kara-mana-goz"] .kg-jet-govde { opacity: 0.9; }
+html[data-halka-tema="kara-mana-goz"] .kg-jet-oz    { stroke: var(--kg-isik); stroke-width: 1.1; opacity: 0.8; stroke-linecap: round; }
+html[data-halka-tema="kara-mana-goz"] .kg-dugum     { fill: var(--kg-buz-acik); opacity: 0; }
+html[data-halka-tema="kara-mana-goz"] .kg-kutup     { fill: var(--kg-buz-acik); opacity: 0.8; filter: drop-shadow(0 0 3px color-mix(in oklab, var(--kg-buz) 80%, transparent)); transform-box: fill-box; transform-origin: center; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-talking .kg-kutup { animation: kg-kutup 0.42s ease-in-out infinite alternate; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-talking .kg-leke { animation-duration: 7s; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-talking .kg-foton-1 { stroke: var(--kg-buz-acik); }
+@keyframes kg-kutup { from { transform: scale(0.8); opacity: 0.55; } to { transform: scale(1.25); opacity: 0.85; } }
+
+/* sarmal plazma iplikleri (jet içinde, dışa akar) */
+html[data-halka-tema="kara-mana-goz"] .kg-iplik { fill: none; stroke: var(--kg-buz-acik); stroke-width: 1; opacity: 0.85; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-talking .kg-sarmal-u { animation: kg-sarmal-u 0.6s linear infinite; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-talking .kg-sarmal-a { animation: kg-sarmal-a 0.6s linear infinite; }
+@keyframes kg-sarmal-u { to { transform: translateY(-52px); } }
+@keyframes kg-sarmal-a { to { transform: translateY(52px); } }
+
+/* dinleme girdabı: 5 cyan sarmal kol, ufka doğru dönerek akar */
+html[data-halka-tema="kara-mana-goz"] .kg-girdap {
+  transform-origin: 300px 300px;
+  opacity: 0;
+  transition: opacity 0.45s ease-out;
+}
+html[data-halka-tema="kara-mana-goz"] .kg-kol-sarmal {
+  stroke: var(--kg-buz);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-dasharray: 26 10 6 10;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 2.5px color-mix(in oklab, var(--kg-buz) 80%, transparent));
+}
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-listening .kg-girdap { opacity: 1; animation: kg-girdap 2.6s linear infinite; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-listening .kg-damarlar { opacity: 0.18; }
+@keyframes kg-girdap { to { transform: rotate(-360deg); } }   /* eksi yön: kollar boyunca İÇE akış */
+
+/* ── Gelgit ipi (widget açılınca o yöne uzanıp söner) ───────────── */
+html[data-halka-tema="kara-mana-goz"] .kg-ip { fill: url(#kg-ip-g); opacity: 0; transform-origin: 400px 300px; }
+html[data-halka-tema="kara-mana-goz"] .kg-ip-alev { fill: none; stroke: var(--kg-altin-isik); stroke-width: 6; stroke-linecap: round; opacity: 0; filter: drop-shadow(0 0 4px color-mix(in oklab, var(--kg-altin) 90%, transparent)); }
+html[data-halka-tema="kara-mana-goz"] .kg-sus.kg-cekim .kg-ip { animation: kg-ip 1.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+html[data-halka-tema="kara-mana-goz"] .kg-sus.kg-cekim .kg-ip-alev { animation: kg-alev 1.7s ease-out forwards; }
+html[data-halka-tema="kara-mana-goz"] .kg-dalga { stroke: var(--kg-altin-acik); stroke-width: 3.2; vector-effect: non-scaling-stroke; transform-origin: 300px 300px; opacity: 0; filter: drop-shadow(0 0 4px color-mix(in oklab, var(--kg-altin) 90%, transparent)); }
+html[data-halka-tema="kara-mana-goz"] .kg-dalga2 { stroke: var(--kg-buz); stroke-width: 1.6; filter: drop-shadow(0 0 3px color-mix(in oklab, var(--kg-buz) 90%, transparent)); }
+html[data-halka-tema="kara-mana-goz"] .kg-sus.kg-cekim .kg-dalga  { animation: kg-dalga 1.6s cubic-bezier(0.15, 0.6, 0.3, 1) forwards; }
+html[data-halka-tema="kara-mana-goz"] .kg-sus.kg-cekim .kg-dalga2 { animation-delay: 0.16s; }
+html[data-halka-tema="kara-mana-goz"] .kg-sus.kg-cekim .kg-halkalar { animation: kg-disk-parla 1.3s ease-out; }
+@keyframes kg-dalga {
+  0%   { transform: scale(1);   opacity: 1; }
+  45%  { opacity: 0.85; }
+  100% { transform: scale(3.3); opacity: 0; }
+}
+@keyframes kg-disk-parla {
+  0%, 100% { opacity: 1; }
+  20%      { opacity: 0.55; }
+  45%      { opacity: 1; }
+}
+@keyframes kg-ip {
+  0%   { opacity: 0;   transform: scaleX(0.04); }
+  22%  { opacity: 1;   transform: scaleX(1); }
+  60%  { opacity: 0.7; transform: scaleX(1); }
+  100% { opacity: 0;   transform: scaleX(1); }
+}
+@keyframes kg-alev {
+  0%   { opacity: 0; }
+  15%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ════════════════ GÖZ (C'den taşındı) ════════════════
+   Kapak/iris/bebek geometrisi JS'te; burada yalnız renk. */
+html[data-halka-tema="kara-mana-goz"] .kg-kapak { fill: none; stroke: var(--kg-altin-acik); stroke-width: 1.6; stroke-linejoin: round; }
+html[data-halka-tema="kara-mana-goz"] .kg-kapak-ust { stroke-width: 3.2; stroke: var(--kg-altin); }
+html[data-halka-tema="kara-mana-goz"] .kg-kapak-hale { fill: none; stroke: color-mix(in oklab, var(--kg-altin) 22%, transparent); stroke-width: 9; }
+html[data-halka-tema="kara-mana-goz"] .kg-kanat { stroke: var(--kg-altin); stroke-width: 2; stroke-linecap: round; fill: none; }
+html[data-halka-tema="kara-mana-goz"] .kg-cizgi { stroke: var(--kg-altin-isik); stroke-width: 0.7; opacity: 0.32; }
+html[data-halka-tema="kara-mana-goz"] .kg-cizgi-koyu { stroke: var(--kg-altin-derin); stroke-width: 1; opacity: 0.45; transform: rotate(4.5deg); }
+html[data-halka-tema="kara-mana-goz"] .kg-limbus { fill: none; stroke: var(--kg-buz); stroke-width: 1.4; opacity: 0.75; }
+html[data-halka-tema="kara-mana-goz"] .kg-tarama { fill: url(#kg-tarama-g); }
+/* göz–jet ekseni: bebekten kutba ince cyan ışık */
+html[data-halka-tema="kara-mana-goz"] .kg-eksen line {
+  stroke: var(--kg-buz-acik);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px color-mix(in oklab, var(--kg-buz) 90%, transparent));
+}
+/* göz açıkken disk incelir — iris diskin arkasında kaybolmasın (C'nin oranları) */
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-talking .kg-disk  { opacity: 0.55; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-thinking .kg-disk { opacity: 0.3; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-idle .kg-sus.kg-goz-acik .kg-disk,
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-listening .kg-sus.kg-goz-acik .kg-disk { opacity: 0.4; }
+
+/* YUKI GÖRÜNÜR KALIR: göz açıkken isim küçülüp gözün alt kapağı ile ufkun alt kenarı
+   arasındaki siyah şeride iner (merkez y≈365). Alt jet ufkun DIŞINDAN (y=390) başladığı
+   için çakışmaz. Göz kapanınca yerine döner. Yalnız transform — yerleşim değişmez. */
+html[data-halka-tema="kara-mana-goz"] #hr-core-name {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), fill 0.3s;
+}
+html[data-halka-tema="kara-mana-goz"] #hr-ring-wrap:has(> .kg-sus.kg-goz-acik) #hr-core-name {
+  transform: translateY(65px) scale(0.72);   /* merkez y≈365: ufkun bu yükseklikteki eni ~113, isim ~94 */
+  fill: var(--kg-altin-isik);
+}
+@media (max-width: 1100px) {
+  /* telefonda halka küçük → isim biraz daha büyük kalır (eni ~104, yine ufka sığar) */
+  html[data-halka-tema="kara-mana-goz"] #hr-ring-wrap:has(> .kg-sus.kg-goz-acik) #hr-core-name { transform: translateY(65px) scale(0.8); }
+}
+/* Ürün farkı: merkezde adın altında bir de durum satırı var (#hr-core-status, y=341).
+   Göz yarı açıkken (DÜŞÜNÜYOR, kapak y≈339) satır kapağın hemen altına oturur ve
+   okunur; tam açıkken (konuşma, widget'a bakış — kapak y≈378) irisin ARKASINDA
+   kalıyordu (ölçüldü, 1440×900). O hâllerde söner — durum yazısı altta #hr-status
+   satırında zaten var, bilgi kaybolmaz. */
+html[data-halka-tema="kara-mana-goz"] #hr-ring #hr-core-status { transition: opacity 0.3s; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage:not(.hr-thinking) #hr-ring-wrap:has(> .kg-sus.kg-goz-acik) #hr-core-status { opacity: 0; }
+
+/* göz biçimli disk deliği: yalnız göz açıkken */
+html[data-halka-tema="kara-mana-goz"] .kg-maske-goz { opacity: 0; transition: opacity 0.35s; }
+html[data-halka-tema="kara-mana-goz"] .kg-sus.kg-goz-acik .kg-maske-goz { opacity: 1; }
+
+/* ════════════════ DURUMLAR — bir bakışta ayrılsın ════════════════ */
+/* DİNLİYOR: disk hızlanır, damarlar içe kıvrılır (emiyor), foton parlar */
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-listening .kg-leke { animation-duration: 3.2s; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-listening .kg-damarlar { transform: rotate(-30deg) scale(0.78); }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-listening .kg-foton-1 { stroke-width: 2.2; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-listening .kg-kor { animation-duration: 4s !important; }
+
+/* DÜŞÜNÜYOR: ufuk nabız atar, şok halkaları yayılır, korlar yoğunlaşır */
+/* göz ufkun İÇİNDE durduğu için ufkun kendisi ölçeklenmez; nabzı foton halkası taşır */
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-thinking .kg-foton {
+  transform-origin: 300px 300px;
+  animation: kg-nabiz 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-thinking .kg-sok { animation: kg-sok 1.6s cubic-bezier(0.1, 0.6, 0.3, 1) infinite; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-thinking .kg-sok2 { animation-delay: 0.8s; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-thinking .kg-kor-yogun { visibility: visible; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-thinking .kg-leke { animation-duration: 6s; }
+@keyframes kg-nabiz {
+  0%, 100% { transform: scale(1); }
+  18%      { transform: scale(1.065); }
+  40%      { transform: scale(0.99); }
+}
+@keyframes kg-sok {
+  0%   { transform: scale(1);   opacity: 0.95; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+/* KONUŞUYOR: kutuplardan iki cyan jet fışkırır, konuşmayla nabız atar */
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-talking .kg-jet { transform: scaleY(1); opacity: 1; }
+/* jet gövdesi ve halesi göz bebeğiyle AYNI ses zarfıyla atar — JS sürer (CSS animasyonu
+   satır içi stili ezerdi, bu yüzden burada animasyon yok) */
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-talking .kg-jet-ust .kg-dugum { animation: kg-dugum-u 0.95s linear infinite; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-talking .kg-jet-alt .kg-dugum { animation: kg-dugum-a 0.95s linear infinite; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-talking .kg-dugum2 { animation-delay: -0.48s !important; }
+html[data-halka-tema="kara-mana-goz"] #hr-stage.hr-talking .kg-damar { animation-duration: 1.9s; }
+@keyframes kg-dugum-u { 0% { transform: translateY(0); opacity: 0.95; } 100% { transform: translateY(-200px); opacity: 0; } }
+@keyframes kg-dugum-a { 0% { transform: translateY(0); opacity: 0.95; } 100% { transform: translateY(200px); opacity: 0; } }
+
+
+/* ── Widget kabuğu + sağ panel: boşluk camı ──────────────────────────
+   Ürün farkı: kişiseldeki altın köşe çentikleri, altın noktalar ve altın widget
+   ikonları ATILDI. Ürün kuralı "altın nadir vurgu" (tokens.css) — bu temada altın
+   zaten halkanın kimliği (disk, foton halkası, göz); kabukta da altın olsaydı
+   ekranda "nadir" bir şey kalmazdı. Kabukta tek altın iz: başlığın altındaki
+   altın → mor → karakter rengi "olay ufku çizgisi". Köşe yarıçapı ürünün. */
+html[data-halka-tema="kara-mana-goz"] .hr-widget,
+html[data-halka-tema="kara-mana-goz"] #hr-side {
+  background:
+    radial-gradient(130% 70% at 50% 0%, color-mix(in oklab, var(--kg-mor) 13%, transparent), transparent 62%),
+    var(--kg-cam);
+  border-color: color-mix(in oklab, var(--kg-mor) 30%, transparent);
+  box-shadow:
+    0 10px 40px color-mix(in oklab, var(--kg-bosluk-derin) 70%, transparent),
+    inset 0 0 22px color-mix(in oklab, var(--kg-mor) 6%, transparent);
+}
+html[data-halka-tema="kara-mana-goz"] .hr-widget.hr-w-active {
+  border-color: color-mix(in oklab, var(--kg-mor) 50%, transparent);
+  box-shadow:
+    0 10px 44px color-mix(in oklab, var(--kg-bosluk-derin) 75%, transparent),
+    0 0 14px color-mix(in oklab, var(--kg-mor) 16%, transparent),
+    inset 0 0 22px color-mix(in oklab, var(--kg-mor) 8%, transparent);
+}
+html[data-halka-tema="kara-mana-goz"] .hr-widget-header,
+html[data-halka-tema="kara-mana-goz"] .hr-side-header {
+  background: linear-gradient(90deg, color-mix(in oklab, var(--kg-mor) 12%, transparent), color-mix(in oklab, var(--kg-bosluk) 20%, transparent) 70%);
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, color-mix(in oklab, var(--kg-altin) 70%, transparent), color-mix(in oklab, var(--kg-mor) 45%, transparent) 45%, color-mix(in oklab, var(--kg-buz) 30%, transparent)) 1;
+}
+html[data-halka-tema="kara-mana-goz"] .hr-widget-title,
+html[data-halka-tema="kara-mana-goz"] .hr-side-name { color: var(--kg-lavanta); }
+html[data-halka-tema="kara-mana-goz"] .hr-widget-icon { color: var(--kg-mor); }
+html[data-halka-tema="kara-mana-goz"] .hr-widget-dot,
+html[data-halka-tema="kara-mana-goz"] .hr-side-dot {
+  background: var(--kg-buz);
+  box-shadow: 0 0 6px color-mix(in oklab, var(--kg-buz) 70%, transparent);
+}
+html[data-halka-tema="kara-mana-goz"] .hr-widget-btn {
+  border-color: color-mix(in oklab, var(--kg-mor) 32%, transparent);
+  color: var(--kg-lavanta-soluk);
+}
+html[data-halka-tema="kara-mana-goz"] .hr-widget-body { background: transparent; }
+
+/* Sağ liste — açık göstergesi hud-ring.css'teki MOR kalır (temadan bağımsız anlam) */
+html[data-halka-tema="kara-mana-goz"] .hr-grup-ad,
+html[data-halka-tema="kara-mana-goz"] .hr-grup-sayi { color: var(--kg-lavanta-soluk); }
+html[data-halka-tema="kara-mana-goz"] .hr-grup-cizgi {
+  background: linear-gradient(90deg, color-mix(in oklab, var(--kg-mor) 40%, transparent), transparent);
+}
+html[data-halka-tema="kara-mana-goz"] .hr-tab-btn { color: var(--kg-lavanta-soluk); }
+html[data-halka-tema="kara-mana-goz"] .hr-tab-btn .hr-tb-icon { color: var(--kg-buz); }
+html[data-halka-tema="kara-mana-goz"] .hr-tab-btn:hover {
+  background: color-mix(in oklab, var(--kg-mor) 10%, transparent);
+  color: var(--kg-lavanta);
+}
+html[data-halka-tema="kara-mana-goz"] .hr-tab-btn.hr-w-open { color: var(--kg-isik); }
+html[data-halka-tema="kara-mana-goz"] .hr-tab-btn.hr-w-open .hr-tb-icon { color: var(--kg-mor); }
+
+/* Odaklı Halka düğümleri (2026-10-11, eski sekme/karakter çarkının yerine): boşluk camı + temanın mor kenarı */
+html[data-halka-tema="kara-mana-goz"] .hr-od-dugum,
+html[data-halka-tema="kara-mana-goz"] .hr-od-anahtar { background: color-mix(in oklab, var(--kg-bosluk) 94%, transparent); }
+html[data-halka-tema="kara-mana-goz"] .hr-od-sekme:not(:hover):not(.hr-od-sec) {
+  border-color: color-mix(in oklab, var(--kg-mor) 55%, transparent);
+  color: var(--kg-lavanta);
+}
+html[data-halka-tema="kara-mana-goz"] .hr-od-etiket { color: var(--kg-lavanta); }
+
+/* Giriş hapı + alt yazılar */
+html[data-halka-tema="kara-mana-goz"] body.hud-ring-mode #input-area {
+  background: color-mix(in oklab, var(--kg-bosluk) 86%, transparent);
+  border-color: color-mix(in oklab, var(--kg-mor) 38%, transparent);
+  box-shadow: 0 0 26px color-mix(in oklab, var(--kg-bosluk-derin) 60%, transparent), 0 -1px 0 color-mix(in oklab, var(--kg-altin) 12%, transparent) inset;
+}
+html[data-halka-tema="kara-mana-goz"] #hr-prompt-text {
+  color: var(--kg-lavanta);
+  text-shadow: 0 0 14px color-mix(in oklab, var(--kg-mor) 45%, transparent);
+}
+html[data-halka-tema="kara-mana-goz"] #hr-status { color: var(--kg-lavanta-soluk); }
+html[data-halka-tema="kara-mana-goz"] #hr-dots span { background: var(--kg-altin); }
+html[data-halka-tema="kara-mana-goz"] #hr-ticker {
+  color: var(--kg-lavanta-soluk);
+  border-left-color: color-mix(in oklab, var(--kg-altin) 60%, transparent);
+}
+
+/* ── Hareketi azalt: ağır animasyon kapalı (HAFİF kademe kuralları css/gfx.css'te) ── */
+@media (prefers-reduced-motion: reduce) {
+  html[data-halka-tema="kara-mana-goz"] .kg-sus * { animation: none !important; }
+  html[data-halka-tema="kara-mana-goz"] .kg-isco, html[data-halka-tema="kara-mana-goz"] .kg-jet, html[data-halka-tema="kara-mana-goz"] .kg-damarlar { transition: none; }
+  html[data-halka-tema="kara-mana-goz"] .kg-kor { display: none; }
+}
+
+/* ── HAFİF kademe: süs katmanı durur (JS zaten tek kare çizer, döngü kurmaz).
+   Kişiselde bu kurallar css/gfx.css'teydi; üründe o dosya bu işin kapsamı
+   dışında → tema kendi dosyasında taşır. ── */
+html[data-halka-tema="kara-mana-goz"][data-gfx="hafif"] .kg-sus * { animation: none !important; transition: none !important; }
+html[data-halka-tema="kara-mana-goz"][data-gfx="hafif"] .kg-kor { display: none; }
+
+/* ── Ürün portunda sınıfa taşınan dolgular (kişiselde satır içi hex'ti) ── */
+html[data-halka-tema="kara-mana-goz"] .kg-leke     { fill: var(--kg-altin-acik); }
+html[data-halka-tema="kara-mana-goz"] .kg-iris-ic  { stroke: var(--kg-altin-derin); }
+html[data-halka-tema="kara-mana-goz"] .kg-iris-mor { stroke: var(--kg-mor); }
+html[data-halka-tema="kara-mana-goz"] .kg-bebek    { fill: var(--kg-bosluk-derin); }
+html[data-halka-tema="kara-mana-goz"] .kg-parilti  { fill: var(--kg-isik); }

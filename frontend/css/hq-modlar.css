@@ -1,0 +1,150 @@
+/* ── MODLAR · BAŞLATMA IZGARASI ( panel 7, 2026-09-27) ────────────────
+ * Kişisel 097779b'nin tasarımı; yalnız ürün token'ları (tokens.css + style.css
+ * --font-hud) — kişisel hq-modlar.css'in ~30 token'ı üründe tanımsız.
+ * Form alanlarının eski kuralları hq.css'te (#hq-mode-form .ff …, 9-11px mono);
+ * burada panel kapsamında okunur boyuta çekilir.
+ */
+
+#hq-panel-modlar [hidden] { display: none !important; }
+/* "Yeni mod" nötr çerçeveli: dolu altın düğme kartlardaki BAŞLAT'larla dikkat için yarışıyordu,
+   uyarı rengiyle de karışıyordu (goz tur 1; referans masa-A) */
+#hq-mode-new-btn { --dg-kenar: var(--kenar-guclu); --dg-ink: var(--ink-1); }
+/* Eski liste kuralı (hq.css #hq-modes-list: flex:1 + overflow:auto) kartları İÇ kutuda kaydırıyordu */
+#hq-panel-modlar #hq-modes-list { flex: none; overflow: visible; padding: 0; min-height: auto; }
+
+/* Başlık altı durum satırı: başlatıcı · mod sayısı · tetik notu */
+/* blok (flex DEĞİL): flex'te ışık noktası ile metin ayrı öğe olup telefonda ayrı satıra düşüyordu */
+.md-bas-durum { margin: var(--b-2) 0 0; font-size: var(--yazi-13); line-height: 1.5; color: var(--ink-2); }
+.md-bas-durum:empty { display: none; }
+.md-isik { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-inline-end: 4px; background: var(--ink-3); }
+.md-isik.ok { background: var(--yesil-ink); }
+.md-isik.off { background: var(--kirmizi-ink); }
+/* satırı büyütmeden 32px vuruş (negatif blok boşluğu) — satır 7px itilip kartlar kayıyordu */
+.md-bag { display: inline-flex; align-items: center; vertical-align: middle; margin-block: -8px; min-height: 32px; border: 0; padding: 0 4px; background: none; font: inherit; color: var(--mor-ink); text-decoration: underline; cursor: pointer; }
+
+/* ── ızgara ── */
+/* align-content:start — oda gövdesi esnek yükseklikte; yoksa boş yükseklik satırlara paylaşılıp kartlar 370px'e uzuyordu */
+.md-izgara { align-content: start; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: var(--b-5); }
+.md-kart {
+  display: flex; flex-direction: column; gap: var(--b-3); min-width: 0;
+  padding: var(--b-6); border: 1px solid var(--kenar); border-radius: var(--r-3);
+  background: var(--yuzey-1); cursor: pointer; text-align: start;
+  transition: border-color var(--sure-2) var(--egri), background-color var(--sure-2) var(--egri);
+}
+.md-kart:hover { border-color: var(--kenar-guclu); }
+.md-kart:focus-visible { outline: 2px solid var(--mor-ink); outline-offset: 2px; }
+.md-kart.secili { border-color: var(--mor-ink); }
+/* Soluk kartta TÜM içerik birlikte söner (yalnız başlık sönünce açıklama baskın kalıyordu).
+   opacity DEĞİL renk: .55 opaklık açık temada açıklamayı 2,64:1'e düşürüyordu (goz tur 2) — hepsi --ink-2'ye iner */
+.md-kart.soluk { background: transparent; }
+.md-kart.soluk h4, .md-kart.soluk .md-ne, .md-kart.soluk .md-aciklama, .md-kart.soluk .md-cip { color: var(--ink-2); }
+.md-kart.soluk h4 { font-weight: var(--ag-orta); }
+.md-kart.soluk .md-cip.hedef { border-color: var(--kenar); background: none; }
+.md-kart h4 { margin: 0; font-size: var(--yazi-16); font-weight: var(--ag-kalin); color: var(--ink-1); overflow-wrap: anywhere; }
+.md-ne { margin: 0; font-size: var(--yazi-13); color: var(--ink-1); line-height: 1.45; overflow-wrap: anywhere; }
+.md-aciklama { inline-size: 100%; margin: 0; font-size: var(--yazi-12); color: var(--ink-2); line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.md-cipler { display: flex; flex-wrap: wrap; gap: 6px; }
+.md-cip { font: var(--yazi-11) var(--font-hud); color: var(--ink-2); padding: 3px 8px; border: 1px solid var(--kenar); border-radius: var(--r-1, 4px); white-space: nowrap; }
+.md-cip.hedef { color: var(--mor-ink); border-color: var(--mor-ink); background: var(--mor-zemin); }
+.md-cip.yok { border-style: dashed; white-space: normal; }
+.md-alt { margin-top: auto; padding-top: var(--b-4); border-top: 1px solid var(--kenar);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--b-4); }
+.md-durum { flex: 1; min-width: 0; font-size: var(--yazi-12); line-height: 1.4; color: var(--ink-2); overflow-wrap: anywhere; }
+.md-durum.ok { color: var(--yesil-ink); }
+.md-durum.uyari { color: var(--altin-ink); }
+.md-durum.err { color: var(--kirmizi-ink); }
+.md-durum.soluk { color: var(--ink-3); }
+.md-baslat { flex: none; white-space: nowrap; }
+.md-donen { display: inline-block; width: 12px; height: 12px; margin-inline-end: 6px; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent; animation: md-don .8s linear infinite; vertical-align: -2px; }
+@keyframes md-don { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .md-donen { animation: none; } }
+
+.md-yeni { align-items: center; justify-content: center; min-height: 140px; border-style: dashed; border-color: var(--kenar-guclu); background: transparent;
+  font: var(--ag-orta) var(--yazi-13) var(--font); color: var(--ink-2); }
+.md-yeni:hover { color: var(--ink-1); }
+
+.md-hata { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-4); padding: var(--b-5) 0; font-size: var(--yazi-13); color: var(--kirmizi-ink); }
+.md-hata p { margin: 0; }
+
+/* ── düzenleme formu (ızgaranın yerini alır) ── */
+#hq-panel-modlar #hq-mode-form { max-width: 760px; }
+.md-form-bas { display: flex; align-items: center; gap: var(--b-5); margin-bottom: var(--b-6); }
+/* Geri düğmesinin METNİ form sütunuyla hizalı (dolgu kadar sola), ok okunur boyda — 5px'lik ← zor seçiliyordu */
+.md-geri { margin-inline-start: calc(-1 * var(--b-6)); }
+.md-ok { font-size: var(--yazi-19); line-height: 1; }
+.md-form-bas h4 { margin: 0; font-size: var(--yazi-19); font-weight: var(--ag-kalin); color: var(--ink-1); overflow-wrap: anywhere; }
+.md-form-izgara { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 0 var(--b-5); }
+
+#hq-panel-modlar #hq-mode-form .ff { margin-bottom: var(--b-6); }
+#hq-panel-modlar #hq-mode-form .ff > label { font: var(--ag-orta) var(--yazi-12) var(--font); letter-spacing: .02em; text-transform: none; color: var(--ink-1); margin-bottom: var(--b-3); }
+#hq-panel-modlar #hq-mode-form .ff input[type=text],
+#hq-panel-modlar #hq-mode-form .ff textarea {
+  font: var(--yazi-13) var(--font); color: var(--ink-1); background: var(--yuzey-1);
+  border: 1px solid var(--kenar-guclu); border-radius: var(--r-2); padding: 10px 12px; min-height: 40px; }
+#hq-panel-modlar #hq-mode-form .ff textarea { font-family: var(--font-hud); min-height: 72px; }
+#hq-panel-modlar #hq-mode-form .ff input:focus,
+#hq-panel-modlar #hq-mode-form .ff textarea:focus { border-color: var(--mor-ink); outline: none; }
+.md-ipucu { display: inline; margin: 0; font-size: var(--yazi-12); font-weight: var(--ag-normal); color: var(--ink-2); }
+p.md-ipucu { display: block; margin-top: var(--b-3); }
+.md-alt-etiket { display: block; margin: var(--b-4) 0 var(--b-2); font-size: var(--yazi-12); color: var(--ink-2); }
+
+#hq-panel-modlar .hq-chip { font: var(--yazi-12) var(--font-hud); color: var(--mor-ink); padding: 2px 2px 2px 10px; border-radius: var(--r-tam); }
+#hq-panel-modlar .hq-chip-sil { border: 0; background: none; color: var(--ink-2); cursor: pointer; min-width: 32px; min-height: 32px; border-radius: 50%; font-size: 12px; }
+#hq-panel-modlar .hq-chip-sil:hover { color: var(--kirmizi-ink); }
+#hq-panel-modlar .hq-chip-input, #hq-panel-modlar .hq-app-picker-btn { font: var(--yazi-12) var(--font); min-height: 32px; padding: 4px 12px; border-radius: var(--r-tam); color: var(--ink-1); }
+#hq-panel-modlar .hq-app-drop { border-radius: var(--r-2); }
+#hq-panel-modlar .hq-app-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; border: 0; background: none; color: var(--ink-1); font: var(--yazi-13) var(--font); text-align: start; cursor: pointer; }
+#hq-panel-modlar .hq-app-item:hover { background: var(--yuzey-2); }
+#hq-panel-modlar .hq-app-item code { margin-inline-start: auto; font-size: var(--yazi-11); color: var(--ink-3); }
+.hq-app-bos { padding: 10px 12px; font-size: var(--yazi-12); color: var(--ink-2); }
+
+#hq-panel-modlar .hq-ws-grid, #hq-panel-modlar .hq-special-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+#hq-panel-modlar .hq-ws-btn, #hq-panel-modlar .hq-sp-btn {
+  min-width: 40px; min-height: 36px; padding: 4px 12px; border: 1px solid var(--kenar-guclu); border-radius: var(--r-2);
+  background: transparent; color: var(--ink-1); font: var(--yazi-13) var(--font-hud); cursor: pointer; position: relative; }
+#hq-panel-modlar .hq-ws-btn.hic { font-family: var(--font); }
+#hq-panel-modlar .hq-ws-btn.active-ws, #hq-panel-modlar .hq-sp-btn.active-sp { background: var(--mor-zemin); border-color: var(--mor-ink); color: var(--mor-ink); }
+#hq-panel-modlar .hq-ws-btn.ws-live::after { content: ""; position: absolute; top: 6px; right: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--ink-2); }
+
+#hq-panel-modlar .hq-snippet-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--b-3); }
+#hq-panel-modlar .hq-snip { min-height: 32px; padding: 3px 10px; border: 1px dashed var(--kenar-guclu); border-radius: var(--r-tam); background: none;
+  color: var(--ink-2); font: var(--yazi-12) var(--font-hud); cursor: pointer; }
+#hq-panel-modlar .hq-snip::before { content: "+ "; }
+#hq-panel-modlar .hq-snip:hover { color: var(--ink-1); border-color: var(--mor-ink); }
+
+.md-anahtarlar { display: flex; flex-wrap: wrap; gap: var(--b-6) var(--b-8); }
+.md-anahtar { display: flex; flex-direction: column; }
+/* etiket düğmeye bağlı (for=) — yazıya dokunmak da anahtarı çevirir; 38×20'lik çizim tek hedef değil */
+#hq-panel-modlar .md-anahtar > label { cursor: pointer; min-height: 24px; }
+/* Anahtarın çizimi 38×20 kalır, VURUŞ alanı büyür (görünmez çerçeve) — 20px'lik hedef ölçümde düştü */
+#hq-panel-modlar .hq-toggle::before { content: ""; position: absolute; inset: -8px -6px; }
+.md-yukleniyor { margin: 0; font-size: var(--yazi-13); color: var(--ink-2); }
+
+.md-sil-sor { display: flex; flex-direction: column; gap: var(--b-4); padding: var(--b-5); border: 1px solid var(--kirmizi-ink); border-radius: var(--r-3); background: var(--kirmizi-zemin); width: 100%; }
+.md-sil-sor p { margin: 0; font-size: var(--yazi-13); color: var(--ink-1); line-height: 1.45; }
+.md-sil-dugme { display: flex; gap: var(--b-3); flex-wrap: wrap; }
+
+/* Telefonda başlık SABİT kalmaz: açıklama + durum + düğme ekranın üst ~300px'ini kaplıyordu,
+   kartlar ve formun "← Modlar" satırı küçük bir kutuda kalıyordu → bütün panel birlikte kayar */
+@media (max-width: 600px) {
+  #tab-hq[data-hq="modlar"] #hq-panel-modlar { overflow-y: auto; }
+  /* Kabuğun ☰ ve ✕ düğmeleri şerit çizgisinin ~9px altına sarkıyor: kayan içerik onların altından geçmesin diye
+     tepede panel zemininde yapışkan bir bant (goz tur 2). margin-top denendi → aradaki boşlukta duvar kâğıdı kara şerit oldu */
+  #tab-hq[data-hq="modlar"] #hq-panel-modlar::before { content: ""; position: sticky; top: 0; z-index: 2; flex: none;
+    block-size: 10px; margin-block-end: -10px; background: color-mix(in srgb, var(--bg, #0b0b0f) 93%, transparent); }
+  #hq-panel-modlar > .oda-bas, #hq-panel-modlar > .oda-govde { flex: none; overflow: visible; }
+}
+@media (max-width: 760px) {
+  .md-form-izgara { grid-template-columns: minmax(0, 1fr); }
+  .md-alt { flex-wrap: wrap; }
+}
+/* Dokunmatik: 44px (--hedef; --hedef-min 24'tür) */
+@media (hover: none) {
+  #hq-panel-modlar .dg, #hq-panel-modlar .hq-ws-btn, #hq-panel-modlar .hq-sp-btn,
+  #hq-panel-modlar .hq-chip-input, #hq-panel-modlar .hq-app-picker-btn, #hq-panel-modlar .hq-snip,
+  #hq-panel-modlar #hq-mode-form .ff input[type=text] { min-height: var(--hedef, 44px); }
+  #hq-panel-modlar .hq-toggle::before { inset: -12px -8px; }
+  #hq-panel-modlar .hq-chip-sil, #hq-panel-modlar .md-bag { min-width: 44px; min-height: 44px; }
+}

@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "_comment": "İndir-gerektiğinde model kayıt defteri. Her modül GitHub release'te bir .tar.gz asset. presenceDir = models-cache içindeki HF-cache klasörü (varlık kontrolü). url/sha256/sizeBytes → scripts/build-model-package.sh çıktısından doldurulur; boşsa (TBD) o model 'indirilemez' sayılır.",
+  "releaseBase": "https://github.com/ihsandeniz/yuki-oss/releases/download",
+  "models": {
+    "whisper-small": {
+      "name": "Ses Tanıma Modeli",
+      "feature": "Mikrofonla konuşma (STT)",
+      "i18n": {
+        "en": {
+          "name": "Speech Recognition Model",
+          "feature": "Talking by microphone (STT)"
+        }
+      },
+      "asset": "whisper-small-int8.tar.gz",
+      "url": "https://github.com/ihsandeniz/yuki-oss/releases/download/v0.4.0-models/whisper-small-int8.tar.gz",
+      "sizeBytes": 486213248,
+      "downloadBytes": 445726547,
+      "sha256": "511cfbacb9fa80b60e0dbc2bf6d6e60c25c8604a501d4c56d3e0a8c3cc1c9eb3",
+      "presenceDir": "hub/models--Systran--faster-whisper-small",
+      "extractTo": ".",
+      "tier": "lite",
+      "_note": "faster-whisper 'small' int8 — 464MB açık, ~250MB sıkıştırılmış. MIT (Systran). Lite'ta indirilebilir."
+    },
+    "embedding-onnx": {
+      "name": "Hafıza Anlama Modeli",
+      "feature": "Unutmayan hafıza (semantik arama)",
+      "i18n": {
+        "en": {
+          "name": "Memory Understanding Model",
+          "feature": "Memory that never forgets (semantic search)"
+        }
+      },
+      "asset": "embedding-onnx-int8.tar.gz",
+      "url": "https://github.com/ihsandeniz/yuki-oss/releases/download/v0.4.0-models/embedding-onnx-int8.tar.gz",
+      "sizeBytes": 135274957,
+      "downloadBytes": 82388611,
+      "sha256": "208192bb217291d38b7666eb4b80efc96bbd1c0c8f262b84fe390f5e57394c45",
+      "presenceDir": "embedding-onnx",
+      "extractTo": ".",
+      "tier": "ultra",
+      "_note": "paraphrase-multilingual-MiniLM-L12-v2 ONNX int8 (113MB) + tokenizer (17MB). Ultra semantik hafızanın motoru — pakette torch YOK, embedding bununla hesaplanır. Lite'ta lisans aktive edilince iner; tam-offline build'de gömülü gelir. url/sha256 → scripts/build-embedding-package.sh doldurur."
+    },
+    "face-pydeps": {
+      "name": "Yüz Tanıma Kütüphanesi",
+      "feature": "Yüz tanıma (Free)",
+      "i18n": {
+        "en": {
+          "name": "Face Recognition Library",
+          "feature": "Face recognition (Free)"
+        }
+      },
+      "kind": "pydeps",
+      "presenceDir": "pydeps/face/insightface",
+      "extractTo": "pydeps/face",
+      "tier": "lite",
+      "_note": "Python paket ağacı — PLATFORMA ÖZEL (derlenmiş .so/.pyd taşır). backend sys.path'e SONA ekler; kutudaki paketleri gölgelemez. Üretici: scripts/build-pydeps-package.sh",
+      "assets": {
+        "linux-x64": {
+          "asset": "face-pydeps-linux-x64.tar.gz",
+          "url": "https://github.com/ihsandeniz/yuki-oss/releases/download/v0.4.0-models/face-pydeps-linux-x64.tar.gz",
+          "sha256": "a5fb1353cf29ef34a85b77f6ce458bb5720e957fd86abf3e939a4b6eb9e53b37",
+          "sizeBytes": 39699936,
+          "downloadBytes": 15830021
+        },
+        "win-x64": {
+          "asset": "face-pydeps-win-x64.tar.gz",
+          "url": "https://github.com/ihsandeniz/yuki-oss/releases/download/v0.4.0-models/face-pydeps-win-x64.tar.gz",
+          "sha256": "c647c1bc26dcc88dfa0dfb3c3fea4568f490c2302af6b51ffb91e2d6ee4eec4e",
+          "sizeBytes": 36252856,
+          "downloadBytes": 14634005
+        }
+      }
+    }
+  },
+  "_externalComment": "Bu projenin DAĞITMADIĞI modeller. Lisansları yeniden dağıtıma izin vermiyor (ticari olmayan araştırma); bu yüzden `models` altında yer almazlar, uygulama onları kendi sunucumuzdan indirmez. Kullanıcı modeli resmî kaynaktan kendisi indirir; lisansı kabul etmek kullanıcıya aittir.",
+  "externalModels": {
+    "face-model": {
+      "name": "Yüz Tanıma Modeli",
+      "feature": "Yüz tanıma — buffalo_l",
+      "i18n": {
+        "en": {
+          "name": "Face Recognition Model",
+          "feature": "Face recognition — buffalo_l"
+        }
+      },
+      "source": "https://github.com/deepinsight/insightface/tree/master/python-package",
+      "license": "InsightFace pretrained models: non-commercial research use only",
+      "presenceDir": "insightface/models/buffalo_l",
+      "_note": "İlk yüz tanıma çağrısında insightface paketi buffalo_l'ı kendi resmî adresinden INSIGHTFACE_HOME köküne indirir (backend/app/services/insightface_havuzu.py: FaceAnalysis(name='buffalo_l', root=...)). Elle kurmak için resmî sürümü indirip <INSIGHTFACE_HOME>/models/buffalo_l/ altına açın. Ön yüz status('face-model') hatasını yakalayıp bu yola düşer (frontend/js/model-downloader.js)."
+    }
+  },
+  "_plannedComment": "Henüz yayınlanmamış modeller BURADA durur — `models` altında DEĞİL. Sebep: `models` altındaki her girdi indirilebilir sayılır; url'i boş bir girdi UI'da 'indir' olarak görünüp indirme anında patlar. Yayına hazır olunca (url + sha256 + boyutlar dolunca) girdiyi `models` altına taşı.",
+  "plannedModels": {
+    "vrm-avatar": {
+      "name": "3D Avatar Paketi",
+      "feature": "3D VRM karakter",
+      "i18n": {
+        "en": {
+          "name": "3D Avatar Pack",
+          "feature": "3D VRM character"
+        }
+      },
+      "asset": "vrm-avatars.tar.gz",
+      "presenceDir": "avatars",
+      "extractTo": ".",
+      "tier": "pro",
+      "_note": "GELECEK FAZ — VRM asset paketi."
+    }
+  }
+}

@@ -1,0 +1,70 @@
+name: Dependency Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1' # her Pazartesi 06:00 UTC
+
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # Ürünün kendi çalıştığı sürüm (backend venv = 3.14). Eski '3.11' değeri
+          # ADIM 18'de requirements-product.txt'ye geçilince kırıldı: numpy==2.5.1
+          # Python >=3.12 istiyor → çözümleme "No matching distribution" ile ölüyordu
+          # ve tarama 6 push boyunca hiç koşmadı. Ayrıca 3.11 ile taramak, müşterinin
+          # asla kurmadığı bir bağımlılık kümesini denetlemek demekti.
+          python-version: '3.14'
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Run pip-audit (kaynak — requirements)
+        # ignore listesi YOK: PYSEC-2026-597 (nltk) TTS/Coqui'nin transitive
+        # bağımlılığıydı, ADIM 18'de Coqui üründen sökülünce ağaçtan da düştü.
+        # Yeniden girerse tarama bunu yakalasın.
+        run: pip-audit -r backend/requirements.txt
+
+      # 🔴 MÜŞTERİYE GİDEN KUTU (2026-09-05)
+      #
+      # Yukarıdaki adım yıllardır yeşildi ve ürün yine de AÇIKTI: müşteri
+      # `requirements.txt`'yi kurmuyor, `backend/pybundle*` hazır kutusunu alıyor.
+      # O kutular .gitignore'da (1,2 GB + 963 MB) → runner onları hiç görmüyor,
+      # dolayısıyla hiç taramıyordu. 2026-09-04'te elle bakıldığında 10 açık çıktı.
+      # 📏 Sorulacak soru: *taranan şey ile SATILAN şey aynı mı?*
+      #
+      # Kutuyu buraya taşıyamayız; `scripts/bundle-envanter.py` içindekilerin
+      # sabitlenmiş listesini üretiyor (~4 KB, git'te). Tazeliğini yerel pytest +
+      # `yayin.py hazir` koruyor — kutunun BULUNDUĞU yerde.
+      #
+      # ⚠️ Bayraklar zorunlu, ikisi de ölçülerek bulundu:
+      #   --no-deps      liste zaten tam ve sabit; çözümleme yaptırmak yanlış
+      #                  ağacı denetlemek olur (yukarıdaki 3.11 kusurunun sınıfı)
+      #   --disable-pip  bu olmadan pip-audit yine `pip install --dry-run` koşar
+      #                  ve Windows listesi Linux runner'da ÖLÜR:
+      #                  "No matching distribution found for pywin32==312"
+      - name: Run pip-audit (Linux kutusu — müşteriye giden)
+        if: always()
+        run: pip-audit --no-deps --disable-pip -r backend/pybundle-kilit.txt
+
+      - name: Run pip-audit (Windows kutusu — müşteriye giden)
+        if: always()
+        run: pip-audit --no-deps --disable-pip -r backend/pybundle-win-kilit.txt
+
+      # Kilit dosyası kutunun aynası; boşalır/bozulursa tarama sessizce "0 açık"
+      # der. 100 alt sınırı taban ölçümüne göre (Linux 150 · Windows 152 paket).
+      # 📏 '0 bulgu'da önce 'kaç öğe ölçüldü'ye bak.
+      - name: Kilit dosyaları boş değil
+        if: always()
+        run: |
+          for f in backend/pybundle-kilit.txt backend/pybundle-win-kilit.txt; do
+            n=$(grep -cE '^[A-Za-z0-9]' "$f")
+            echo "$f → $n paket"
+            [ "$n" -ge 100 ] || { echo "✗ $f şüpheli derecede kısa ($n)"; exit 1; }
+          done

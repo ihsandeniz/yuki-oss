@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="tr" data-pencere="tam">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yuki · Tasarım Kanıtı</title>
+
+<!-- Sistemin kendisi. Ekranlara uygulanmadan ÖNCE burada görünür.
+     Bir düğmenin 7 durumu burada yanlışsa, 5 ekranda 5 kez yanlış olur. -->
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/temel.css">
+<link rel="stylesheet" href="css/ogeler.css">
+
+<style>
+  /* Yalnız BU sayfaya ait düzen — sisteme ait değil, o yüzden burada. */
+  body { padding: 0; }
+  .sayfa { max-width: 1100px; margin-inline: auto; padding: var(--b-9) var(--b-7) var(--b-11); }
+
+  .bolum { margin-block-start: var(--b-11); scroll-margin-top: var(--b-9); }
+  .bolum > h2 {
+    padding-block-end: var(--b-4);
+    border-block-end: 1px solid var(--kenar);
+    margin-block-end: var(--b-7);
+  }
+  .bolum > h2 small { font-weight: 400; color: var(--ink-3); margin-inline-start: var(--b-4); }
+
+  .satir-akis { display: flex; flex-wrap: wrap; gap: var(--b-5); align-items: center; }
+  .izgara { display: grid; gap: var(--b-5); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+  /* Renk örneği */
+  .renk { display: flex; align-items: center; gap: var(--b-5); }
+  /* Kenar --kenar-guclu: yüzey kademeleri arasındaki fark 1.23:1 — gerçekten bu
+     kadar ince. Zayıf kenarla --bg kutusu sayfada tamamen kaybolur. */
+  .renk-kutu { width: 56px; height: 56px; border-radius: var(--r-3); flex: none; border: 1px solid var(--kenar-guclu); }
+  .renk code { background: none; padding: 0; color: var(--ink-3); font-size: var(--yazi-11); }
+  .renk b { display: block; color: var(--ink-1); font-size: var(--yazi-13); }
+  .oran { margin-inline-start: auto; font-size: var(--yazi-11); color: var(--ink-3); font-family: var(--font-mono); }
+  .oran[data-gecti="evet"]::after { content: ' ✓'; color: var(--mor-ink); }
+
+  /* Radius örneği — küçük ve dolgun olmalı: geniş bir kutuda 6px ile 10px köşe
+     farkı ayırt edilmez, örnek işini yapmaz. Mor dolgu köşeyi zemine karşı keser. */
+  .r-satir { display: flex; flex-wrap: wrap; gap: var(--b-6); align-items: flex-end; }
+  .r-ornek {
+    display: grid; place-items: end center;
+    width: 72px; height: 72px;
+    padding-block-end: var(--b-3);
+    background: var(--mor-yuzey);
+    color: var(--ink-1);
+    font-size: var(--yazi-11);
+    font-family: var(--font-mono);
+  }
+  .r-ad { font-size: var(--yazi-11); color: var(--ink-3); text-align: center; margin-block-start: var(--b-3); }
+
+  /* Üst kumanda */
+  .kumanda {
+    position: sticky; top: 0; z-index: var(--z-yapisik);
+    display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-5);
+    padding: var(--b-4) var(--b-7);
+    background: color-mix(in oklab, var(--bg) 88%, transparent);
+    backdrop-filter: blur(14px);
+    border-block-end: 1px solid var(--kenar);
+  }
+  .kumanda strong { color: var(--ink-1); }
+
+  /* Kabuk demosu — gerçek kabuk, küçültülmüş */
+  .kabuk-demo { height: 320px; border: 1px solid var(--kenar); border-radius: var(--r-5); overflow: hidden; }
+  .kabuk-demo .kabuk { height: 100%; }
+  .menu-dg {
+    display: flex; align-items: center; gap: var(--b-4);
+    min-height: var(--hedef); padding: 0 var(--b-5);
+    border: 0; border-radius: var(--r-2); background: transparent;
+    color: var(--ink-3); font-size: var(--yazi-13); cursor: pointer;
+    transition: background-color var(--sure-2) var(--egri), color var(--sure-2) var(--egri);
+  }
+  .menu-dg:hover { background: var(--yuzey-2); color: var(--ink-2); }
+  .menu-dg[aria-current="page"] { background: var(--mor-zemin); color: var(--mor-ink); font-weight: var(--ag-orta); }
+  .menu-dg svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.5; flex: none; }
+
+  .not {
+    padding: var(--b-5) var(--b-6);
+    border-radius: var(--r-3);
+    background: var(--yuzey-1);
+    font-size: var(--yazi-13);
+    color: var(--ink-3);
+  }
+  .not b { color: var(--ink-2); }
+</style>
+</head>
+<body>
+
+<a class="atla-baglantisi" href="#icerik">İçeriğe atla</a>
+
+<div class="kumanda">
+  <strong>Yuki · Tasarım Kanıtı</strong>
+  <span class="rozet">FAZ 1</span>
+
+  <div class="satir-akis" style="margin-inline-start:auto; gap:var(--b-4)">
+    <span class="kucuk">Pencere modu:</span>
+    <div class="sekmeler" role="tablist" aria-label="Pencere modu">
+      <button class="sekme" role="tab" aria-selected="true"  data-mod="tam">Tam</button>
+      <button class="sekme" role="tab" aria-selected="false" data-mod="panel">Panel</button>
+      <button class="sekme" role="tab" aria-selected="false" data-mod="mini">Mini</button>
+    </div>
+  </div>
+</div>
+
+<main class="sayfa" id="icerik">
+
+  <p class="not">
+    Bu sayfa <b>sistemin kendisidir</b>, bir ekran değil. Buradaki her değer
+    <code>tokens.css</code>'ten gelir; hiçbir renk, boşluk veya süre bu dosyada
+    tanımlanmaz. Üstteki <b>pencere modu</b> düğmeleri kök yazı boyutunu değiştirir —
+    tüm ölçek <code>rem</code> olduğu için her şey birlikte kayar.
+  </p>
+
+  <!-- ================================================================== -->
+  <section class="bolum">
+    <h2>1 · Renk <small>22 token · kontrast 14/14 ölçüldü</small></h2>
+
+    <h3 style="margin-block-end:var(--b-5)">Yüzeyler</h3>
+    <div class="izgara" style="margin-block-end:var(--b-9)">
+      <div class="renk"><div class="renk-kutu" style="background:var(--bg)"></div>
+        <div><b>--bg</b><code>oklch(.145 .010 295)</code></div></div>
+      <div class="renk"><div class="renk-kutu" style="background:var(--yuzey-1)"></div>
+        <div><b>--yuzey-1</b><code>panel, menü kartı</code></div></div>
+      <div class="renk"><div class="renk-kutu" style="background:var(--yuzey-2)"></div>
+        <div><b>--yuzey-2</b><code>yükseltilmiş</code></div></div>
+      <div class="renk"><div class="renk-kutu" style="background:var(--yuzey-3)"></div>
+        <div><b>--yuzey-3</b><code>yüzen katman</code></div></div>
+    </div>
+
+    <h3 style="margin-block-end:var(--b-5)">Metin — zemin üstünde</h3>
+    <div style="margin-block-end:var(--b-9)">
+      <p style="color:var(--ink-1)">--ink-1 · Birincil metin, başlıklar
+        <span class="oran" data-gecti="evet">18.15</span></p>
+      <p style="color:var(--ink-2)">--ink-2 · Gövde metni, varsayılan
+        <span class="oran" data-gecti="evet">10.58</span></p>
+      <p style="color:var(--ink-3)">--ink-3 · Soluk metin ve yer tutucu
+        <span class="oran" data-gecti="evet">6.85</span></p>
+    </div>
+
+    <h3 style="margin-block-end:var(--b-5)">Aksan — rolüne göre ikiye ayrılmış</h3>
+    <div class="izgara">
+      <div class="renk"><div class="renk-kutu" style="background:var(--mor-ink)"></div>
+        <div><b>--mor-ink</b><code>metin · ikon · odak</code></div>
+        <span class="oran" data-gecti="evet">7.61</span></div>
+
+      <div class="renk"><div class="renk-kutu" style="background:var(--mor-yuzey)"></div>
+        <div><b>--mor-yuzey</b><code>üstüne beyaz yazılan</code></div>
+        <span class="oran" data-gecti="evet">6.74</span></div>
+
+      <div class="renk"><div class="renk-kutu" style="background:var(--altin)"></div>
+        <div><b>--altin</b><code>üstüne KOYU metin</code></div>
+        <span class="oran" data-gecti="evet">10.52</span></div>
+
+      <div class="renk"><div class="renk-kutu" style="background:var(--kirmizi-yuzey)"></div>
+        <div><b>--kirmizi-yuzey</b><code>yalnız tehlike</code></div>
+        <span class="oran" data-gecti="evet">6.83</span></div>
+    </div>
+
+    <p class="not" style="margin-block-start:var(--b-7)">
+      <b>Neden mor ikiye ayrıldı:</b> ilk turda tek bir mor vardı ve beyaz metin onun
+      üstünde <b>3.91</b> çıktı — AA'yı geçmedi. Bir renk aynı açıklıkta hem okunur metin
+      hem okunur zemin olamaz. Kırmızı da aynı sebeple ayrıldı.
+      <br><b>Altın kuralı:</b> üstüne daima koyu metin. Beyaz metin altın üstünde
+      <b>1.72</b> — okunmaz, istisnası yok.
+    </p>
+  </section>
+
+  <!-- ================================================================== -->
+  <section class="bolum">
+    <h2>2 · Radius <small>sıfır radius yok</small></h2>
+    <div class="r-satir">
+      <div><div class="r-ornek" style="border-radius:var(--r-1)">6</div><div class="r-ad">--r-1<br>rozet</div></div>
+      <div><div class="r-ornek" style="border-radius:var(--r-2)">10</div><div class="r-ad">--r-2<br>düğme</div></div>
+      <div><div class="r-ornek" style="border-radius:var(--r-3)">14</div><div class="r-ad">--r-3<br>satır</div></div>
+      <div><div class="r-ornek" style="border-radius:var(--r-4)">20</div><div class="r-ad">--r-4<br>panel</div></div>
+      <div><div class="r-ornek" style="border-radius:var(--r-5)">28</div><div class="r-ad">--r-5<br>kabuk</div></div>
+      <div><div class="r-ornek" style="border-radius:var(--r-tam)">∞</div><div class="r-ad">--r-tam<br>hap</div></div>
+    </div>
+
+    <!-- İç içe kural, anlatılmak yerine GÖSTERİLİYOR: solda doğru, sağda yanlış. -->
+    <div class="r-satir" style="margin-block-start:var(--b-9); align-items:flex-start">
+      <div>
+        <div style="width:140px;height:140px;padding:16px;border-radius:28px;background:var(--yuzey-2)">
+          <div style="width:100%;height:100%;border-radius:12px;background:var(--mor-yuzey)"></div>
+        </div>
+        <div class="r-ad">doğru · dış 28 − boşluk 16 = <b style="color:var(--ink-2)">iç 12</b></div>
+      </div>
+      <div>
+        <div style="width:140px;height:140px;padding:16px;border-radius:28px;background:var(--yuzey-2)">
+          <div style="width:100%;height:100%;border-radius:28px;background:var(--kirmizi-yuzey)"></div>
+        </div>
+        <div class="r-ad">yanlış · iç de 28 → köşeler <b style="color:var(--kirmizi-ink)">paralel gitmiyor</b></div>
+      </div>
+    </div>
+    <p class="not" style="margin-block-start:var(--b-7)">
+      <b>İç içe kural:</b> iç radius = dış radius − iç boşluk. Yukarıdaki örnekte
+      dış kutu 28px, boşluk 16px → iç öğe <b>12px</b>. Sağdaki gibi ikisi de 28px
+      olursa köşeler paralel gitmez; göz bunu <i>kaba</i> okur — tam da kaçınmak
+      istediğimiz his.
+    </p>
+  </section>
+
+  <!-- ================================================================== -->
+  <section class="bolum">
+    <h2>3 · Tipografi <small>sabit rem · 7 kademe · tek aile</small></h2>
+    <p style="font-size:var(--yazi-23); color:var(--ink-1); font-weight:var(--ag-kalin)">23px · Ekran başlığı</p>
+    <p style="font-size:var(--yazi-19); color:var(--ink-1); font-weight:var(--ag-kalin)">19px · Panel başlığı</p>
+    <p style="font-size:var(--yazi-16); color:var(--ink-1)">16px · Vurgulu gövde</p>
+    <p style="font-size:var(--yazi-14)">14px · Gövde — varsayılan</p>
+    <p style="font-size:var(--yazi-13)">13px · İkincil gövde, tablo</p>
+    <p style="font-size:var(--yazi-12); color:var(--ink-3)">12px · Etiket, yardımcı metin</p>
+    <p style="font-size:var(--yazi-11); color:var(--ink-3)">11px · Rozet, sayaç, zaman damgası</p>
+
+    <p class="not" style="margin-block-start:var(--b-7)">
+      <b>clamp() bilerek kullanılmadı.</b> Akışkan tipografi ürün arayüzünde zarar verir:
+      dar panelde küçülen başlık <i>uyumlu</i> değil, bozuk görünür. Ölçek sabit;
+      pencere moduna göre yalnız kök boyut üç ayrık kademede değişir
+      (15px / 14px / 13px) — yukarıdaki düğmelerle dene.
+      <br><b>700 ağırlık yok:</b> koyu zeminde kalın metin kanar.
+    </p>
+  </section>
+
+  <!-- ================================================================== -->
+  <section class="bolum">
+    <h2>4 · Düğme <small>3 tip × 7 durum</small></h2>
+
+    <div class="satir-akis" style="margin-block-end:var(--b-7)">
+      <button class="dg dg-birincil">Birincil</button>
+      <button class="dg dg-ikincil">İkincil</button>
+      <button class="dg dg-sessiz">Sessiz</button>
+      <button class="dg dg-altin">Altın · vurgu</button>
+      <button class="dg dg-yikici">Sil</button>
+    </div>
+
+    <div class="satir-akis" style="margin-block-end:var(--b-7)">
+      <button class="dg dg-birincil" disabled>Devre dışı</button>
+      <button class="dg dg-birincil" data-durum="yukleniyor">Kaydediliyor</button>
+      <button class="dg dg-ikincil" data-durum="yukleniyor">Denetleniyor</button>
+      <button class="dg dg-ikon dg-ikincil" aria-label="Ayarları aç">
+        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+
+    <p class="not">
+      <b>Odağı gör:</b> <kbd>Tab</kbd> ile düğmeler arasında gez — halka her yerde aynı
+      mor, 2px, 2px offset. Tek tanım, istisnasız.
+      <br><b>İkon düğmeler <code>aria-label</code> taşır</b> — mevcut üründe
+      <code>DENETLE</code> ve <code>KAYDET &amp; UYGULA</code> düğmeleri adsız
+      (ölçüm kapısı E1, FAZ 4'te kapanacak).
+      <br><b>Dördüncü düğme tipi yok.</b> Eklemek isteyen, önce mevcut üçünden birinin
+      neden yetmediğini yazmalı.
+    </p>
+  </section>
+
+  <!-- ================================================================== -->
+  <section class="bolum">
+    <h2>5 · Form</h2>
+    <div class="izgara">
+      <div class="alan">
+        <label for="d1">API anahtarı</label>
+        <input class="girdi" id="d1" type="password" placeholder="sk-or-v1-…">
+        <span class="alan-ipucu">Anahtar yalnız bu makinede saklanır.</span>
+      </div>
+
+      <div class="alan">
+        <label for="d2">Model</label>
+        <select class="girdi" id="d2">
+          <option>google/gemma-4-26b-a4b-it:free</option>
+          <option>anthropic/claude-sonnet-5</option>
+        </select>
+      </div>
+
+      <div class="alan">
+        <label for="d3">Lisans anahtarı</label>
+        <input class="girdi" id="d3" aria-invalid="true" value="YUKI-XXXX-BOZUK">
+        <span class="alan-hata">
+          <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          Anahtar biçimi tanınmadı. Satın alma e-postandaki satırın tamamını yapıştır.
+        </span>
+      </div>
+
+      <div class="alan">
+        <label for="d4">Devre dışı alan</label>
+        <input class="girdi" id="d4" value="Devre dışı alan" disabled>
+      </div>
+    </div>
+
+    <div class="satir-akis" style="margin-block-start:var(--b-7)">
+      <label class="anahtar hedef-genis">
+        <input type="checkbox" checked aria-label="Her zaman üstte">
+        <span class="yol"></span>
+      </label>
+      <span>Her zaman üstte</span>
+
+      <label class="anahtar hedef-genis" style="margin-inline-start:var(--b-7)">
+        <input type="checkbox" aria-label="Uyandırma kelimesi">
+        <span class="yol"></span>
+      </label>
+      <span>Uyandırma kelimesi</span>
+    </div>
+
+    <p class="not" style="margin-block-start:var(--b-7)">
+      <b>Yer tutucu rengi <code>--ink-3</code></b> (6.85:1) — tarayıcının varsayılan soluk
+      grisi kabul edilmez, o 4.5:1'i geçmez.
+      <br><b>Hata mesajı ne yapılacağını söyler</b>, sorunu adlandırmakla yetinmez.
+    </p>
+  </section>
+
+  <!-- ================================================================== -->
+  <section class="bolum">
+    <h2>6 · Sekme <small>aktiflik üç kanaldan okunur</small></h2>
+
+    <div class="sekmeler" role="tablist" aria-label="Örnek sekmeler" id="ornek-sekmeler">
+      <button class="sekme" role="tab" aria-selected="true">Sohbet</button>
+      <button class="sekme" role="tab" aria-selected="false">Plan</button>
+      <button class="sekme" role="tab" aria-selected="false">Ayarlar</button>
+      <button class="sekme" role="tab" aria-selected="false" disabled>Kilitli</button>
+    </div>
+
+    <p class="not" style="margin-block-start:var(--b-7)">
+      Aktif sekme <b>üç ayrı kanaldan</b> belli olur: arka plan (<code>--mor-zemin</code>),
+      metin rengi (<code>--mor-ink</code>) ve alt gösterge çizgisi. Tek kanal renk olsaydı
+      renk körlüğünde kaybolurdu. Gösterge sekmeden sekmeye <b>akar</b> — tıkla ve izle.
+      <br><b>Sol şerit değil alt çizgi:</b> kalın yan şerit vurgu yasak.
+    </p>
+  </section>
+
+  <!-- ================================================================== -->
+  <section class="bolum">
+    <h2>7 · Katlama <small>kalabalığın çözümü</small></h2>
+
+    <details class="katlanir" open style="margin-block-end:var(--b-5)">
+      <summary class="katlanir-bas">Öğünler <span class="katlanir-sayi">4</span></summary>
+      <div class="katlanir-sar"><div class="katlanir-govde">
+        <div class="satir"><div class="satir-govde">
+          <div class="satir-bas">Kahvaltı</div><div class="satir-alt">420 kcal · 3 öğe</div></div></div>
+        <div class="satir"><div class="satir-govde">
+          <div class="satir-bas">Öğle</div><div class="satir-alt">680 kcal · 4 öğe</div></div></div>
+        <div class="satir"><div class="satir-govde">
+          <div class="satir-bas">Ara öğün</div><div class="satir-alt">210 kcal · 2 öğe</div></div></div>
+      </div></div>
+    </details>
+
+    <details class="katlanir">
+      <summary class="katlanir-bas">Gelişmiş ayarlar <span class="katlanir-sayi">7</span></summary>
+      <div class="katlanir-sar"><div class="katlanir-govde">
+        <p style="padding-block:var(--b-5)">Nadiren kullanılan ayarlar burada durur —
+        varsayılan olarak kapalı, ama arandığında <kbd>Ctrl+F</kbd> ile kendiliğinden açılır.</p>
+      </div></div>
+    </details>
+
+    <p class="not" style="margin-block-start:var(--b-7)">
+      Native <code>&lt;details&gt;</code> — klavye, ekran okuyucu ve sayfa içi arama
+      bedavaya gelir.
+      <br><b>Teknik not:</b> Electron 29 = Chromium 122, ve <code>interpolate-size</code>
+      orada <b>yok</b> (129 gerekiyor) — yani <code>height:auto</code>'ya animasyon
+      mümkün değil. Bunun yerine <code>grid-template-rows: 0fr → 1fr</code> kullanıldı;
+      <code>max-height</code> hilesinin aksine içerik kırpılmaz ve gecikme olmaz.
+      <br><b>Sayaç kaç öğenin gizlendiğini söyler</b> — katlanmış bölüm bilgisiz kutu olmaz.
+    </p>
+  </section>
+
+  <!-- ================================================================== -->
+  <section class="bolum">
+    <h2>8 · Rozet, durum, kilit</h2>
+    <div class="satir-akis" style="margin-block-end:var(--b-7)">
+      <span class="rozet" data-kademe="free">FREE</span>
+      <span class="rozet" data-kademe="pro">PRO</span>
+      <span class="rozet" data-kademe="ultra">ULTRA</span>
+      <span class="rozet rozet-kirmizi">Hata</span>
+      <span class="rozet"><span class="durum-nokta" data-durum="bagli"></span> Bağlı</span>
+      <span class="rozet"><span class="durum-nokta" data-durum="calisiyor"></span> Düşünüyor</span>
+      <span class="rozet"><span class="durum-nokta" data-durum="hata"></span> Bağlantı yok</span>
+    </div>
+
+    <div class="izgara">
+      <div class="yuzey"><div class="satir-bas">Planner</div>
+        <div class="satir-alt">Görev, takvim, bütçe, fitnes</div></div>
+      <div class="yuzey" data-locked="1"><div class="satir-bas">Hafıza yönetimi</div>
+        <div class="satir-alt">Bu ayar şu an kapalı</div></div>
+    </div>
+
+    <p class="not" style="margin-block-start:var(--b-7)">
+      <b>Durum noktası tek başına bilgi taşımaz</b> — yanında daima metin var.
+      Renk tek kanal olduğunda renk körü kullanıcı için ekran boşalır.
+      <br><b>Kilitli özellik gizlenmez, soluklaştırılır.</b> Kullanıcı neyi kaçırdığını
+      görür; gizlemek hem satışa hem güvene zarar verir.
+      <br><b>Kilit ikonu emoji değil</b>, Lucide SVG (ölçüm kapısı S7).
+    </p>
+  </section>
+
+  <!-- ================================================================== -->
+  <section class="bolum">
+    <h2>9 · Boş durum &amp; yükleme</h2>
+    <div class="izgara">
+      <div class="yuzey">
+        <div class="bos">
+          <svg class="bos-ikon" viewBox="0 0 24 24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <div class="bos-bas">Henüz konuşmadın</div>
+          <p class="bos-metin">Yuki'ye bir şey sorun ya da mikrofona basılı tutup konuşun.
+            İlk mesajdan sonra geçmiş burada birikir.</p>
+          <button class="dg dg-birincil">Sohbete başla</button>
+        </div>
+      </div>
+
+      <div class="yuzey">
+        <div class="iskelet iskelet-satir" style="width:40%"></div>
+        <div class="iskelet iskelet-satir"></div>
+        <div class="iskelet iskelet-satir"></div>
+        <div class="iskelet iskelet-satir"></div>
+        <p class="kucuk" style="margin-block-start:var(--b-5)">İskelet — ortada dönen çark yok.</p>
+      </div>
+    </div>
+
+    <p class="not" style="margin-block-start:var(--b-7)">
+      <b>Boş durum arayüzü öğretir</b>, "kayıt yok" demez. Ne olduğunu, ne yapılacağını
+      ve tek bir eylemi gösterir. İki eylem sunmak boş ekranı karar ekranına çevirir.
+    </p>
+  </section>
+
+  <!-- ================================================================== -->
+  <section class="bolum">
+    <h2>10 · Popover &amp; bildirim <small>modal'a düşmeden önce</small></h2>
+    <div class="satir-akis">
+      <button class="dg dg-ikincil" popovertarget="pop-model">Model seç ▾</button>
+      <div popover id="pop-model" style="min-width:280px">
+        <button class="menu-dg" style="width:100%">gemma-4-26b · ücretsiz</button>
+        <button class="menu-dg" style="width:100%">claude-sonnet-5</button>
+        <button class="menu-dg" style="width:100%">gpt-5.6-sol</button>
+      </div>
+
+      <button class="dg dg-ikincil" id="dg-bildirim">Bildirim göster</button>
+      <button class="dg dg-ikincil" id="dg-hata">Hata bildirimi</button>
+    </div>
+
+    <p class="not" style="margin-block-start:var(--b-7)">
+      Native <b>Popover API</b> — odak yönetimi, <kbd>Esc</kbd> ile kapanma ve dışa
+      tıklama tarayıcıdan gelir; yazılmaz.
+      <br><b>Mevcut üründe 9 modal var.</b> Modal çoğu zaman tembelliktir: FAZ 4'te
+      hedef ≤3. Yalnız kesintili ve geri döndürülemez işlemler (model indirme,
+      güncelleme) modal kalır.
+      <br><b>Hata bildirimi kendiliğinden kaybolmaz</b> — kullanıcı kapatır.
+      Sessiz başarısızlık yasağının yarısı budur.
+    </p>
+  </section>
+
+  <!-- ================================================================== -->
+  <section class="bolum">
+    <h2>11 · Kabuk &amp; gömülü menü <small>menü ayrı çubuk değil</small></h2>
+
+    <div class="kabuk-demo">
+      <div class="kabuk">
+        <nav class="menu" aria-label="Örnek">
+          <button class="menu-dg" aria-current="page">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span class="etiket">Sohbet</span>
+          </button>
+          <button class="menu-dg">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <span class="etiket">Plan</span>
+          </button>
+          <button class="menu-dg">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+            <span class="etiket">Ayarlar</span>
+          </button>
+        </nav>
+
+        <div class="icerik" style="padding:var(--b-6)">
+          <div class="panel-bas">İçerik alanı <span class="sayi">demo</span></div>
+          <p>Menü ile içerik arasında <b>çizgi yok</b> — 12px boşluk ve bir kademe
+          yüzey farkı ayırıyor. Menü kartının köşesi kabuğunkinden küçük
+          (28 − 12 = 16px), böylece köşeler paralel gidiyor.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="not" style="margin-block-start:var(--b-7)">
+      Referans görselden alınan tek yapısal fikir bu: <b>menü uygulamanın yüzeyinin
+      içinde yüzen bir kart</b>, kenara yapıştırılmış ayrı bir çubuk değil.
+      <br><b>Cam efekti alınmadı</b> — yalnız Panel ve Mini modda, orada
+      <i>bilgi taşıdığı için</i> (pencerenin masaüstünün üstünde yüzdüğünü söyler).
+      Tam ekranda arkada bir şey yok, orada cam saf süs olurdu.
+    </p>
+  </section>
+
+  <!-- ================================================================== -->
+  <section class="bolum">
+    <h2>12 · Hareket <small>90–260ms · zıplama yok</small></h2>
+    <div class="izgara">
+      <div class="yuzey"><b style="color:var(--ink-1)">--sure-1 · 90ms</b>
+        <p class="kucuk">Anlık geri bildirim: basılı durum, chip seçimi</p></div>
+      <div class="yuzey"><b style="color:var(--ink-1)">--sure-2 · 140ms</b>
+        <p class="kucuk">Hover, küçük durum değişimi</p></div>
+      <div class="yuzey"><b style="color:var(--ink-1)">--sure-3 · 190ms</b>
+        <p class="kucuk">Katlama, panel geçişi</p></div>
+      <div class="yuzey"><b style="color:var(--ink-1)">--sure-4 · 260ms</b>
+        <p class="kucuk">Sekme geçişi, çekmece</p></div>
+    </div>
+
+    <p class="not" style="margin-block-start:var(--b-7)">
+      <b>Üst sınır 260ms.</b> Kullanıcı akış içinde; koreografi izlemiyor.
+      Eğri üstel ease-out (<code>cubic-bezier(.22,1,.36,1)</code>) — zıplama ve
+      elastik yok.
+      <br><b>Sekme açılışındaki 1700ms sinematik overlay kaldırıldı.</b> Yerine her
+      geçişte aynı 260ms geçiş var: ilk/sonraki farkı yok, arayüz öngörülebilir.
+      <br><b>İşletim sisteminde "hareketi azalt" açıksa</b> bu sayfadaki her animasyon
+      durur — kapsama %100. Mevcut üründe bu oran %6.
+    </p>
+  </section>
+
+</main>
+
+<div class="bildirim-kap" id="bildirimler" aria-live="polite"></div>
+
+<script>
+/* Bu sayfaya ait davranış — sisteme ait değil, ürüne taşınmayacak. */
+
+// Pencere modu: kök yazı boyutunu değiştirir, tüm ölçek birlikte kayar.
+document.querySelectorAll('[data-mod]').forEach((dg) => {
+  dg.addEventListener('click', () => {
+    document.querySelectorAll('[data-mod]').forEach((d) =>
+      d.setAttribute('aria-selected', String(d === dg)));
+    document.documentElement.dataset.pencere = dg.dataset.mod;
+  });
+});
+
+// Sekme geçişi — View Transitions ile kayan gösterge (Chromium 122 ✅).
+// startViewTransition yoksa doğrudan uygular; güvenlik ağı, süs değil.
+const sekmeKabi = document.getElementById('ornek-sekmeler');
+sekmeKabi.addEventListener('click', (e) => {
+  const dg = e.target.closest('.sekme');
+  if (!dg || dg.disabled) return;
+  const uygula = () => sekmeKabi.querySelectorAll('.sekme').forEach((s) =>
+    s.setAttribute('aria-selected', String(s === dg)));
+  document.startViewTransition ? document.startViewTransition(uygula) : uygula();
+});
+
+// Bildirim
+function bildir(metin, tip) {
+  const kap = document.getElementById('bildirimler');
+  const el = document.createElement('div');
+  el.className = 'bildirim';
+  if (tip) el.dataset.tip = tip;
+  el.innerHTML = '<span style="flex:1"></span>' +
+    '<button class="dg dg-sessiz dg-ikon" aria-label="Bildirimi kapat">✕</button>';
+  el.firstChild.textContent = metin;
+  el.querySelector('button').onclick = () => el.remove();
+  kap.appendChild(el);
+  // Hata bildirimi KENDİLİĞİNDEN kaybolmaz — kullanıcı kapatır.
+  if (tip !== 'hata') setTimeout(() => el.remove(), 4000);
+}
+document.getElementById('dg-bildirim').onclick = () => bildir('Ayarlar kaydedildi.');
+document.getElementById('dg-hata').onclick = () =>
+  bildir('Model listesi alınamadı — anahtarını kontrol et.', 'hata');
+</script>
+
+</body>
+</html>

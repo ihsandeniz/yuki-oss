@@ -1,0 +1,473 @@
+/* ════════════════════════════════════════════════════════════════════
+   sohbet-sahne.css — SOHBET görünümünün sahnesi (2026-10-04)
+
+   🔴 Kurallar YALNIZ `body.sohbet-mode` altında (sohbet-sahne.js yazar).
+   HALKA bu sınıfı taşımaz → görünümü değişmez.
+   Renk/ölçü yalnız css/tokens.css'ten; kişiselden yalnız düzen alındı.
+   Sahne (#avatar-pane) JS ile `data-tema="koyu"` taşır: karakter görselleri
+   siyah fonlu, açık temada alt karartma açığa dönünce görüntü yıkanıyordu.
+
+   ⚠️ sohbet.css'ten SONRA yüklenir (index.html) — portre kuralları onun
+   `body:not(.hud-ring-mode) #yuki-video` kuralını bilerek ezer. Mini kabukta
+   (≤379px) ve Küçük avatarda rozet kadrajı sohbet.css'te kalır: oradaki
+   seçiciler `#avatar-pane` taşıdığı için daha özgül, ayrıca aşağıdaki kadraj
+   kuralları `min-width: 380px` kabuk koşulunda.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ══ Sahne kabı — kadraj hesabı kabın kendi ölçüsüyle (cqw/cqh) ═════ */
+body.sohbet-mode #avatar-pane {
+  container: sahne / size;
+
+  /* Kadraj değişkenleri — PORTRE (RESİM kipi).
+     --kadraj-boy  görselin dikeyde gösterilecek payı (0.5 = üst yarı = belden yukarı)
+     --yuz-x/y     yüz merkezinin görseldeki oranı (aşağıda karakter başına)
+     --yuz-hedef   yüzün kutuda duracağı yükseklik (kutu boyunun oranı)
+     --zoom-tavan  dar-uzun kutuda büyütme tavanı (genişliğin katı) — yoksa
+                   ~260px'lik orta pencerede yüz 3×'ten fazla büyür, bulanıklaşır */
+  /* Tur 2 (göz 10-04): 0.5 → 0.4. 0.5 "üst yarı" teoride bel ama alt karartma
+     bandı (~200px) görüntünün altını yediği için göze uyluk ortası görünüyordu
+     (1440'ta eller y≈650-720). Ölçüt artık görünür bölge: eller bandın altında. */
+  --kadraj-boy: 0.4;
+  --yuz-x: 0.5;
+  --yuz-y: 0.135;
+  --yuz-hedef: 0.3;
+  --zoom-tavan: 3.2;
+
+  /* VİDEO kipinin klibi (720×1280) — aynı yöntem, kendi ölçüleriyle.
+     Yüz merkezi klipte (x .50, y .155), bel ≈ .37 — 4 karede (0/3/10/15 sn)
+     ölçüldü, figür klip boyunca yerinde. Klipte figür kareye göre küçük
+     ve baş-gövde oranı farklı; 0.36 yüzü portreden ~1.6× büyük gösterdi, 0.48
+     yüz boyunu portreye yaklaştırıp beli alt karartmanın hemen üstünde tutar. */
+  --v-kadraj-boy: 0.48;
+  --v-yuz-x: 0.5;
+  --v-yuz-y: 0.155;
+}
+
+/* Karaktere özel yüz merkezi: başka karakter eklenirse görselinde ÖLÇ ve buraya yaz
+   ([data-character="<key>"] body.sohbet-mode #avatar-pane { --yuz-x; --yuz-y }).
+   11-14: yalnız Yuki var, varsayılan (yukarıdaki) onun ölçüsü. */
+
+/* ══ RESİM — belden yukarı portre ═══════════════════════════════════
+   `object-fit: cover` yalnız KIRPAR, büyütmez → tam boy görselde yüz küçük
+   kalıyordu (eski KLASİK). Burada görsel kutudan büyük çizilip yüz hedefe
+   oturtuluyor; clamp() görselin kenarını kutunun içine hiç sokmaz (boşluk yok).
+   Beş PNG'nin hepsi 768×1024 (ölçüldü) → en-boy 3:4 sabit yazıldı. */
+@container kabuk (min-width: 380px) {
+  /* Tur 2: RESİM'e özel değil — VİDEO kipinde klibin ALTINDA duran portre de
+     aynı yakın kadrajda kalır, klip yüklenirken/yüklenemezse "zıplama" olmaz. */
+  body.sohbet-mode #app[data-avatar-ayar="buyuk"] #yuki-video {
+    --g: clamp(100cqw, 100cqh / var(--kadraj-boy) * 0.75, 100cqw * var(--zoom-tavan));
+    inset: auto;
+    left: clamp(100cqw - var(--g), 50cqw - var(--g) * var(--yuz-x), 0px);
+    top: clamp(100cqh - var(--g) * 4 / 3, var(--yuz-hedef) * 100cqh - var(--g) * 4 / 3 * var(--yuz-y), 0px);
+    width: var(--g);
+    height: auto;
+    max-width: none;            /* temel.css img reset'i yoksa genişliği %100'e kırpar */
+    object-fit: fill;
+    transition: opacity var(--sure-3) var(--egri);
+  }
+}
+
+/* ══ VİDEO — eski TAM BOY'un bekleme klibi ══════════════════════════
+   Portre ALTTA kalır (klip yüklenemezse görünür). Tur 2 (göz): klip de tam boy
+   değil, portreyle aynı belden yukarı kadrajda — iki kip aynı karakteri aynı
+   yakınlıkta gösterir, kip değişimi kadraj değişimi değildir.
+   Klip 720×1280 (ölçüldü) → en-boy 16:9 dikey. */
+body.sohbet-mode.sk-video #yuki-fb-video {
+  display: block;
+  object-fit: cover;
+  object-position: 50% 0%;
+  transition: opacity var(--sure-4) var(--egri);
+}
+body.sohbet-mode.sk-video #yuki-fb-video.on { opacity: 1; }
+@container kabuk (min-width: 380px) {
+  body.sohbet-mode.sk-video #app[data-avatar-ayar="buyuk"] #yuki-fb-video {
+    --gv: clamp(100cqw, 100cqh / var(--v-kadraj-boy) * 9 / 16, 100cqw * var(--zoom-tavan));
+    inset: auto;
+    left: clamp(100cqw - var(--gv), 50cqw - var(--gv) * var(--v-yuz-x), 0px);
+    top: clamp(100cqh - var(--gv) * 16 / 9, var(--yuz-hedef) * 100cqh - var(--gv) * 16 / 9 * var(--v-yuz-y), 0px);
+    width: var(--gv);
+    height: calc(var(--gv) * 16 / 9);
+    max-width: none;
+    object-fit: fill;
+  }
+}
+
+/* ══ CANLI — portre yerine hareketli Yuki (canvas, sohbet-sahne.js § CANLI) ══
+   Kadraj PORTREDEN TÜRETİLİR (göz 10-11 #1: "cover" yüzü 2× büyütüp ~100px aşağı
+   indiriyordu → kip değişince karakter zıplıyordu, alt yazı göğsün üstüne biniyordu).
+   Motorun rig'i 1024×1024 kare, belden yukarı; kare canvas'ta ölçek = kenar/1024.
+   ÖLÇÜLDÜ (2026-10-11): göz ortası + gözler arası mesafe
+     portre yuki_fullbody.png 768×1024 → orta (0.497, 0.116·boy) · aralık 0.0534·genişlik
+     rig base.png 1024×1024           → orta (0.493, 0.347)      · aralık 0.171·kenar
+   ⇒ göz noktası portreyle AYNI: (portre_sol + 0.497·g, portre_üst + 0.1547·g)
+     birebir ölçekte kenar 0.3123·g olurdu; ama rig göğüste biter ve 1280'de sahnenin
+     alt üçte biri boş kalıyordu → --canli-olcek (1.3; göz tur 2 #3: 1.25'te ~85px boşluk) kadar büyütülür, göz noktası
+     sabit kalır. Kip değişiminde yüz yerinde durur, yalnız %30 yakınlaşır.
+   (g, portre_sol, portre_üst: aşağıdaki RESİM kuralının AYNI formülü.)
+   Alt kenar maskeyle söner, HUD karartmasına karışır.
+   Canvas #avatar-hud'dan ÖNCE eklenir → karartma ve yazı onun üstünde.
+   Motor hazır olana kadar portre görünür (boş sahne yok), hazır olunca söner. */
+.ss-canli {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 97%);
+  mask-image: linear-gradient(to bottom, #000 72%, transparent 97%);
+  transition: opacity var(--sure-4) var(--egri);
+}
+@container kabuk (min-width: 380px) {
+  body.sohbet-mode #app[data-avatar-ayar="buyuk"] .ss-canli {
+    --g: clamp(100cqw, 100cqh / var(--kadraj-boy) * 0.75, 100cqw * var(--zoom-tavan));
+    --p-sol: clamp(100cqw - var(--g), 50cqw - var(--g) * var(--yuz-x), 0px);
+    --p-ust: clamp(100cqh - var(--g) * 4 / 3, var(--yuz-hedef) * 100cqh - var(--g) * 4 / 3 * var(--yuz-y), 0px);
+    --kenar: calc(var(--g) * 0.3123 * var(--canli-olcek, 1.3));
+    inset: auto;
+    left: calc(var(--p-sol) + var(--g) * 0.497 - var(--kenar) * 0.493);
+    top: calc(var(--p-ust) + var(--g) * 0.1547 - var(--kenar) * 0.347);
+    width: var(--kenar);
+    height: var(--kenar);
+    max-width: none;            /* temel.css reset'i kenarı sahne genişliğine kırpıyordu → göz x'i kayıyordu */
+  }
+}
+body.sohbet-mode.sk-canli #avatar-pane.ss-canli-hazir .ss-canli { opacity: 1; }
+body.sohbet-mode.sk-canli #avatar-pane.ss-canli-hazir #yuki-video { opacity: 0; }
+/* Portrenin kendi siyah fonu ve hafif halesi canvas'ta yok → sahne zemini ona yaklaştırılır
+   (göz 10-11 #6: düz grafit zemin "kesip yapıştırılmış" görünüyordu). */
+body.sohbet-mode.sk-canli #avatar-pane.ss-canli-hazir {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 28%, color-mix(in oklab, var(--mor-ink) 10%, transparent), transparent 70%),
+    var(--bg);
+}
+body.sohbet-mode #app:not([data-avatar-etkin="buyuk"]) .ss-canli { display: none; }
+
+/* ══ KİP ANAHTARI — VİDEO | RESİM | CANLI (değiştirdiği sahnenin üstünde) ══ */
+.ss-kip { display: none; }
+body.sohbet-mode .ss-kip {
+  position: absolute;
+  inset-block-start: var(--b-5);
+  inset-inline-end: var(--b-5);
+  z-index: var(--z-yuksek);
+  display: flex;
+  gap: var(--b-1);
+  padding: var(--b-1);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-tam);
+  background: color-mix(in oklab, var(--yuzey-1) 72%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--golge-2);
+}
+body.sohbet-mode .ss-kip[hidden] { display: none; }
+.ss-kip button[hidden] { display: none; }
+.ss-kip.ss-kip-uc .ss-kip-ad { display: none; }
+.ss-kip.ss-kip-uc button { gap: 0; padding: 0; }
+/* Sahne rozet (Küçük) ya da gizliyken anahtar 40px'lik rozetin İÇİNE düşerdi;
+   gizli/katlı bölmede de görünmez ama klavyeyle odaklanabilir kalırdı. */
+body.sohbet-mode #app:not([data-avatar-ayar="buyuk"]) .ss-kip,
+body.sohbet-mode #avatar-pane.collapsed .ss-kip { display: none; }
+@container kabuk (max-width: 379px) {
+  body.sohbet-mode .ss-kip { display: none; }   /* mini kabukta Büyük de rozete düşer */
+}
+
+.ss-kip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--b-3);
+  min-width: var(--hedef);
+  min-height: var(--hedef);
+  padding: 0 var(--b-6) 0 var(--b-5);
+  border: 0;
+  border-radius: var(--r-tam);
+  background: transparent;
+  color: var(--ink-2);
+  font: var(--ag-orta) var(--yazi-11) / 1 var(--font-mono);
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--sure-2) var(--egri),
+    color var(--sure-2) var(--egri),
+    box-shadow var(--sure-2) var(--egri);
+}
+.ss-kip button svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ss-kip button:hover { color: var(--ink-1); background: var(--yuzey-3); }
+/* Seçili: dolu mor yüzey + açık metin (6.74:1) — birincil düğmeyle aynı dil.
+   Renk tek kanal değil: dolu zemin + ağırlık. */
+.ss-kip button[aria-checked="true"] {
+  color: var(--ink-1);
+  background: var(--mor-yuzey);
+  font-weight: var(--ag-kalin);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--mor-ink) 45%, transparent);
+}
+.ss-kip button[aria-checked="true"]:hover { background: var(--mor-yuzey-hov); }
+.ss-kip button:focus-visible {
+  outline: var(--odak-kalinlik) solid var(--mor-ink);
+  outline-offset: var(--odak-offset);
+}
+
+/* ══ Karakter şeridi — kontrast (tur 2, göz) ═════════════════════════
+   Kilitli (Free'de N·K·S·R) harfler `opacity: .45` ile sönükleştiriliyordu →
+   koyu zeminde ~2.9:1, okunmuyordu. Sönüklük OKUNURLUĞU değil durumu anlatmalı:
+   kilit artık kesikli çerçeve + ikincil metinle; harf kontrastı ≥4.5:1. */
+body.sohbet-mode #char-bar .char-btn { color: var(--ink-2); }
+body.sohbet-mode #char-bar .char-btn.locked,
+body.sohbet-mode #char-bar .char-btn.locked:hover {
+  opacity: 1;
+  color: var(--ink-3);
+  background: transparent;
+  border: 1px dashed var(--kenar-guclu);
+}
+body.sohbet-mode #char-bar .char-btn.locked:hover { color: var(--ink-2); border-style: solid; }
+
+/* ══ Alt blok: ŞU AN · DUYGU + karakter şeridi + ses dalgası ════════ */
+.ss-duygu { display: none; }
+
+body.sohbet-mode #avatar-hud {
+  /* Yumuşak karartma: eski blok sert kenarlı bir şeritti (görüntü ~%85'te
+     kesiliyordu). Zemin token'ı sahnede koyuya sabit → iki temada aynı. */
+  padding-block-start: calc(var(--b-11) * 2);
+  background: linear-gradient(
+    to top,
+    var(--bg) 0%,
+    color-mix(in oklab, var(--bg) 88%, transparent) 38%,
+    color-mix(in oklab, var(--bg) 0%, transparent) 100%
+  );
+  gap: var(--b-5);
+}
+/* "UNIT // YUKI" saf etiket — karakteri şerit ve üst bar zaten söylüyor */
+body.sohbet-mode #av-unit-id { display: none; }
+/* Görünüm menüsü üst barda; sahnedeki ikinci düğme kararsızlıktır (sohbet.css ④) */
+body.sohbet-mode #mode-toggle-fab { display: none; }
+
+body.sohbet-mode .ss-duygu {
+  display: grid;
+  gap: var(--b-2);
+  min-width: 0;
+}
+.ss-duygu-ust {
+  display: flex;
+  align-items: center;
+  gap: var(--b-3);
+  color: var(--ink-2);
+  font: var(--ag-orta) var(--yazi-11) / 1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.ss-nabiz {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: var(--r-tam);
+  background: var(--mor-ink);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--mor-ink) 24%, transparent);
+}
+/* Düşünürken nabız atar — tek hareketli öğe, yalnız anlam taşıdığında */
+.ss-duygu[data-duygu="thinking"] .ss-nabiz { animation: ssNabiz 1.2s var(--egri) infinite; }
+@keyframes ssNabiz { 50% { opacity: 0.35; } }
+
+.ss-duygu-ad {
+  color: var(--ink-1);
+  font: var(--ag-kalin) var(--yazi-23) / var(--satir-sik) var(--font);
+  letter-spacing: 0.06em;
+  overflow-wrap: anywhere;
+  text-shadow: var(--golge-2);
+}
+.ss-duygu.ss-yeni .ss-duygu-ad { animation: ssDuyguGir var(--sure-4) var(--egri-giris) both; }
+@keyframes ssDuyguGir {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-duygu[data-duygu="thinking"] .ss-nabiz,
+  .ss-duygu.ss-yeni .ss-duygu-ad { animation: none; }
+}
+
+/* ══ Sohbet sütunu ═══════════════════════════════════════════════════ */
+/* "Aşağı git" ve model listesi giriş alanının ÜSTÜNDE dursun — kısayol satırı
+   giriş alanını uzattı; yükseklik sohbet-sahne.js'te ölçülür (sabit sayı yok). */
+body.sohbet-mode #scroll-btn {
+  inset-block-end: calc(var(--ss-giris-h, 120px) + var(--b-4));
+}
+/* ⋯ menüsü sohbet sütununa sığar (sütunun dışı kırpılıyor — dar kabukta sahnenin altında
+   kalan öğeler tıklanamıyordu); tavan sohbet-sahne.js'te ölçülür, kalan kaydırılır. */
+body.sohbet-mode #input-secondary-btns {
+  max-height: min(calc(100dvh - 140px), 620px, var(--ss-menu-tavan, 620px));
+}
+body.sohbet-mode .model-popover {
+  inset-block-end: calc(var(--ss-giris-alt, 140px) + var(--b-3));
+}
+
+/* ══ DURUM SATIRI — ince "◈ model · dil · küçült ⌄" (Halka Konsolu, 2026-10-11 ) ══
+   Kişiseldeki durum satırıyla birebir: çerçevesiz, zeminsiz, küçük mono yazı, hapın altında
+   ortalı. Eski hâl bir çip satırıydı: EKRAN · PANO · ARA · AKTAR + çerçeveli model/dil
+   hapları. Çipler ⋯ menüsüne taşındı (index.html yorumu). Görsel yükseklik 26px ama dokunma
+   alanı 44×44 (::after) — PRODUCT.md: "görsel küçük olabilir, tıklama alanı 44'te kalır".
+   Renk: yazı --ink-2 (≥4.5:1, ölçüldü), simge mor; altın yok (ürün vurgusu mor). */
+#hizli-satir { display: none; }
+body.sohbet-mode #hizli-satir:not([hidden]) {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  /* 12px: dokunma alanı (26→44, yukarı 9px taşar) hapın görünen alt kenarına girmesin */
+  margin-block-start: var(--b-5);
+  /* mikrofon sütunu + sütun boşluğu: satır mikrofonun değil HAPIN altında ortalansın */
+  padding-inline-start: calc(var(--hedef) + var(--b-2) + 12px);   /* = --giris-mik-ara (giris-konsol.css) */
+}
+.hizli-haplar {
+  display: flex;
+  align-items: center;
+  gap: var(--b-2);
+  min-width: 0;
+  max-width: 100%;
+}
+.hizli-ayrac {
+  flex: 0 0 auto;
+  color: var(--ink-3);
+  font: var(--yazi-11) / 1 var(--font-mono);
+  user-select: none;
+}
+.hizli-hap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--b-2);
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 26px;
+  padding: 0 var(--b-3);
+  border: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--ink-2);
+  /* 12px (goz 10-12 #8): 11px mono'da "gemma" okunmuyordu ("qe▒▒a") — g'nin kuyruğu
+     satır yüksekliği 1'de kırpılıyor, m'ler birbirine kaynıyordu */
+  font: var(--ag-orta) var(--yazi-12) / 1.25 var(--font-mono);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition:
+    background-color var(--sure-2) var(--egri),
+    color var(--sure-2) var(--egri);
+}
+/* Dokunma alanı: dikeyde 26 → 44, yatayda en az 44 (dar "TR" düğmesi de) */
+.hizli-hap::after {
+  content: '';
+  position: absolute;
+  inset-block: calc((26px - var(--hedef)) / 2);
+  inset-inline: min(0px, calc((100% - var(--hedef)) / 2));
+}
+.hizli-hap[hidden] { display: none; }
+.hizli-hap svg {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: var(--mor-ink);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.hizli-hap:hover { color: var(--ink-1); background: var(--yuzey-2); }
+.hizli-hap:active { background: var(--yuzey-3); }
+.hizli-hap:focus-visible {
+  outline: var(--odak-kalinlik) solid var(--mor-ink);
+  outline-offset: var(--odak-offset);
+}
+.hizli-hap .hap-metin {
+  min-width: 0;
+  max-inline-size: 32ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Kısa model adı yalnız dar kabukta (aşağıda) */
+.hizli-hap .hap-kisa { display: none; }
+/* Anahtar yokken (core.js yukiAnahtarHazir === false) çip model adı söylemez — kayıtlı ama çalışmayan
+   bir model "hazır" gibi duruyordu (goz 11-13 #1b). "kurulum gerekli" (sarı), basınca Ayar › Anahtar. */
+.hizli-hap .hap-kur { display: none; }
+#hap-model.anahtar-yok .hap-tam, #hap-model.anahtar-yok .hap-kisa { display: none !important; }
+#hap-model.anahtar-yok .hap-kur { display: inline; max-inline-size: none; }   /* dar ekranda 14ch tavanı "kurulum gere…" diye kesiyordu (goz 11-13) */
+#hap-model.anahtar-yok { color: #f5cf73; }
+.hizli-hap[aria-expanded="true"] { color: var(--ink-1); background: var(--mor-zemin); }
+
+/* ═════════════════════════════ DAR EKRAN ═════════════════════════════
+   Kabuk 380–619px: sahne üstte yatay bant. Kişiseldeki dar düzen örnek alındı:
+   portre BÜYÜK (baş-omuz), duygu solda altta, karakter şeridi sağda altta —
+   yüz bandın üst yarısında, şerit alt şeritte: üst üste binmez. */
+@container kabuk (min-width: 380px) and (max-width: 619px) {
+  body.sohbet-mode #app[data-avatar-ayar="buyuk"] #avatar-pane {
+    flex-basis: min(280px, 36vh);
+    --kadraj-boy: 0.3;
+    --v-kadraj-boy: 0.34;
+    --yuz-hedef: 0.4;
+  }
+
+  body.sohbet-mode #app[data-avatar-ayar="buyuk"] #avatar-hud {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: var(--b-2) var(--b-4);
+    padding: var(--b-11) var(--b-5) var(--b-4);
+  }
+  body.sohbet-mode #app[data-avatar-ayar="buyuk"] #char-bar { justify-self: end; }
+  body.sohbet-mode #app[data-avatar-ayar="buyuk"] #waveform-hud { grid-column: 1 / -1; }
+  body.sohbet-mode .ss-duygu-ad { font-size: var(--yazi-19); }
+
+  /* Anahtar yalnız simge (2×44px) — metinli hâli bandın sağ yarısını kaplayıp
+     saçın üstüne biniyordu. Ad erişilebilir isimde (aria-label) duruyor. */
+  body.sohbet-mode .ss-kip { inset-block-start: var(--b-4); inset-inline-end: var(--b-4); }
+  body.sohbet-mode .ss-kip button { padding: 0; }
+  body.sohbet-mode .ss-kip .ss-kip-ad { display: none; }
+}
+
+/* Durum satırı dar kabukta (mini dahil): mikrofon sütunu --hedef-dar, model kısa adla.
+   Tam ad ekran okuyucuda ve title'da kalır. */
+@container kabuk (max-width: 619px) {
+  body.sohbet-mode #hizli-satir:not([hidden]) {
+    padding-inline-start: calc(var(--hedef-dar) + var(--b-2));
+  }
+  .hizli-hap .hap-metin { max-inline-size: 14ch; }
+  .hizli-hap .hap-kisa { display: inline; }
+  .hizli-hap .hap-tam {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* 11-14 tam hizala: duygu adı (SAKİN…) kişisel Yuki'deki gibi büyük gösterge yazısı —
+   kişisel .ss-ad: 700 44px Chakra Petch (vendor/fonts.css), kısa pencerede 32, telefonda 28. */
+body.sohbet-mode .ss-duygu-ad {
+  font: 700 44px / 1 'Chakra Petch', var(--font);
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.6);
+}
+@media (min-width: 801px) and (max-height: 640px) { body.sohbet-mode .ss-duygu-ad { font-size: 32px; } }
+@media (max-width: 800px) { body.sohbet-mode .ss-duygu-ad { font-size: 28px; } }
+
+/* 11-14 tam hizala: RESİM/CANLI sahne genişliği kişisel Yuki'deki gibi clamp(340px, 33vw, 520px)
+   (oss %35-36'ydı: 1280'de 448 px, kişisel 422 px). Yalnız "büyük" avatar ayarında; küçük/gizli
+   oss'un kendi kademeleri olarak kalır. */
+@container kabuk (min-width: 960px) {
+  body.sohbet-mode:is(.sk-resim, .sk-canli):not(.hud-ring-mode) #app[data-avatar-ayar="buyuk"] #avatar-pane {
+    flex-basis: clamp(340px, 33vw, 520px);
+  }
+}

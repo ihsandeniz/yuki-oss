@@ -1,0 +1,32 @@
+name: Sır taraması + temizlik kapıları
+
+# gitleaks (tüm geçmiş) + scripts/test_temizlik.py: sır, ev dizini/e-posta izi, kişisel veri
+# dosyası, iç dosya, görsel lisans kapsamı, kademe izi ve açık kaynağa girmeyecek özellikler.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  temizlik:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # gitleaks git geçmişin tamamını tarasın
+      - name: gitleaks kur (sabit sürüm)
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+      - name: gitleaks — git geçmişi
+        run: gitleaks git . --no-banner -c .gitleaks.toml --redact
+      - name: Temizlik kapıları
+        run: python3 scripts/test_temizlik.py
+      - name: Profil adı kapısı (kişisel alice-ai ile çakışma yok)
+        run: python3 scripts/test_profil_adi.py
+      - name: İlk sürüm tek commit kapıları (kuru koşu betiği, push yok)
+        run: python3 scripts/test_ilk_surum_tek_commit.py
+      - name: Model kaynağı kapısı (paketler yalnız bu deponun sürümünden)
+        run: python3 scripts/test_model_kaynagi.py

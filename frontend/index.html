@@ -1,0 +1,2104 @@
+<!DOCTYPE html>
+<html lang="tr" data-tab="chat">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#000814">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>YUKI // AI COMPANION</title>
+  <script>
+    /* Cihaz performans katmanı — CSS'ten ÖNCE <html data-perf> set (FOUC yok). Detay: js/perf-tier.js
+       Zayıf cihazda (eski laptop) ağır blur/glow otomatik kapanır; yüksek/orta cihazda tasarım birebir. */
+    (function () {
+      try {
+        var o = localStorage.getItem('yuki-perf-tier'), t;
+        if (o === 'low' || o === 'mid' || o === 'high') { t = o; }
+        else {
+          var c = navigator.hardwareConcurrency || 4, m = navigator.deviceMemory;
+          t = (c <= 4 || (typeof m === 'number' && m <= 4)) ? 'low'
+            : (c >= 8 && (typeof m !== 'number' || m >= 8)) ? 'high' : 'mid';
+        }
+        document.documentElement.dataset.perf = t;
+      } catch (e) { document.documentElement.dataset.perf = 'high'; }
+    })();
+  </script>
+  <script>
+    /* Grafik kademesi (KULLANICI seçimi) — ilk boyamadan ÖNCE bas, yoksa açılışta
+       bir kare tam efektli çizilir (flash). Tam yönetim: modes/gfx.js
+       Yukarıdaki data-perf'ten ayrı eksen: o donanıma göre otomatik, bu kullanıcı seçimi.
+       🔴 SIRA BİLİNÇLİ: data-perf snippet'i BUNUN ÜSTÜNDE durmalı — aşağıdaki otomatik
+       HAFİF kararı onun bastığı `data-perf` değerini okuyor. Sırayı bozarsan karar
+       sessizce hiç çalışmaz (öznitelik henüz yoktur, `low` karşılaştırması false döner). */
+    (function () {
+      try {
+        var p = localStorage.getItem('yukiGfx_v1');
+        if (p !== 'normal' && p !== 'hafif') {
+          p = 'normal';
+          /* ── Zayıf makinede OTOMATİK HAFİF (2026-08-12, karar D11 = A+B) ──
+             Kullanıcı bir kez seçim yaptıysa (yukarıdaki dal) buraya HİÇ gelinmez —
+             otomatik karar kullanıcının seçimini asla ezmez. Bayrak da bir kez
+             basılır: kullanıcı sonradan NORMAL'e dönerse bir daha karışılmaz.
+             `data-perf` bir sonraki satırdaki snippet'te hesaplanıyor; bu yüzden
+             o snippet BUNUN ÜSTÜNDE durur — sıra bilinçlidir, bozma. */
+          var oto = localStorage.getItem('yukiGfxOto_v1');
+          if (!oto && document.documentElement.dataset.perf === 'low') {
+            p = 'hafif';
+            localStorage.setItem('yukiGfx_v1', 'hafif');
+            localStorage.setItem('yukiGfxOto_v1', '1');
+            window.__YUKI_GFX_OTO__ = true;   /* gfx.js bunu görüp kullanıcıya söyler */
+          }
+        }
+        document.documentElement.setAttribute('data-gfx', p);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="manifest" href="/ui/manifest.json">
+  <!-- `assets/` düşmüştü → ikon 404'tü (manifest.json aynı dosyayı doğru yoldan veriyor).
+       iOS'ta ana ekrana eklenince simge yerine sayfa görüntüsü çıkıyordu. -->
+  <link rel="apple-touch-icon" href="/ui/assets/icons/icon-192.png">
+  <!-- Fontlar + markdown/kod-highlight SELF-HOST (offline ürün — CDN bağımlılığı yok) -->
+  <link rel="stylesheet" href="/ui/vendor/fonts.css?v=1">
+  <link rel="stylesheet" href="/ui/vendor/fonts-mono.css?v=1">
+  <link rel="stylesheet" href="/ui/vendor/prism-one-dark.min.css?v=1">
+  <!-- MAP panosu (Dalga 3 kalanı) — harita kütüphaneleri SELF-HOST.
+       Kişiselde unpkg.com CDN'inden geliyordu; offline SKU'da harita hiç
+       açılmazdı ve müşterinin IP'si üçüncü tarafa görünürdü. -->
+  <link rel="stylesheet" href="/ui/vendor/leaflet-1.9.4/leaflet.css?v=1">
+  <link rel="stylesheet" href="/ui/vendor/markercluster-1.5.3/MarkerCluster.css?v=1">
+  <link rel="stylesheet" href="/ui/vendor/markercluster-1.5.3/MarkerCluster.Default.css?v=1">
+  <link rel="stylesheet" href="/ui/vendor/maplibre-gl-4/maplibre-gl.css?v=1">
+  <link rel="stylesheet" href="/ui/css/map-hud.css?v=10">
+  <link rel="stylesheet" href="/ui/css/gorus.css?v=1">  <!-- kamera görüşü + ses kimliği kartları (HQ › Sistem; bayrak kapalıysa kart çizilmez) -->
+  <link rel="stylesheet" href="/ui/css/map-controls.css?v=4">
+  <link rel="stylesheet" href="/ui/css/fontlar-gozlemevi.css?v=1">
+  <link rel="stylesheet" href="/ui/css/baslik-gozlemevi.css?v=1">  <!-- sekme başlığı: 8 sekmede tek tarz (11-13) -->  <!-- Fraunces · Figtree · Martian Mono (OFL) — HQ + HARİTA Gözlemevi kullanır -->
+  <link rel="stylesheet" href="/ui/css/map-gozlemevi.css?v=3">  <!-- HARİTA Gözlemevi (A2, 11-13) -->
+  <script src="/ui/vendor/marked.min.js?v=1"></script>
+  <script src="/ui/vendor/dompurify.min.js?v=1"></script>
+  <script src="/ui/vendor/prism.min.js?v=1"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Prism dilleri prism.min.js bundle'ında gömülü (js/py/bash/json/ts/jsx/tsx/sql/yaml/md/css)
+      // → autoloader (dinamik CDN yükleme) gerekmez; offline çalışır.
+      if (window.marked) {
+        marked.setOptions({ breaks: true, gfm: true });
+      }
+    });
+  </script>
+<link rel="stylesheet" href="/ui/style.css?v=47">
+<link rel="stylesheet" href="/ui/theme-violet.css?v=2">
+<link rel="stylesheet" href="/ui/perf-adaptive.css?v=2">
+<link rel="stylesheet" href="/ui/css/gfx.css?v=1">
+<link rel="stylesheet" href="/ui/css/tokens.css?v=8">
+<script src="/ui/js/tema.js?v=6"></script>  <!-- FOUC: CSS sonrası SENKRON -->
+<script src="/ui/js/diller/tr.js?v=102"></script>
+<script src="/ui/js/diller/ja.js?v=5"></script>
+<script src="/ui/js/diller/en.js?v=102"></script>
+<script src="/ui/js/dil.js?v=7"></script>  <!-- FOUT: sözlüklerden SONRA, SENKRON -->
+<script src="/ui/js/ozellik.js?v=3"></script>  <!-- bayraklı özelliklerin kapısı (Atölye · Fitnes): SENKRON, girişlerden önce -->
+<link rel="stylesheet" href="/ui/css/temel.css?v=1">
+<link rel="stylesheet" href="/ui/css/ogeler.css?v=10">
+<link rel="stylesheet" href="/ui/css/kabuk.css?v=19">
+</head>
+
+<body>
+<script>
+  if (!navigator.userAgent.includes('Electron')) {
+    document.documentElement.classList.add('web-mode');
+  }
+  // DEBUG: Görünür hata göstergesi — sorun çözülünce kaldır
+  window.onerror = function(msg, src, line, col, err) {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:red;color:var(--ink-1);font-size:12px;padding:6px 10px;z-index:99999;word-break:break-all;';
+    d.textContent = '⚠ JS Error: ' + msg + ' (L' + line + ')';
+    document.body ? document.body.appendChild(d) : document.addEventListener('DOMContentLoaded', () => document.body.appendChild(d));
+    return false;
+  };
+</script>
+
+<!-- ══ YUKI-WIDGET GÖMME MODU (yuki-widget iframe reuse — Aşama 5) ══
+     ?widget=1&token=<tok>#wtab=<key> ile çağrılır. Token'ı kaydeder,
+     açılış/boot/auth gate'lerini atlar, istenen sekmeyi açar; ebeveyn
+     widget'tan postMessage({type:'wtab',tab}) ile sekme değiştirir.
+     ?widget yoksa HİÇBİR ETKİSİ YOK (normal kullanım etkilenmez). -->
+<style>
+  .widget-embed #boot-screen,
+  .widget-embed #yuki-opening { display: none !important; }
+</style>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  if (!q.has('widget')) return;                 // normal modda no-op
+  var TOKEN = q.get('token') || '';
+  if (TOKEN) { try { sessionStorage.setItem('aliceToken', TOKEN); } catch (e) {} }
+  document.documentElement.classList.add('widget-embed');
+
+  function reqTab() {
+    var m = String(location.hash).match(/wtab=([a-z]+)/i);
+    return m ? m[1] : 'chat';
+  }
+  // Ebeveyn widget'tan sekme değişimi (reload yok)
+  window.addEventListener('message', function (e) {
+    if (e && e.data && e.data.type === 'wtab' && typeof window.switchTab === 'function') {
+      try { window.switchTab(e.data.tab); } catch (_) {}
+    }
+  });
+  window.addEventListener('hashchange', function () {
+    if (typeof window.switchTab === 'function') { try { window.switchTab(reqTab()); } catch (_) {} }
+  });
+
+  // Gate atlama: açılış/boot gizli, auth çıkarsa token ile otomatik giriş, app görünür, ilk sekme.
+  var tabDone = false, tries = 0;
+  var iv = setInterval(function () {
+    tries++;
+    var app  = document.getElementById('app');
+    var boot = document.getElementById('boot-screen');
+    var auth = document.getElementById('auth-screen');
+    if (boot) boot.classList.add('hidden');
+    if (auth && !auth.classList.contains('hidden') && TOKEN) {
+      var inp = document.getElementById('auth-input');
+      if (inp && typeof window._authLogin === 'function') {
+        inp.value = TOKEN; try { window._authLogin(); } catch (_) {}
+      }
+    }
+    if (app && app.style.display === 'none') app.style.display = '';
+    if (!tabDone && typeof window.switchTab === 'function') {
+      try { window.switchTab(reqTab()); tabDone = true; } catch (_) {}
+    }
+    if ((tabDone && app && app.style.display !== 'none') || tries > 40) clearInterval(iv);
+  }, 150);
+})();
+</script>
+
+
+<script src="/ui/js/perf-tier.js?v=1"></script>
+<!-- ══ END YUKI OPENING ═══════════════════════════════════════════ -->
+
+<div data-i18n-aria-label="lightbox.buyutulmus-gorsel" id="lightbox" role="dialog" aria-modal="true" aria-label="Büyütülmüş görsel" hidden>
+  <div id="lightbox-backdrop" aria-hidden="true"></div>
+  <div id="lightbox-content">
+    <img data-i18n-alt="lightbox.buyutulmus-gorsel" id="lightbox-img" src="" alt="Büyütülmüş görsel">
+    <div id="lightbox-toolbar">
+      <a data-i18n="lightbox.indir" id="lightbox-download" download="screenshot.jpg">İndir</a>
+      <button data-i18n-title="lightbox.kapat" data-i18n-aria-label="lightbox.gorseli-kapat" id="lightbox-close" aria-label="Görseli kapat" title="Kapat">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- Auth Login Ekranı -->
+<!-- 🔴 2026-08-13: `hidden` VARSAYILAN. Eskiden sınıfsız açılıyordu → parola ekranı,
+     JS `/api/ping`'den cevap alana kadar EKRANDA duruyordu. Soğuk Windows açılışında
+     motor 7-10 sn geç geldiği için müşteri parola isteneceğini sanıyordu — oysa
+     satılan pakette `AUTH_TOKEN` boş, auth KAPALI ve ekran hiç gösterilmeyecekti.
+     (geliştiricinin 08-13 saha raporu: "açtık mı şifre alanı gösteriyor".)
+     Gerçekten gerekliyse `_showAuthScreen()` sınıfı KALDIRIP gösteriyor — yani
+     "varsayılan gizli" bir yetenek kaybı değil, yalnız kanıtsız gösterimi bitiriyor.
+     ⚠️ Bu satırdan `hidden`ı silme; `core.js::_authCheckAndInit` 401 görmeden
+     ekranı açan başka bir yol YOK. -->
+<div id="auth-screen" class="hidden">
+  <section class="auth-box" data-auth-mode="password" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-sub">
+    <div class="auth-progress" aria-hidden="true"><span></span></div>
+
+    <header class="auth-header">
+      <div class="auth-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3 5 6v5c0 4.6 2.8 8.2 7 10 4.2-1.8 7-5.4 7-10V6l-7-3Z"></path>
+          <path d="m9.5 12 1.7 1.7 3.5-3.7"></path>
+        </svg>
+      </div>
+      <div class="auth-brand-row">
+        <span data-i18n="kilit-ekran.urun-adi" class="auth-product">YUKI</span>
+        <span data-i18n="kilit-ekran.oturum-kilitli" class="auth-lock-state">Oturum kilitli</span>
+      </div>
+      <h1 data-i18n="kilit-ekran.baslik" class="auth-title" id="auth-title">Tekrar hoş geldin</h1>
+      <p data-i18n="giris.erisim-parolani-gir" class="auth-sub" id="auth-sub">Erişim parolanı gir</p>
+    </header>
+
+    <div class="auth-main">
+      <div class="auth-password-group">
+        <label data-i18n="kilit-ekran.parola-etiket" class="auth-label" for="auth-input">Parola</label>
+        <div class="auth-input-shell">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="16" height="11" x="4" y="10" rx="2"></rect>
+            <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+          </svg>
+          <input data-i18n-aria-label="giris.erisim-parolasi" aria-label="Erişim parolası" aria-describedby="auth-sub auth-error" aria-errormessage="auth-error" type="password" id="auth-input" autocomplete="current-password">
+        </div>
+      </div>
+
+      <div class="auth-actions">
+        <button class="auth-btn" type="button" onclick="_authLogin()">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <path d="m10 17 5-5-5-5"></path>
+            <path d="M15 12H3"></path>
+          </svg>
+          <span data-i18n="kilit-ekran.parolayla-gir" class="auth-btn-label">Parolayla gir</span>
+        </button>
+      </div>
+
+      <div class="auth-assist">
+        <svg class="auth-error-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 8v4"></path>
+          <path d="M12 16h.01"></path>
+        </svg>
+        <span class="auth-bekleme-isaret" aria-hidden="true"></span>
+        <p class="auth-error" id="auth-error" role="alert" aria-live="polite"></p>
+        <p data-i18n="kilit-ekran.dogrulaniyor" class="auth-bekleme">Doğrulanıyor…</p>
+      </div>
+    </div>
+
+    <footer data-i18n="kilit-ekran.alt-not" class="auth-footer">Doğrulama tamamlanınca kaldığın yerden devam edersin.</footer>
+  </section>
+</div>
+
+<!-- Boot Animation Screen -->
+
+<!-- Offline banner -->
+<div data-i18n="cevrimdisi.baglanti-yok" id="offline-banner" role="status" aria-live="polite" aria-atomic="true">Bağlantı yok — yeniden deneniyor…</div>
+
+<!-- Bildirim kabı js/bildirim.js tarafından üretilir (#bildirim-kap).
+     Eski #toast-container 'de silindi — 2026-08-28'den beri hiçbir kod yazmıyordu. -->
+<div data-i18n-aria-label="secim.menu-etiket" id="sel-ctx-menu" role="menu" aria-label="Metin seçim eylemleri">
+  <button type="button" role="menuitem" tabindex="-1" class="ctx-item" onclick="_ctxAsk()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 8l8 5 8-5-8-5Z"/><path d="m4 12 8 5 8-5"/></svg><span data-i18n="secim.yuki-ye-sor">Yuki'ye sor</span></button>
+  <button type="button" role="menuitem" tabindex="-1" class="ctx-item" onclick="_ctxSearch()"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span data-i18n="secim.web-de-ara">Web'de ara</span></button>
+  <button type="button" role="menuitem" tabindex="-1" class="ctx-item" onclick="_ctxCopy()"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="13" height="13" x="8" y="8" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg><span data-i18n="secim.kopyala">Kopyala</span></button>
+  <div class="ctx-sep"></div>
+  <button type="button" role="menuitem" tabindex="-1" class="ctx-item" onclick="_ctxDefine()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg><span data-i18n="secim.acikla">Açıkla</span></button>
+  <button type="button" role="menuitem" tabindex="-1" class="ctx-item" onclick="_ctxTranslate()"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span data-i18n="secim.turkce-ye-cevir">Türkçe'ye çevir</span></button>
+</div>
+
+<div class="kabuk">
+  <!-- Pencere modu denetimleri — GÖRÜNÜM menüsüne (modes/chat-modes.js) taşınır.
+       🔴 Neden burada duruyor: markup yeniden YAZILMADI, TAŞINDI. js/tab-nav.js
+       bu düğümleri id/öznitelik ile arıyor ve dinleyicilerini açılışta bağlıyor;
+       yeniden yazsaydık o bağların hepsini de taşımak gerekirdi. appendChild
+       düğümü taşır, dinleyiciler düğümle birlikte gider.
+       Eski hâli `.kabuk-ust-serit` şeridiydi: tüm genişlikte 44px yer kaplayıp
+       sağ ucunda tek düğme taşıyordu. geliştirici o boşluğu ÜÇ kez bildirdi (08-28,
+       08-30, 09-06); ilk iki düzeltme yalnız düğme GİZLİYKEN devreye giriyordu,
+       Electron'da düğme görünür olduğu için boşluk geri geliyordu. -->
+  <div id="pencere-mod-kaynak" hidden>
+      <div data-i18n-aria-label="pencere.pencere-modu" class="pencere-mod-secenekleri" role="radiogroup" aria-label="Pencere modu">
+        <button data-i18n-aria-label="pencere.tam-pencere-modu" type="button" class="dg dg-sessiz pencere-mod-secenegi" data-pencere-mod="tam"
+                role="radio" aria-checked="true" aria-label="Tam pencere modu" tabindex="0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>
+          </svg>
+          <span data-i18n="pencere.tam">Tam</span>
+        </button>
+        <button data-i18n-aria-label="pencere.panel-pencere-modu" type="button" class="dg dg-sessiz pencere-mod-secenegi" data-pencere-mod="panel"
+                role="radio" aria-checked="false" aria-label="Panel pencere modu" tabindex="-1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/>
+          </svg>
+          <span data-i18n="pencere.panel">Panel</span>
+        </button>
+        <button data-i18n-aria-label="pencere.mini-pencere-modu" type="button" class="dg dg-sessiz pencere-mod-secenegi" data-pencere-mod="mini"
+                role="radio" aria-checked="false" aria-label="Mini pencere modu" tabindex="-1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m14 10 7-7M20 10h-6V4M10 14l-7 7M4 14h6v6"/>
+          </svg>
+          <span data-i18n="pencere.mini">Mini</span>
+        </button>
+      </div>
+
+      <div class="pencere-kose-alani" id="pencere-kose-alani" hidden>
+        <label data-i18n="pencere.yapisma-noktasi" for="pencere-kose-sec">Yapışma noktası</label>
+        <select class="girdi" id="pencere-kose-sec">
+          <option data-i18n="pencere.sol-ust" value="sol-ust">Sol · üst</option>
+          <option data-i18n="pencere.sag-ust" value="sag-ust">Sağ · üst</option>
+          <option data-i18n="pencere.sol-tam-yukseklik" value="sol-tam">Sol · tam yükseklik</option>
+          <option data-i18n="pencere.sag-tam-yukseklik" value="sag-tam" selected>Sağ · tam yükseklik</option>
+          <option data-i18n="pencere.sol-alt" value="sol-alt">Sol · alt</option>
+          <option data-i18n="pencere.sag-alt" value="sag-alt">Sağ · alt</option>
+        </select>
+      </div>
+
+      <!-- Mini HUD (2026-10-04) — AYRI bir durum kartı; yukarıdaki "Mini"
+           PENCERE MODU (ana pencereyi küçültür) ile karıştırma. Bu kap da
+           #pencere-mod-kaynak'ın çocuğu olduğu için menüye onunla taşınır.
+           Görünürlük + davranış: js/mini-kopru.js (köprü yoksa gizli kalır).
+           Herkese açık. -->
+      <!-- margin: .vmm-pencere'nin 4px yan dolgusunu geri alır → yazılar üstteki satırlarla aynı sütunda -->
+      <div id="mini-hud-satirlari" class="mini-hud-satirlari" style="margin-inline:-4px" hidden>
+        <button type="button" class="vmm-item" id="mini-hud-ac-kapat" aria-pressed="false" style="inline-size:100%">
+          <span class="vmm-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="12" width="7" height="5" rx="1"/></svg>
+          </span>
+          <span class="vmm-text"><b data-i18n="mini-hud.menu.ac">Mini HUD</b><small data-i18n="mini-hud.menu.ac-alt">Küçük durum kartı göster</small></span>
+        </button>
+        <button type="button" class="vmm-item" id="mini-hud-yalniz" style="inline-size:100%">
+          <span class="vmm-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="12" y="12" width="9" height="7" rx="1.5"/><path d="M9 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2" stroke-dasharray="2 2.5"/></svg>
+          </span>
+          <span class="vmm-text"><b data-i18n="mini-hud.menu.yalniz">Yalnız Mini HUD</b><small data-i18n="mini-hud.menu.yalniz-alt">Bu pencereyi gizle, kart kalsın</small></span>
+        </button>
+      </div>
+  </div>
+
+  <!-- Sekme menüsü — soldan kayan çekmece (2026-09-25; kişisel AliceAi
+       2026-09-24'ün ürün karşılığı). Eski 60px ray + <620px alt şerit + TABS/‹
+       düğmeleri kalktı; tek düzen her genişlikte. ☰ içeriğin üstünde durur,
+       çekmece sekme seçince / perdeye tıklayınca / Esc ile tamamen kapanır.
+       Aç-kapa betiği tab-nav.js'te (`toggleTabDropdown`), stil kabuk.css
+       "SEKME MENÜSÜ". Kapalıyken `inert`: gizli düğmeler odak almasın. -->
+  <button data-i18n-title="nav.menu-f" data-i18n-aria-label="genel.menuyu-ac" type="button" id="nav-ac" title="Menü (F)" aria-label="Menüyü aç" aria-expanded="false" aria-controls="tab-nav">
+    <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg>
+  </button>
+  <div id="nav-backdrop"></div>
+  <aside data-i18n-aria-label="genel.ana-menu" class="kabuk-menu" aria-label="Ana menü">
+    <nav data-i18n-aria-label="nav.uygulama-bolumleri" id="tab-nav" aria-label="Uygulama bölümleri" inert>
+      <div class="nav-baslik"><span class="nav-marka">YUKI</span></div>
+      <div data-i18n-aria-label="nav.ana-sekmeler" id="tab-items" role="tablist" aria-label="Ana sekmeler">
+        <button type="button" class="tab-btn active" id="tab-btn-chat" onclick="switchTab('chat')" title="[1] CHAT" data-tab="chat" data-aktif role="tab" aria-controls="app" aria-selected="true" tabindex="0">
+          <span class="tab-icon"><svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 10a2 2 0 01-2 2H5l-3 3V4a2 2 0 012-2h8a2 2 0 012 2v6z"/><circle cx="5.5" cy="7" r="0.8" fill="currentColor" stroke="none"/><circle cx="8" cy="7" r="0.8" fill="currentColor" stroke="none"/><circle cx="10.5" cy="7" r="0.8" fill="currentColor" stroke="none"/></svg></span>
+          <span class="tab-lbl">CHAT</span>
+        </button>
+        <button type="button" class="tab-btn" id="tab-btn-planner" onclick="switchTab('planner')" title="[2] PLAN" data-tab="planner" role="tab" aria-controls="tab-planner" aria-selected="false" tabindex="-1">
+          <span class="tab-icon"><svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5.5 1.8v2.4M10.5 1.8v2.4"/></svg></span>
+          <span class="tab-lbl">PLAN</span>
+        </button>
+        <button data-i18n-title="nav.3-ayarlar" type="button" class="tab-btn" id="tab-btn-hq" onclick="switchTab('hq')" title="[3] AYARLAR" data-tab="hq" role="tab" aria-controls="tab-hq" aria-selected="false" tabindex="-1">
+          <span class="tab-icon"><svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.2v1.8M8 13v1.8M1.2 8h1.8M13 8h1.8M3.2 3.2l1.3 1.3M11.5 11.5l1.3 1.3M12.8 3.2l-1.3 1.3M4.5 11.5l-1.3 1.3"/></svg></span>
+          <span data-i18n="nav.ayar" class="tab-lbl">AYAR</span>
+        </button>
+        <button type="button" class="tab-btn" id="tab-btn-map" onclick="switchTab('map')" title="[4] MAP" data-tab="map" role="tab" aria-controls="tab-map" aria-selected="false" tabindex="-1">
+          <span class="tab-icon"><svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14s-5-4.5-5-8a5 5 0 0110 0c0 3.5-5 8-5 8z"/><circle cx="8" cy="6" r="2"/></svg></span>
+          <span class="tab-lbl">MAP</span>
+        </button>
+        <!-- AJAN: bilgisayarda çalışan yapay zekâ ajanları. -->
+        <button type="button" class="tab-btn" id="tab-btn-ajan" onclick="switchTab('ajan')" title="[5] AJAN" data-i18n-title="nav.5-ajan" data-tab="ajan" role="tab" aria-controls="tab-ajan" aria-selected="false" tabindex="-1">
+          <span class="tab-icon"><svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="1.5" width="7" height="10" rx="1.2"/><path d="M6.5 4.5v4M4.5 6.5h4"/><path d="M11.5 4l2 .6-2.4 9.1-6.3-1.7"/></svg></span>
+          <span data-i18n="nav.ajan" class="tab-lbl">AJAN</span>
+        </button>
+        <!-- YEDEK: klasörleri Google Drive'a yedekleme (11-13: HQ › Yedekleme ayrı sekmeye çıktı). -->
+        <button type="button" class="tab-btn" id="tab-btn-yedek" onclick="switchTab('yedek')" title="[6] YEDEK" data-i18n-title="nav.6-yedek" data-tab="yedek" role="tab" aria-controls="tab-yedek" aria-selected="false" tabindex="-1">
+          <span class="tab-icon"><svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5h7.2a2.8 2.8 0 00.4-5.6 4 4 0 00-7.7-1A3.3 3.3 0 004.5 12.5z"/><path d="M8 11V7.2M6.4 8.7L8 7.1l1.6 1.6"/></svg></span>
+          <span data-i18n="nav.yedek" class="tab-lbl">YEDEK</span>
+        </button>
+        <!-- GALERİ: bilgisayardaki resim/video klasörlerinde salt okunur gezgin. -->
+        <button type="button" class="tab-btn" id="tab-btn-galeri" onclick="switchTab('galeri')" title="[7] GALERİ" data-i18n-title="nav.7-galeri" data-tab="galeri" role="tab" aria-controls="tab-galeri" aria-selected="false" tabindex="-1">
+          <span class="tab-icon"><svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="3" width="13" height="10" rx="1.5"/><circle cx="5.5" cy="6.5" r="1.2"/><path d="M2 11l3.5-3 2.5 2.2L11 7l3 3.4"/></svg></span>
+          <span data-i18n="nav.galeri" class="tab-lbl">GALERİ</span>
+        </button>
+        <!-- DOSYA: bilgisayardaki klasörlerde salt okunur dosya gezgini (yazma/terminal yok). -->
+        <button type="button" class="tab-btn" id="tab-btn-dosya" onclick="switchTab('dosya')" title="[8] DOSYA" data-i18n-title="nav.8-dosya" data-tab="dosya" role="tab" aria-controls="tab-dosya" aria-selected="false" tabindex="-1">
+          <span class="tab-icon"><svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4a1.5 1.5 0 011.5-1.5h3l1.5 1.5h4.5A1.5 1.5 0 0114 5.5v6A1.5 1.5 0 0112.5 13h-9A1.5 1.5 0 012 11.5V4z"/><path d="M5 8h6M5 10h4"/></svg></span>
+          <span data-i18n="nav.dosya" class="tab-lbl">DOSYA</span>
+        </button>
+        <!-- YÜZ sekmesi 2026-09-06'da KALDIRILDI (geliştirici kararı): panel artık
+             Ayarlar → Güvenlik odasının içinde yaşıyor (intro-sequences.js,
+             `render==='guvenlik'`). Kimlikle ilgili her şey — açılış parolası
+             ve yüz tanıma — tek odada.
+             ⚠️ `#faces-root` SİLİNMEDİ, aşağıda duruyor: paneli faces.js oraya
+             çiziyor ve Güvenlik odası onu gövdesine gömüyor. Kapı (`_yukiFacesOk`)
+             tab-nav.js'te ölçülmeye devam ediyor. -->
+      </div>
+      <div data-i18n="nav.kisayol-ipucu" class="nav-ipucu">F menü · Ctrl+Tab sonraki · 1–6 sekme</div>
+    </nav>
+  </aside>
+
+  <main class="kabuk-icerik">
+<link rel="stylesheet" href="/ui/css/sohbet.css?v=24">
+<link rel="stylesheet" href="/ui/css/gorev-serit.css?v=7"><!-- Atölye: görev şeridi · yeni görev formu -->
+<!-- SOHBET sahnesi: sohbet.css'ten SONRA — portre kadrajı onun kurallarını bilerek ezer -->
+<link rel="stylesheet" href="/ui/modes/sohbet-sahne.css?v=11">
+<!-- Halka Konsolu yazı çubuğu (10-11) — sohbet.css + sohbet-sahne.css'ten SONRA: onları ezer -->
+<link rel="stylesheet" href="/ui/css/giris-konsol.css?v=5">
+<link rel="stylesheet" href="/ui/css/sohbet-kisisel.css?v=4"><!-- Sohbet üst çubuk · boş ekran · yazı çubuğu · araç yayı kişisel düzende (11-14) -->
+<link rel="stylesheet" href="/ui/css/duvar.css?v=17">
+<link rel="stylesheet" href="/ui/css/hq.css?v=35">
+<!-- HQ → SİSTEM paneli (Dalga 3). Ayrı dosya: `hq.css` 1334 satır ve bu panel
+     kendi renk sözlüğünü (`--mon-*`) taşıyor — kişiseldeki ayrımın aynısı. -->
+<link rel="stylesheet" href="/ui/css/hq-monitor.css?v=5">
+<link rel="stylesheet" href="/ui/css/hq-hafiza.css?v=2">
+<link rel="stylesheet" href="/ui/css/hq-bildirim.css?v=2">
+<link rel="stylesheet" href="/ui/css/hq-ayarlar.css?v=4">
+<link rel="stylesheet" href="/ui/css/hq-modlar.css?v=8">
+<link rel="stylesheet" href="/ui/css/hq-anahtar.css?v=2">
+<link rel="stylesheet" href="/ui/css/hq-surum.css?v=1">
+<link rel="stylesheet" href="/ui/css/hq-saglik.css?v=4">
+<link rel="stylesheet" href="/ui/css/hq-google.css?v=2">
+<link rel="stylesheet" href="/ui/css/hq-tema.css?v=3">
+<link rel="stylesheet" href="/ui/css/hq-yedekleme.css?v=3">
+<link rel="stylesheet" href="/ui/css/yedek.css?v=5">
+<link rel="stylesheet" href="/ui/css/yedek-rclone.css?v=1">
+<link rel="stylesheet" href="/ui/css/hq-cihazlar.css?v=5">
+<!-- HQ Gözlemevi dili (A2, 11-13) — HQ CSS'lerinden SONRA; yalnız koyu temada eşleşir -->
+<link rel="stylesheet" href="/ui/css/hq-gozlemevi.css?v=1">
+<link rel="stylesheet" href="/ui/css/panel-jobs.css?v=6">
+<link rel="stylesheet" href="/ui/css/ajan.css?v=5">
+<link rel="stylesheet" href="/ui/css/faces.css?v=6">
+<link rel="stylesheet" href="/ui/css/ilk-kurulum.css?v=3">
+<!-- ══ YUKI OPENING ANIMATION — acilis-v4 ⑤ Mühür + Döküm (tık/Enter/Esc atlar; hareket azaltmada oynamaz) ══ -->
+<link rel="stylesheet" href="/ui/acilis-v4/ortak/ortak.css?v=1">
+<link rel="stylesheet" href="/ui/acilis-v4/muhur-dokum/acilis.css?v=2">
+<script src="/ui/acilis-v4/ortak/veri.js?v=1"></script>
+<script src="/ui/acilis-v4/ortak/motor.js?v=1"></script>
+<script src="/ui/acilis-v4/muhur-dokum/acilis.js?v=1"></script>
+<script src="/ui/acilis-v4/baglanti.js?v=1" data-sahne="muhur-dokum"></script>
+<!-- ══ END YUKI OPENING ══ -->
+
+<div id="app" role="tabpanel" aria-labelledby="tab-btn-chat" data-aktif
+     data-avatar-ayar="buyuk" data-avatar-etkin="buyuk" hidden>
+  <!-- Left Side: Yuki -->
+  <div id="avatar-pane" data-fal-durum="hazir">
+    <!-- 2026-08-08: video sprite sistemi kaldırıldı → _arsiv-medya/.
+         Tek görsel kaynağı 5 karakterin fullbody PNG'si; seçili karaktere göre
+         chat-modes.js `_applyCharacter` src'yi günceller.
+         2026-10-04: KLASİK + TAM BOY tek SOHBET modu. Bu img sahnenin
+         RESİM kipi (belden yukarı kadraj, modes/sohbet-sahne.css); VİDEO kipinde
+         klip bunun ÜSTÜNE biner. Ayrı tam boy <img> (#yuki-fullbody-img) kalktı. -->
+    <img id="yuki-video" src="/ui/assets/characters/yuki_fullbody.png" alt="Yuki">
+    <!-- Faz 13: fal.ai micro-animation overlay -->
+    <video id="yuki-fal-overlay" muted playsinline aria-hidden="true"></video>
+    <!-- Mikro animasyon overlay (eye_blink, breath, head_tilt, look_away) -->
+        <!-- γ: Rive canvas — RIVE_ENABLED=true olduğunda aktif -->
+    <canvas id="yuki-canvas"></canvas>
+    <!-- Bekleme klibi (sahnenin VİDEO kipi) — src'yi core.js `_applyFullbodyVideo` atar.
+         Klibi olan karakterde portrenin üstüne biner; olmayan karakterde hiç yüklenmez.
+         Yüklenemezse `.on` sınıfı gelmez → altındaki PNG görünür kalır.
+         2026-08-08: #fb-anim-btns kaldırıldı — tetikleyecek klip kalmadı, altı düğme
+         de aynı durağan görseli gösterecekti. -->
+    <video id="yuki-fb-video" muted loop playsinline preload="none" aria-hidden="true"></video>
+    <!-- Mobil floating mode toggle -->
+    <button data-i18n-aria-label="avatar.gorunum-modunu-degistir" id="mode-toggle-fab" onclick="toggleViewMode()" aria-label="Görünüm modunu değiştir"></button>
+
+    <!-- HUD Overlay -->
+    <div id="avatar-hud">
+      <!-- Etiketi chat-modes.js `_applyCharacter` günceller (2026-08-08) — sabit
+           "YUKI" yazıyordu, başka karakter seçiliyken bile öyle kalıyordu. -->
+      <div class="av-unit-id" id="av-unit-id">UNIT // YUKI</div>
+      <div class="av-stats" style="display:none;">
+        <div class="av-stat-row">
+          <span class="av-stat-label">EMO</span>
+          <span class="av-stat-val" id="hud-emotion-val">NEUTRAL</span>
+          <div class="av-stat-bar"><div class="av-stat-fill" id="hud-emo-fill" style="width:50%"></div></div>
+        </div>
+        <div class="av-stat-row">
+          <span class="av-stat-label">UPTIME</span>
+          <span class="av-stat-val" id="uptime-display">00:00:00</span>
+        </div>
+      </div>
+      <div id="waveform-hud">
+        <div class="wf-bars" id="wf-bars"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Chat -->
+  <div id="chat-pane">
+    <!-- Üst çubuk (2026-11-14 — kişisel ust-bar düzeni):
+         [● Yuki hazır]            [ses ▬ │ hafıza 0] [▤ HALKA ▾] │ [◧ 🗑 ⤓]
+         Görünüm css/ust-bar.css. Durum sözcüğü #state-badge[data-durum-metni]'nden (core.js),
+         bağlantı yoksa #ws-pill görünür. Tema düğmesi kişiseldeki gibi üst çubukta YOK
+         (tema HQ › Tema'da). Eski "YUKI / Sohbet" sekme başlığı ve ⋯ katlanır menü kalktı. -->
+    <header id="header">
+      <div class="hud-status-bar">
+        <div data-i18n-aria-label="ust.yuki-hazir" id="state-badge" class="state-idle" role="status" aria-label="Yuki hazır"><div id="state-dot"></div></div>
+        <span class="hud-unit-label">Yuki</span>
+        <div id="ws-pill" class="offline" role="status"><div id="ws-dot"></div><span data-i18n="ust.baglanti-yok" id="ws-label">BAĞLANTI YOK</span></div>
+      </div>
+      <!-- Göz takibi bu dağıtımda kapalı. Guard'lı JS kancası inert tutuluyor. -->
+      <span id="eye-indicator" hidden aria-hidden="true"></span>
+      <div id="header-actions" class="hud-controls">
+        <div id="vol-wrap">
+          <button data-i18n-title="ust.bu-cihazda-sesi-ac-kapat" data-i18n-aria-label="ust.bu-cihazda-sesi-ac-veya-kapat" id="vol-icon" class="dg dg-sessiz dg-ikon" type="button" onclick="_toggleMute()"
+                  aria-label="Bu cihazda sesi aç veya kapat" title="Bu cihazda sesi aç/kapat — cihaza özel ve kalıcı">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
+          </button>
+          <label data-i18n="ust.ses-seviyesi" class="gorsel-gizli" for="vol-slider">Ses seviyesi</label>
+          <input data-i18n-title="ust.ses-seviyesi" id="vol-slider" type="range" min="0" max="1" step="0.05" value="1"
+                 oninput="_setVolume(this.value)" title="Ses seviyesi">
+        </div>
+        <div data-i18n-aria-label="ust.hafizadaki-kayit-sayisi" class="hud-mem-badge" aria-label="Hafızadaki kayıt sayısı"><span data-i18n="ust.hafiza-kucuk" class="ub-hafiza-etiket">hafıza</span> <span id="mem-num">0</span></div>
+                    <!-- 🔴 data-i18n-yok: METNİNİ JS YAZIYOR (core.js::_applyViewMode ·
+               _avatarDurumunuUygula). Çapa da taşısalardı aynı alanın İKİ SAHİBİ
+               olurdu ve bu bir kuram değil, ölçülmüş bir arıza (2026-09-20 tur mutasyonu): `ust.avatar-buyuk-sonraki-kucuk-2` DONMUŞ bir
+               tam cümle ("Avatar: Büyük · sonraki: Küçük") ve varsayılan durumda
+               core.js'in ürettiğiyle BİREBİR aynı → `dil.js::_sahibiBizMiyiz`
+               "sahibi biziz" sanıp üstüne yazıyordu. Bugün görünmüyordu çünkü iki
+               dize eşitti; kullanıcı avatarı 'Gizli'ye alıp dil değiştirdiğinde
+               ipucu YANLIŞ durumu gösterecekti. Tek sahip: JS.
+               2026-10-04: eski statik yedek metin de kalktı — etiketi
+               chat-modes.js `_updateButton` yazar (#app açılışta `hidden`, boş
+               düğme görünmez). Statik bir yedek metin çapasız metin sayılırdı. -->
+          <button data-i18n-yok id="mode-toggle" class="dg dg-ikincil" onclick="toggleViewMode()"></button>
+          <button data-i18n-yok id="avatar-toggle" class="dg dg-sessiz dg-ikon active" type="button"
+                  data-avatar-ayar="buyuk" data-avatar-etkin="buyuk"
+                  onclick="toggleAvatarPane()"
+                  aria-label="Karakteri gizle" aria-pressed="true"
+                  title="Karakteri gizle">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.5 4.5v15"/></svg>
+          </button>
+          <button data-i18n-title="ust.gecmisi-temizle" data-i18n-aria-label="ust.sohbet-gecmisini-temizle" id="ub-temizle" class="dg dg-sessiz dg-ikon" onclick="clearHistory()" aria-label="Sohbet geçmişini temizle" title="Geçmişi temizle">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V4.8h5V7M6.5 7l.9 12.2h9.2L17.5 7"/><path d="M10.3 10.5v5.5M13.7 10.5v5.5"/></svg>
+          </button>
+          <button data-i18n-title="ust.sohbeti-markdown-olarak-indir" data-i18n-aria-label="ust.sohbeti-markdown-olarak-indir" id="ub-disa" class="dg dg-sessiz dg-ikon" onclick="exportChat()" aria-label="Sohbeti Markdown olarak indir" title="Sohbeti Markdown olarak indir">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19.5h14"/></svg>
+          </button>
+      </div>
+    </header>
+
+    <div data-i18n-aria-label="sohbet.mesajlar" id="messages" role="log" aria-label="Sohbet mesajları" aria-live="polite" aria-relevant="additions text" tabindex="0">
+      <!-- Karşılama (2026-11-14 — kişiseldeki gibi): iki satır daktilo yazısı,
+           öneri kartı yok. Başlığı chat-modes.js karaktere göre yazar. Görünüm css/sohbet-kisisel.css. -->
+      <div id="chat-empty-state" class="bos">
+        <h1 data-i18n="sohbet.merhaba-ben-yuki" class="empty-title bos-bas">Merhaba! Ben Yuki.</h1>
+        <p data-i18n="sohbet.yardim-sorusu" class="empty-sub bos-metin">Sana nasıl yardımcı olabilirim?</p>
+      </div>
+    </div>
+    <button data-i18n-title="sohbet.asagi-git" data-i18n-aria-label="sohbet.en-yeni-mesaja-git" id="scroll-btn" class="dg dg-ikincil dg-ikon" onclick="scrollToBottom()" aria-label="En yeni mesaja git" title="Aşağı git">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-6-6 6 6 6-6"/></svg>
+    </button>
+
+    <div id="input-area">
+      <div id="input-container">
+        <div id="mic-container">
+          <button data-i18n-title="girdi.mikrofon" data-i18n-aria-label="girdi.mikrofonu-ac-veya-kapat" id="mic-btn" class="dg dg-sessiz dg-ikon" aria-label="Mikrofonu aç veya kapat" title="Mikrofon">
+            <!-- Tur 2 (göz 10-04): eski çizim 12×18 ve rx=6 olan şişman bir kapsüldü, 20px'te "O" gibi okunuyordu. Klasik mikrofon: ince kapsül + çatal + ayak. -->
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="6" height="12" x="9" y="2" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg>
+          </button>
+          <svg id="mic-level-ring" viewBox="0 0 52 52" aria-hidden="true">
+            <circle class="ring-bg" cx="26" cy="26" r="23"/>
+            <circle class="ring-level" cx="26" cy="26" r="23"
+              stroke-dasharray="0 144.51" transform="rotate(-90 26 26)"/>
+          </svg>
+          <div id="mic-timer">00:00</div>
+        </div>
+        <label data-i18n="girdi.yuki-ye-mesajin" class="gorsel-gizli" for="msg-input">Yuki'ye mesajın</label>
+        <textarea data-i18n-placeholder="girdi.yuki-ye-yaz" id="msg-input" placeholder="Yuki'ye yaz…" rows="1"
+                  role="combobox" aria-autocomplete="list" aria-haspopup="listbox"
+                  aria-controls="cmd-palette" aria-expanded="false"></textarea>
+        <div data-i18n-aria-label="girdi.komut-paleti" id="cmd-palette" role="listbox" aria-label="Komut paleti"></div>
+        <!-- ⋯ menüsü — 2026-08-03: eskiden 8 ikon yazma alanının etrafına ve altına
+             dağılmıştı (ikon-only, etiketsiz). Hepsi tek bir ETİKETLİ menüde toplandı;
+             yazma alanında yalnız 🎤 · ⋯ · model · ➤ kaldı. Hiçbir yetenek kaybolmadı,
+             yalnız görünürlük sırası değişti. Mobil zaten bu deseni kullanıyordu. -->
+        <div data-i18n-aria-label="girdi.araclar" id="input-secondary-btns" class="giris-yayi" role="menu" aria-label="Araçlar">
+          <div id="model-selector-wrap">
+            <button data-i18n-title="girdi.model-sec" id="model-selector-btn" class="more-item" title="Model seç" role="menuitem"
+                    popovertarget="model-popover" aria-controls="model-popover"
+                    aria-haspopup="dialog" aria-expanded="false">
+              <svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 8l8 5 8-5-8-5Z"/><path d="m4 12 8 5 8-5m-16 4 8 5 8-5"/></svg>
+              <span data-i18n="girdi.model-etiket">Model:</span> <span id="model-label">GPT-4.1</span>
+            </button>
+          </div>
+          <div class="more-sep" role="separator"></div>
+          <button id="upload-btn" class="more-item" data-i18n-title="girdi.fotograf-cek" data-i18n-aria-label="girdi.fotograf-cek" title="Fotoğraf çek" aria-label="Fotoğraf çek" onclick="openCameraCapture()" role="menuitem"><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4 16 7h4a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h4l1.5-3h5Z"/><circle cx="12" cy="13" r="3"/></svg><span data-i18n="girdi.yay.kamera" class="yay-ad">Kamera</span></button>
+          <button id="gallery-picker-btn" class="more-item" data-i18n-title="girdi.galeriden-sec" data-i18n-aria-label="girdi.galeriden-sec" title="Galeriden seç" aria-label="Galeriden seç" onclick="openGalleryPicker()" role="menuitem"><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg><span data-i18n="girdi.yay.galeri" class="yay-ad">Galeri</span></button>
+          <!-- `hidden`: kademede ekran aracı (take_screenshot) yoksa görünmez —
+               sohbet-sahne.js yetki `=== true` iken açar (kısayol çipiyle aynı kapı). -->
+          <button id="menu-ekran" class="more-item" data-i18n-title="girdi.ekran-goruntusu" data-i18n-aria-label="girdi.ekran-goruntusu" title="Ekran görüntüsü" aria-label="Ekran görüntüsü" onclick="qaScreenshot()" role="menuitem" hidden><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="14" x="3" y="4" rx="2"/><path d="M8 21h8m-4-3v3"/></svg><span data-i18n="girdi.yay.ekran" class="yay-ad">Ekran</span></button>
+          <!-- `hidden`: tarayıcı panoyu okuyamıyorsa (güvensiz bağlam, eski motor) görünmez —
+               sohbet-sahne.js hizliKur açar (eski PANO çipinin kapısı, 10-11 buraya taşındı). -->
+          <button id="menu-pano" class="more-item" data-i18n-title="girdi.panodan-yapistir" data-i18n-aria-label="girdi.panodan-yapistir" title="Panodan yapıştır" aria-label="Panodan yapıştır" onclick="qaClipboard()" role="menuitem" hidden><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="16" x="5" y="4" rx="2"/><path d="M9 4V2h6v2m-6 6h6m-6 4h4"/></svg><span data-i18n="girdi.yay.pano" class="yay-ad">Pano</span></button>
+          <button class="more-item" data-i18n-title="girdi.webde-ara" data-i18n-aria-label="girdi.webde-ara" title="Web'de ara" aria-label="Web'de ara" onclick="qaSearch()" role="menuitem"><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span data-i18n="girdi.yay.web" class="yay-ad">Web ara</span></button>
+          <button id="gorev-baslat-btn" data-ozellik="atolye" class="more-item" onclick="window.GorevSerit &amp;&amp; GorevSerit.formAc()" role="menuitem" data-i18n-title="girdi.gorev-baslat" data-i18n-aria-label="girdi.gorev-baslat" title="Atölye görevi başlat" aria-label="Atölye görevi başlat" aria-haspopup="dialog"><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4Z"/></svg><span data-i18n="girdi.gorev" class="yay-ad">Görev</span></button>
+          <button id="menu-aktar" class="more-item" data-i18n-title="girdi.sohbeti-disa-aktar" data-i18n-aria-label="girdi.sohbeti-disa-aktar" title="Sohbeti dışa aktar" aria-label="Sohbeti dışa aktar" onclick="qaExport()" role="menuitem"><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 21h14"/></svg><span data-i18n="girdi.yay.disa" class="yay-ad">Dışa aktar</span></button>
+          <!-- T3 (10-11): mikrofonun ▾ rozeti dar ekranda gizlenir (16px, mikrofonun üstüne biniyordu);
+               cihaz seçimi burada da var — rozetsiz kabukta tek görünür yol. -->
+          <button id="menu-mik-sec" class="more-item" data-i18n-title="mik.sec" data-i18n-aria-label="mik.sec" title="Mikrofon seç" aria-label="Mikrofon seç" onclick="micCihazMenusuAc()" role="menuitem"><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="6" height="12" x="9" y="2" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg><span data-i18n="girdi.yay.mikrofon" class="yay-ad">Mikrofon</span></button>
+          <div class="more-sep" role="separator"></div>
+          <!-- Ambient ekran izleme — P1'de KAPALI (gelişmiş/ücretli seviyede açılır; panel + toggleAmbientPanel kodda kalır)
+          <button id="ambient-watch-btn" class="more-item" onclick="toggleAmbientPanel()" role="menuitem"><span class="mi-ico">👁</span>Ambient</button>
+          -->
+          <button data-i18n-title="girdi.gemini-native-audio-ultra-hiz" id="native-audio-btn" class="more-item" onclick="toggleNativeMode()" role="menuitem" title="Gemini Native Audio — ultra-hız mod"><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-9 12h8l-1 8 9-12h-8l1-8Z"/></svg><span data-i18n="girdi.yay.hizli-ses" class="yay-ad">Hızlı ses</span></button>
+          <button data-i18n-title="girdi.hey-yuki-wake-word-modu" id="always-on-btn" class="more-item" onclick="toggleAlwaysOn()" role="menuitem" title="Hey Yuki wake word modu" aria-controls="wake-word-secim" aria-expanded="false"><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8.5C6 5.46 8.46 3 11.5 3S17 5.46 17 8.5c0 2-1 3.5-2.5 4.5L13 14.5V17a3 3 0 0 1-6 0v-1"/><path d="M4 12a8 8 0 0 0 3 6"/></svg><span data-i18n="girdi.yay.hep-dinle" class="yay-ad">Hep dinle</span></button>
+          <button id="claude-brain-btn" class="more-item" onclick="toggleClaudeBrain()" role="menuitem" data-i18n-title="girdi.claude-beyni" data-i18n-aria-label="girdi.claude-beyni" title="Claude beyni" aria-label="Claude beyni"><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="16" height="16" x="4" y="4" rx="2"/><path d="M9 9h6v6H9zM9 1v3m6-3v3M9 20v3m6-3v3M20 9h3m-3 6h3M1 9h3m-3 6h3"/></svg><span data-i18n-yok id="claude-brain-label" class="yay-ad">Claude</span></button>
+          <button id="lang-toggle-btn" class="more-item" onclick="toggleLanguage()" role="menuitem"><span class="mi-ico" id="lang-flag" aria-hidden="true"></span><span id="lang-baslik" data-i18n="dil.baslik">Konuşma dili:</span> <span id="lang-label" data-i18n-yok>Türkçe</span></button>
+          <button id="arayuz-toggle-btn" class="more-item" onclick="toggleArayuzDili()" role="menuitem" data-i18n-title="dil.arayuz-baslik" data-i18n-aria-label="dil.arayuz-baslik" title="Arayüz dili" aria-label="Arayüz dili"><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg><span data-i18n="girdi.yay.arayuz" class="yay-ad">Arayüz</span><span data-i18n="dil.arayuz-baslik" id="arayuz-baslik-uzun">Arayüz dili:</span> <span id="arayuz-label" data-i18n-yok>Türkçe</span></button>
+        </div>
+        <!-- capture attr KALDIRILDI: telefonda galeriyi/dosya seçiciyi engelleyip kamerayı zorluyordu -->
+        <input type="file" id="mediaFileInput" multiple
+               accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.xlsx,.xls,.docx,.csv,.txt,.md,.json,.log"
+               style="display:none">
+        <button data-i18n-aria-label="girdi.araclar" data-i18n-title="girdi.araclar" id="input-more-btn" class="dg dg-sessiz dg-ikon" onclick="toggleInputMore(event)"
+                title="Araçlar" aria-label="Araçlar" aria-haspopup="menu" aria-controls="input-secondary-btns" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+        </button>
+        <!-- Model seçici — Popover API. Perde (#model-overlay) KALDIRILDI: popover
+             top layer'da çizilir, ::backdrop perdeyi kendi yapar, Esc ve dışa tıklayarak
+             kapanma tarayıcıdan gelir. Böylece z-index yarışına hiç girmez.
+             ✅ 2026-09-03: eski `#model-dropdown-sheet` + `#model-overlay` CSS'i SİLİNDİ
+             ( ardılı, piksel kapısı 165/165 AYNI) — bu yorumun eski hâli o kuralların
+             "style.css'te durduğunu" söylüyordu ve artık doğru değildi. Tuzak da kalktı:
+             `#model-dropdown-sheet { display:none }` id specificity'siyle popover'ın UA
+             kuralını eziyordu, o id'ye dönülseydi açık popover görünmez kalırdı.
+             Yürürlükteki kanca: `#model-popover`. -->
+        <div popover id="model-popover" class="model-popover" role="dialog" aria-modal="true" aria-labelledby="model-popover-baslik">
+          <div data-i18n="girdi.model" class="model-popover-baslik" id="model-popover-baslik">Model</div>
+          <div data-i18n-aria-label="girdi.model-secimi" id="model-popover-liste" role="radiogroup" aria-label="Model seçimi"></div>
+        </div>
+<!-- Banner metni SABİT DEĞİL: `WAKE_WORD_ENABLED` kapalıyken "Hey Yuki dinleniyor"
+     yazmak yalandı — filtre kapalıyken Yuki duyduğu her cümleye yanıt verir.
+     Metni core.js::_wakeBannerYaz() gerçek duruma göre yazar. -->
+<div data-i18n-aria-label="girdi.hey-yuki-wake-word-modu" id="wake-word-banner" role="region" aria-label="Hey Yuki uyandırma kelimesi modu">
+  <span data-i18n="girdi.dinleniyor" id="wake-word-text" role="status" aria-live="polite">Dinleniyor…</span>
+  <span data-i18n-aria-label="girdi.hey-yuki-wake-word-modu" id="wake-word-secim" role="radiogroup" aria-label="Hey Yuki uyandırma kelimesi modu" hidden>
+    <button data-i18n="girdi.her-ses" data-i18n-title="girdi.duydugu-her-cumleyi-yanitlar" type="button" role="radio" aria-checked="false" onclick="wakeWordSec(false)" title="Duyduğu her cümleyi yanıtlar">her ses</button>
+    <button data-i18n="girdi.yalniz-hey-yuki" data-i18n-title="girdi.yalniz-hey-yuki-ile-baslayan" type="button" role="radio" aria-checked="false" onclick="wakeWordSec(true)" title="Yalnız 'Hey Yuki' ile başlayan cümleyi yanıtlar">yalnız “Hey Yuki”</button>
+  </span>
+</div>
+<button data-i18n-title="girdi.durdur" data-i18n-aria-label="girdi.sesli-yaniti-durdur" id="stop-audio-btn" class="dg dg-ikincil dg-ikon" onclick="stopAudio()" aria-label="Sesli yanıtı durdur" title="Durdur">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+        </button>
+        <button data-i18n-aria-label="girdi.mesaji-gonder" id="send-btn" class="dg dg-birincil dg-ikon" onclick="sendMessage()" aria-label="Mesajı gönder">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+        <!-- Halka Konsolu (10-11): küçültülmüş hâlde yazı hapının yerine bu düğme kalır.
+             Durum: js/giris-konsol.js (localStorage giris_kucuk_v1) · "/" de açar (core.js). -->
+        <button data-i18n-title="girdi.yaz-ac-ipucu" data-i18n-aria-label="girdi.yaz-ac" id="giris-ac" class="dg dg-sessiz" type="button"
+                onclick="girisKucult(false)" title="Yazı alanını aç (/)" aria-label="Yazı alanını aç" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg><span data-i18n="girdi.yaz">YAZ</span>
+        </button>
+        <!-- Mobil: flex-wrap satır kırıcı (kontroller üst satır, input alt satır) -->
+        <div id="input-break" aria-hidden="true"></div>
+      </div>
+      <!-- Durum satırı (Halka Konsolu, 2026-10-11 kişiselle birebir):
+           ince bir metin satırı "◈ model · dil · küçült ⌄". Eskiden burada EKRAN · PANO ·
+           ARA · AKTAR çipleri vardı; dördü de ⋯ menüsünde aynı fonksiyonla duruyor
+           (#menu-ekran · #menu-pano · Web'de ara · #menu-aktar) ve kademe kapıları menüde
+           aynen uygulanıyor (modes/sohbet-sahne.js hizliYetki/hizliKur) — işlev kaybı yok.
+           Model/dil düğmeleri ⋯ menüsündeki asıl düğmelerin VEKİLİ: aynı fonksiyonu çağırır,
+           etiketini oradan kopyalar. Asıllar menüde kalır çünkü HALKA bu satırı göstermez.
+           Görsel yükseklik ince, dokunma alanı 44px (::after, sohbet-sahne.css). -->
+      <div id="hizli-satir" hidden>
+        <div class="hizli-haplar">
+          <button data-i18n-title="girdi.model-sec" id="hap-model" class="hizli-hap" type="button" title="Model seç"
+                  popovertarget="model-popover" aria-controls="model-popover" aria-haspopup="dialog" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 8l8 5 8-5-8-5Z"/><path d="m4 12 8 5 8-5m-16 4 8 5 8-5"/></svg>
+            <span data-i18n="girdi.model-etiket" class="gorsel-gizli">Model:</span> <span class="hap-metin hap-tam" id="hap-model-ad" data-i18n-yok>GPT-4.1</span><span class="hap-metin hap-kisa" id="hap-model-kisa" aria-hidden="true" data-i18n-yok>GPT-4.1</span><span class="hap-metin hap-kur" id="hap-model-kur" data-i18n="girdi.model-kurulum">kurulum gerekli</span>
+          </button>
+          <span class="hizli-ayrac" aria-hidden="true">·</span>
+          <button id="hap-dil" class="hizli-hap" type="button" onclick="toggleLanguage()">
+            <span data-i18n="dil.baslik" class="gorsel-gizli">Konuşma dili:</span> <span class="gorsel-gizli" id="hap-dil-ad" data-i18n-yok>Türkçe</span><span class="hap-metin" id="hap-dil-kod" aria-hidden="true" data-i18n-yok>TR</span>
+          </button>
+          <span class="hizli-ayrac" aria-hidden="true">·</span>
+          <!-- Hep dinle anahtarı (kişiseldeki gibi, 11-14): asıl #always-on-btn'in vekili, durumu core.js _hepDinleAnahtarTazele yazar. -->
+          <button id="hep-dinle-anahtar" class="hizli-hap" type="button" role="switch" aria-checked="false" onclick="toggleAlwaysOn()"
+                  data-i18n-title="girdi.her-zaman-dinle" title="Her zaman dinle"><span class="hd-nokta" aria-hidden="true"></span><span id="hep-dinle-yazi" class="hap-metin" data-i18n-yok>Hep dinle: kapalı</span></button>
+          <span class="hizli-ayrac" aria-hidden="true">·</span>
+          <button data-i18n-title="girdi.kucult" data-i18n-aria-label="girdi.kucult" id="giris-kucult" class="hizli-hap" type="button"
+                  onclick="girisKucult(true)" title="Yazı alanını küçült" aria-label="Yazı alanını küçült">
+            <span data-i18n="girdi.kucult-kisa" class="hap-metin" aria-hidden="true">küçült</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PLANNER TAB ── -->
+<div id="tab-planner" role="tabpanel" aria-labelledby="tab-btn-planner" hidden>
+  <iframe id="planner-iframe" src="" allowfullscreen style="width:100%;height:100%;border:none;display:block;"></iframe>
+</div>
+
+<!-- ── YÜZ PANELİ (2026-09-06'da Ayarlar'a taşındı) ──
+     İçeriği js/faces.js kurar.
+     Yüz tanıma paneli. Artık bir sekme paneli DEĞİL — Ayarlar → Güvenlik odası
+     bunu kendi gövdesine gömüyor (intro-sequences.js). `role="tabpanel"` ve
+     `aria-labelledby` KALDIRILDI: işaret ettikleri sekme düğmesi artık yok,
+     kalsalardı ekran okuyucu var olmayan bir sekmeye bağlı panel duyururdu.
+     Varsayılan gizli — odaya gömülünce `display` açılır. -->
+<div id="faces-root" class="faces-root" style="display:none"></div>
+
+<!-- ── HQ TAB ── -->
+<div id="tab-hq" data-hq="key" role="tabpanel" aria-labelledby="tab-btn-hq" hidden>
+  <!-- Katmanı kapat. Ray katmanın altında kaldığı için geri dönüş
+       yolunu GÖSTEREN tek işaret bu. Escape de kapatır (tab-nav.js). -->
+  <button data-i18n-title="hq.ayarlari-kapat-esc" data-i18n-aria-label="hq.ayarlari-kapat" id="hq-katman-kapat" type="button" onclick="switchTab('chat')"
+          aria-label="Ayarları kapat" title="Ayarları kapat (Esc)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+         stroke-linecap="round" aria-hidden="true" width="20" height="20">
+      <path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+
+  <!-- ═══ HQ SOL DİKEY MENÜ (2026-08-12, karar D5) ═══
+       İçeriği `intro-sequences.js::hqMenuCiz` üretir: panel girdileri + ayar
+       kategorileri TEK listede, gruplu. Eskiden burada 8 statik yatay sekme
+       vardı ve ayar kategorileri AYARLAR panelinin İÇİNDE ikinci bir dikey
+       liste olarak duruyordu (iç içe iki menü).
+       🔴 Statik kopya bilerek bırakılmadı: menü iki yerde tanımlansaydı
+       (HTML + JS) er geç ayrışırlardı — `surum.js` dersi. Kategoriler zaten
+       yalnız JS ile geliyor, yarısı statik bir menü tam olarak o ayrışmadır. -->
+  <!-- Sekme başlığı (11-13): öbür 7 sekmeyle aynı köşe kimliği; görünüm css/baslik-gozlemevi.css,
+       yer hq.css § Sekme başlığı. "Bilgisayarım" vb. oda başlıkları bölüm başlığı olarak kalır. -->
+  <div class="sekme-baslik hq-sekme-baslik"><span class="sekme-baslik__etiket">YUKI HQ</span><span class="sekme-baslik__ad" data-i18n="baslik.ayarlar">Ayarlar</span></div>
+  <div data-i18n-aria-label="hq.ayarlar-menusu" id="hq-subnav" role="navigation" aria-label="Ayarlar menüsü"></div>
+  <!-- Telefon şeridinin kaydırma okları (T1, 10-11): ≤720px'te şerit yatay kayar ama bunu yalnız
+       kenar solması söylüyordu — goz "Sağlık" yarım kesik + soluk gördü. Ok, o tarafta etiket
+       kaldığını GÖSTERİR ve basınca kaydırır. Görünürlük `#tab-hq[data-serit-sol|sag]`
+       (intro-sequences.js `_seritOk`). Klavye için gerekmez: odaklanan düğme kendiliğinden
+       görünür alana kayar → aria-hidden + tabindex=-1. Masaüstünde (dikey menü) hiç yok. -->
+  <button id="hq-serit-geri" class="hq-serit-ok" type="button" tabindex="-1" aria-hidden="true" onclick="hqSeritKaydir(-1)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+  <button id="hq-serit-ileri" class="hq-serit-ok" type="button" tabindex="-1" aria-hidden="true" onclick="hqSeritKaydir(1)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+
+
+  <!-- ═══ SAĞLIK PANELİ (kurulum denetimi + oto onarım + hata günlüğü) ═══
+       2026-08-01: ürün temiz Windows'ta çalışmadı ve her başarısızlık sessizdi.
+       Bu panel "neyin bozuk olduğunu ürün kendisi söylesin" için var. -->
+  <!-- ═══ SAĞLIK · YETENEK KARTLARI ═══  ( panel 10, 2026-09-28 — geliştirici taslak B'yi seçti)
+       Taslak B (2026-09-26 HQ taslakları). Üstte hüküm kartı
+       (#sag-ozet), dört yetenek kartı (#sag-liste — Sohbet · Ses · Görme ve hafıza · Kayıt), hata günlüğü
+       özeti. Kartlar ve hüküm JS'ten doğar (intro-sequences.js `_sagCiz`); eylemler `data-sag` + tek
+       dinleyici. Eski kusurlar: satır içi onclick/stil, ⚠️ emoji, #sag-spin (08-28 oda kabuğu) · panel
+       yalnız ilk açılışta denetleniyordu · yeşil "yolunda" ölçülemeyen denetimde de yanıyordu (09-28).
+       Yeniden başlatma bölümü (#sag-yeniden-baslat, 2026-09-08 geliştirici isteği) JS'ten DOLDURULUR: düğme yalnız
+       Electron'da anlamlı; bekleyen ayar varsa odanın en üstünde mor şerit, yoksa en altta sessiz satır. -->
+  <div id="hq-panel-saglik" class="hq-panel oda">
+    <h2 data-i18n="hq.saglik.kurulum-ve-saglik" class="gorsel-gizli">Kurulum ve Sağlık</h2>
+
+    <div class="oda-bas">
+      <div class="oda-bas-metin">
+        <h3 data-i18n="hq.saglik.baslik" class="oda-baslik">Sağlık</h3>
+        <p class="oda-amac" data-i18n-html="hq.saglik.amac">Yuki'nin bu bilgisayarda çalışmak için nelere ihtiyaç duyduğunu
+          kendi denetler. Bir şey çalışmıyorsa <b>neden</b> ve <b>ne yapman gerektiğini</b> burada görürsün.</p>
+      </div>
+      <div class="oda-eylem">
+        <button data-i18n="hq.saglik.denetle" type="button" class="dg dg-ikincil" id="sag-tara" data-sag="tara">Yeniden denetle</button>
+      </div>
+    </div>
+
+    <div class="oda-govde sag-govde">
+      <div id="sag-yeniden-baslat" class="sag-yb"></div>
+
+      <section id="sag-ozet" class="sag-kart sag-hukum" aria-live="polite" data-durum="yukleniyor"></section>
+
+      <div id="sag-liste" class="sag-izgara"></div>
+
+      <section class="sag-kart sag-gunluk" aria-labelledby="sag-gunluk-bas">
+        <h3 id="sag-gunluk-bas" data-i18n="hq.saglik.hata-gunlugu">Hata günlüğü</h3>
+        <div class="sag-gunluk-satir">
+          <div id="sag-log-ozet" class="sag-yay"></div>
+          <div class="sag-dugmeler">
+            <button data-i18n="hq.saglik.goster" type="button" class="dg dg-sessiz" data-sag="goster" aria-expanded="false" aria-controls="sag-log">Göster</button>
+            <button data-i18n="hq.saglik.kopyala" type="button" class="dg dg-sessiz" data-sag="kopyala">Kopyala</button>
+            <button data-i18n="hq.saglik.temizle" type="button" class="dg dg-sessiz" data-sag="temizle">Temizle</button>
+          </div>
+        </div>
+        <p id="sag-log-durum" class="sag-log-durum" role="status"></p>
+        <pre id="sag-log" class="sag-log" hidden></pre>
+        <p class="sag-kucuk" data-i18n-html="hq.saglik.gunluk-ipucu">Destek isterken <b>Kopyala</b>'ya bas ve mesajına yapıştır — anahtarların otomatik gizlenir.</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- ═══ SİSTEM PANELİ (Dalga 3 · 2026-09-10 — kişiselden taşındı) ═══
+       Backend yarısı `b453ee2`'de indi: `api/monitor.py` `main.py`'ye kayıtlı,
+       dört builder yml'den çıkarıldı, `system_monitor` = Free.
+
+       🔴 **Yeni HQ paneli = ÜÇ PARÇA BİRDEN** (ledger). ① buradaki div
+       ② `intro-sequences.js::_HQ_PANELS` listesi ③ `css/hq-monitor.css`'teki
+       `#tab-hq[data-hq="sistem"] #hq-panel-sistem{display:flex !important}`.
+       ③ unutulursa panel SESSİZCE boş kalır (`hq.css:1024` hepsini `none`'a
+       çeker) — kişiselde duvar kâğıdı turunda bizzat ölçüldü.
+
+       ⚠️ Kişiseldeki `#intel-health` (SYS HEALTH şeridi) ve `#sys-events-strip`
+       (LIVE EVENTS) BİLEREK ALINMADI. Onları `mon-*` değil `js/hq-monitor.js`
+       besliyor — 454 satırlık ayrı bir "istihbarat paneli" (haber · hatırlatma
+       · hafıza araması) ve üründe o uçların karşılığı yok. Kopyalansalardı
+       ekranda kalıcı "—" şeridi ve `setIntelFilter is not defined` veren altı
+       düğme dururdu: "ilan edilen ama uygulanmayan özellik" sınıfı, bu üründe
+       bir kez ciddi kusur üretti (`gfx.js` ULTRA kademesi dersi).
+
+       Değer alanlarını `intro-sequences.js::monitorRender` doldurur; buradaki
+       başlangıç metni "—" (0 DEĞİL — 0°C yalan söyler, Windows'ta 70 alandan
+       ~6'sı hiç okunamaz). -->
+  <div id="hq-panel-sistem" class="hq-panel oda">
+    <h2 data-i18n="hq.sistem.bilgisayarim" class="gorsel-gizli">Bilgisayarım</h2>
+
+    <div class="oda-bas">
+      <div class="oda-bas-metin">
+        <!-- Başlık "Sistem" DEĞİL: `gelistirici` ayar kategorisi zaten
+             "Sistem" adını taşıyor (settings_api.py:253) ve aynı menüde. -->
+        <h3 data-i18n="hq.sistem.bilgisayarim" class="oda-baslik">Bilgisayarım</h3>
+        <p class="oda-amac" data-i18n-html="hq.sistem.amac">Bilgisayarının o anki durumu: işlemci, bellek, ekran kartı,
+          disk, ağ ve çalışan programlar. Yuki yavaşladıysa <b>neyin</b> yavaşlattığını
+          burada görürsün. Okunamayan bir değer <b>—</b> ile gösterilir.</p>
+      </div>
+      <div class="oda-eylem">
+        <button data-i18n="hq.sistem.yuki-ye-sor" type="button" class="dg dg-ikincil" id="mon-doctor-btn"
+                onclick="monitorDoctor()">Yuki'ye sor</button>
+      </div>
+    </div>
+
+    <!-- 2026-09-27 · MAKİNE: bilgisayar ŞEMA olarak (kişisel a1a54ae'nin seçilen tasarımı,
+         ürün verisi + ürün token'larıyla yeniden kuruldu). Sağlık + açık kalma süresi TEK
+         yerde (üst şerit) — eskiden ayrı kartta, halka "100%" taşıyordu. Uzun tablolar
+         (TÜM PROGRAMLAR · GEÇMİŞ) katlı: ilk bakış "ne oluyor"u söyler, dökümü değil. -->
+    <div class="oda-govde mon-govde">
+      <div class="mon-ust">
+        <div class="mon-ust-sol">
+          <div class="mon-kimlik" id="mon-kimlik">—</div>
+          <div class="mon-meta">
+            <!-- Etiket + değer tek parça (white-space:nowrap): telefonda "22.3 W" alt satırda yetim kalıyordu (goz 11-13). -->
+            <span class="mon-meta-oge"><span data-i18n="mon.acik">açık</span> <span id="mon-uptime">—</span></span>
+            <span class="mon-nokta" aria-hidden="true">·</span>
+            <span class="mon-meta-oge"><span data-i18n="hq.sistem.sicaklik">sıcaklık</span> <span id="mon-cpu-temp">—</span></span>
+            <!-- 🔴 GÜÇ Windows'ta ve çoğu masaüstünde okunamaz (RAPL = /sys/class/powercap,
+                 Linux'a özel) → "—". Gizlemek "böyle bir ölçü yok" demek olurdu. -->
+            <span class="mon-nokta" aria-hidden="true">·</span>
+            <span class="mon-meta-oge"><span data-i18n="hq.sistem.gpu-guc" id="mon-power-sub">güç</span> <span id="mon-power">—</span></span>
+          </div>
+        </div>
+        <div class="mon-muhur" id="mon-muhur" role="status" aria-live="polite">
+          <span class="mon-muhur-skor" id="mon-health-val">—</span>
+          <span class="mon-muhur-metin"><span data-i18n="hq.sistem.saglik">SAĞLIK</span> · <span id="mon-muhur-durum">—</span></span>
+        </div>
+      </div>
+      <div id="mon-alerts" class="mon-alerts" hidden></div>
+      <div id="mon-doctor-result" class="mon-doktor" hidden></div>
+
+      <div class="mon-makine">
+        <section class="mon-kart mon-kart-islemci" aria-labelledby="mon-h-islemci">
+          <div class="mon-kart-bas"><span id="mon-h-islemci" data-i18n="mon.islemci">İŞLEMCİ</span>
+            <span class="mon-kart-sag" data-i18n-title="mon.yuk-aciklama" title="Sıradaki iş sayısı — son 1 · 5 · 15 dakika. Çekirdek sayısının altındaysa işlemci yetişiyor."><span data-i18n="hq.sistem.yuk">yük</span> <span id="mon-cpu-load">—</span></span></div>
+          <div class="mon-buyuk"><b id="mon-cpu-total">—</b><span id="mon-cpu-freq">—</span></div>
+          <div class="mon-cekirdekler" id="mon-cpu-cores"></div>
+          <div class="mon-kart-alt" data-i18n="mon.cekirdek-aciklama">her kare bir çekirdek · parlaklık = doluluk</div>
+        </section>
+
+        <section class="mon-kart" aria-labelledby="mon-h-bellek">
+          <div class="mon-kart-bas"><span id="mon-h-bellek" data-i18n="hq.sistem.bellek">BELLEK</span>
+            <span class="mon-kart-sag" id="mon-ram-total">—</span></div>
+          <div class="mon-buyuk"><b id="mon-ram-used">—</b><span data-i18n="mon.gb-kullanimda">GB kullanımda</span></div>
+          <div class="mon-hucreler" id="mon-ram-cells" aria-hidden="true"></div>
+          <div class="mon-lejant">
+            <span><i class="h-dolu"></i><span data-i18n="mon.kullanimda">kullanımda</span></span>
+            <span><i class="h-onbellek"></i><span data-i18n="hq.sistem.onbellek">önbellek</span> <span id="mon-ram-cache">—</span></span>
+            <span><i class="h-bos"></i><span data-i18n="mon.bos">boş</span></span>
+          </div>
+          <div class="mon-kart-alt"><span data-i18n="mon.takas">takas</span> <span id="mon-swap-txt">—</span> · <span id="mon-ram-birim"></span></div>
+        </section>
+
+        <section class="mon-kart" aria-labelledby="mon-gpu-name">
+          <div class="mon-kart-bas"><span id="mon-gpu-name" data-i18n="hq.sistem.ekran-karti">EKRAN KARTI</span>
+            <span class="mon-kart-sag" id="mon-vram-txt">—</span></div>
+          <div class="mon-buyuk"><b id="mon-gpu-util">—</b>
+            <span><span id="mon-gpu-temp">—</span> · <span id="mon-gpu-power">—</span> · <span data-i18n="hq.sistem.fan">fan</span> <span id="mon-gpu-fan">—</span></span></div>
+          <div class="mon-hucreler mon-hucreler-vram" id="mon-vram-cells" aria-hidden="true"></div>
+          <!-- AMD satırı yalnız AMD iGPU BULUNDUĞUNDA yazılır — backend "yok" ile
+               "okunamıyor"u ayıramıyor (ikisi de None); "—" olmayan donanımı gösterirdi. -->
+          <div class="mon-kart-alt"><span data-i18n="mon.vram-aciklama">her kare 1 GB video belleği</span> <span id="mon-amd"></span></div>
+        </section>
+
+        <section class="mon-kart mon-kart-genis" aria-labelledby="mon-h-disk">
+          <div class="mon-kart-bas"><span id="mon-h-disk" data-i18n="hq.sistem.diskler">DİSKLER</span></div>
+          <div id="mon-disks"></div>
+        </section>
+
+        <section class="mon-kart" aria-labelledby="mon-h-ag">
+          <div class="mon-kart-bas"><span id="mon-h-ag" data-i18n="hq.sistem.ag">AĞ</span>
+            <span class="mon-kart-sag" id="mon-net-conns">—</span></div>
+          <div id="mon-net-list" class="mon-ag"></div>
+          <canvas id="mon-net-spark" class="mon-spark" height="36" aria-hidden="true"></canvas>
+        </section>
+      </div>
+
+      <div class="mon-alt-ikili">
+        <section class="mon-bolum" aria-labelledby="mon-h-yiyen">
+          <h4 class="mon-bolum-bas" id="mon-h-yiyen" data-i18n="mon.ne-yiyor">NE YİYOR?</h4>
+          <div id="mon-yiyen"></div>
+        </section>
+        <section class="mon-bolum" aria-labelledby="mon-h-bugun">
+          <h4 class="mon-bolum-bas" id="mon-h-bugun"><span data-i18n="mon.gun-ozeti">GÜN ÖZETİ</span>
+            <span class="mon-rep-nav">
+              <button data-i18n-aria-label="hq.sistem.onceki-gun" data-i18n-title="hq.sistem.onceki-gun" type="button" id="mon-rep-prev" class="mon-rep-navbtn" title="Önceki gün" aria-label="Önceki gün">◀</button>
+              <button data-i18n-aria-label="hq.sistem.bugune-don" data-i18n-title="hq.sistem.bugune-don" type="button" id="mon-rep-today" class="mon-rep-navbtn" title="Bugüne dön" aria-label="Bugüne dön">●</button>
+              <button data-i18n-aria-label="hq.sistem.sonraki-gun" data-i18n-title="hq.sistem.sonraki-gun" type="button" id="mon-rep-next" class="mon-rep-navbtn" title="Sonraki gün" aria-label="Sonraki gün">▶</button>
+            </span>
+            <span class="mon-hd-sub" id="mon-rep-meta"></span></h4>
+          <div class="mon-tepeler" id="mon-rep-peaks"></div>
+          <div class="mon-rep-grid">
+            <div class="mon-rep-col"><div class="mon-rep-h"><span data-i18n="hq.sistem.en-cok-cpu">EN ÇOK CPU</span> <span data-i18n="hq.sistem.toplam-sure">(toplam süre)</span></div><div id="mon-rep-cpu"></div></div>
+            <div class="mon-rep-col"><div class="mon-rep-h"><span data-i18n="hq.sistem.en-cok-ram">EN ÇOK RAM</span> <span data-i18n="hq.sistem.zirve">(zirve)</span></div><div id="mon-rep-mem"></div></div>
+          </div>
+        </section>
+      </div>
+
+      <details class="mon-katli" id="mon-saglik-katli">
+        <summary><span data-i18n="mon.saglik-olcer">SAĞLIK ÖLÇERİ</span> <span id="mon-saglik-ozet" class="mon-hd-sub"></span>
+          <span class="mon-rbtns"><button type="button" class="mon-rbtn" id="mon-saglik-olc" data-i18n="mon.saglik-olc">Şimdi ölç</button></span></summary>
+        <div id="mon-saglik-liste" class="mon-ag"></div>
+        <div class="mon-kart-alt" id="mon-saglik-alt"></div>
+      </details>
+
+      <details class="mon-katli">
+        <summary><span data-i18n="mon.tum-programlar">TÜM PROGRAMLAR</span> <span id="mon-proc-count" class="mon-hd-sub"></span></summary>
+        <div class="mon-proc-wrap">
+          <table class="mon-proc">
+            <thead><tr>
+              <th data-sort="pid" class="num">PID</th>
+              <th data-i18n="hq.sistem.program" data-sort="name">PROGRAM</th>
+              <th data-i18n="hq.sistem.komut" class="mon-cmd-col">KOMUT</th>
+              <th data-sort="cpu" class="num">CPU%</th>
+              <th data-i18n="hq.sistem.bellek" data-sort="mem" class="num">BELLEK</th>
+              <th class="num">THR</th>
+              <th data-i18n="hq.sistem.kullanici">KULLANICI</th>
+              <th data-i18n="hq.sistem.sure" class="num">SÜRE</th>
+            </tr></thead>
+            <tbody id="mon-proc-body"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <details class="mon-katli" id="mon-gecmis-katli">
+        <summary><span data-i18n="hq.sistem.gecmis">GEÇMİŞ</span>
+          <span class="mon-hist-ctl">
+            <span class="mon-leg" data-i18n-yok><i style="background:var(--mon-seri-1)"></i>CPU <i style="background:var(--mon-seri-2)"></i>RAM <i style="background:var(--mon-seri-3)"></i>GPU</span>
+            <span class="mon-rbtns">
+              <button type="button" class="mon-rbtn active" data-r="1h" data-i18n="mon.aralik-1s">1S</button>
+              <button type="button" class="mon-rbtn" data-r="24h" data-i18n="mon.aralik-24s">24S</button>
+              <button type="button" class="mon-rbtn" data-r="7d" data-i18n="mon.aralik-7g">7G</button>
+            </span>
+            <span class="mon-hd-sub" id="mon-hist-count"></span>
+          </span></summary>
+        <canvas id="mon-hist-main" height="150" aria-hidden="true"></canvas>
+        <div class="mon-rep-h mon-ag-gecmis-bas"><span data-i18n="hq.sistem.ag-gecmisi">AĞ GEÇMİŞİ</span> <span class="mon-leg" data-i18n-yok><i style="background:var(--mon-seri-1)"></i>↓ <i style="background:var(--mon-seri-2)"></i>↑ MB/s</span></div>
+        <canvas id="mon-hist-net" height="64" aria-hidden="true"></canvas>
+      </details>
+
+      <div class="mon-foot"><span data-i18n="hq.sistem.canli-alt">⟳ 2 sn · canlı ·</span> <span id="mon-ts">—</span></div>
+    </div>
+  </div>
+
+  <!-- ═══ ANAHTAR PANELİ (BYOK key sihirbazı) ═══ -->
+  <!-- ═══ ANAHTAR · BAĞLANTI KARTI ( panel 8, 2026-09-27 — geliştirici taslak A'yı seçti) ═══
+       Kart içeriği `intro-sequences.js` (`keyInit` → `_anCiz`) tarafından çizilir: anahtar kayıtlıyken
+       durum satırları, yokken üç adım. Eski "solda yap, sağda öğren" iki kolonu ve sabit
+       yedek model listesi kalktı — liste /api/llm/models'ten, yedeği sunucuda. -->
+  <div id="hq-panel-key" class="hq-panel oda">
+    <h2 data-i18n="hq.anahtar.anahtar" class="gorsel-gizli">Anahtar</h2>
+    <div class="oda-bas">
+      <div class="oda-bas-metin">
+        <h3 data-i18n="hq.anahtar.anahtar" class="oda-baslik">Anahtar</h3>
+        <p data-i18n="hq.anahtar.amac" class="oda-amac">Yuki bir yapay zekâ servisine senin anahtarınla bağlanır. Sohbet genelde ayda birkaç dolar tutar; ücretsiz başlamak da mümkün.</p>
+      </div>
+    </div>
+    <div class="oda-govde">
+      <section id="hq-key-kart" class="an-kart" aria-live="polite">
+        <p data-i18n="hq.anahtar.durum-yukleniyor" class="an-alt">Durum yükleniyor…</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- ═══ SÜRÜM PANELİ (HQ id'si tarihsel olarak `license`) ═══
+       Açık kaynak sürümde lisans/paket merdiveni kaldırıldı (2026-10-17). Yalnız sürüm ve
+       güncelleme bölümü kaldı; sahibi `updater-ui.js` (`#hq-upd-*`), stil `css/hq-surum.css`. -->
+  <div id="hq-panel-license" class="hq-panel oda">
+    <h2 data-i18n="hq.lisans.surum-guncelleme" class="gorsel-gizli">Sürüm ve güncelleme</h2>
+
+    <div class="oda-govde">
+      <section class="lic-surum" id="hq-upd-bolum" aria-labelledby="hq-upd-baslik">
+        <h3 id="hq-upd-baslik" data-i18n="hq.lisans.surum-guncelleme">Sürüm ve güncelleme</h3>
+        <div class="lic-surum-satir">
+          <div class="lic-yay">
+            <div id="hq-upd-version" data-i18n="hq.lisans.surum-okunuyor">Sürüm okunuyor…</div>
+            <p id="hq-upd-result" class="upd-sonuc" aria-live="polite"></p>
+          </div>
+          <button data-i18n="hq.lisans.simdi-denetle" type="button" class="dg dg-sessiz upd-masaustu" id="hq-upd-check">Şimdi denetle</button>
+        </div>
+        <div class="lic-surum-satir upd-masaustu">
+          <div class="lic-yay">
+            <b id="hq-upd-toggle-ad" data-i18n="hq.lisans.haber-ver">Yeni sürüm çıkınca haber ver</b>
+            <p class="lic-kucuk" data-i18n="hq.lisans.haber-ver-not">Açıkken günde bir kez GitHub'daki sürüm listesine bakılır; kişisel veri gönderilmez.</p>
+          </div>
+          <label class="anahtar"><input type="checkbox" role="switch" id="hq-upd-toggle" aria-labelledby="hq-upd-toggle-ad"><span class="yol" aria-hidden="true"></span></label>
+        </div>
+        <div class="lic-surum-satir upd-masaustu">
+          <div class="lic-yay">
+            <label for="hq-upd-channel"><b data-i18n="hq.lisans.kanal">Kanal</b></label>
+            <p class="lic-kucuk" data-i18n="hq.lisans.kanal-not">Erken kanal ön sürümleri beklemeden getirir.</p>
+          </div>
+          <select class="girdi" id="hq-upd-channel">
+            <option data-i18n="hq.lisans.kararli-yayindan-24-saat-sonra" value="stable">Kararlı — yayından 24 saat sonra</option>
+            <option data-i18n="hq.lisans.erken-on-surumler-dahil" value="beta">Erken — ön sürümler dahil, beklemesiz</option>
+          </select>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ═══ AYARLAR PANELİ ═══ -->
+  <!-- Kategori listesi (#hq-settings-side) kaldırıldı — kategoriler sol menüde. -->
+  <div id="hq-panel-ayarlar" class="hq-panel">
+    <h2 data-i18n="hq.ayarlar.ayarlar" class="gorsel-gizli">Ayarlar</h2>
+    <div id="hq-settings-main"><div data-i18n="hq.ayarlar.ayarlar-yukleniyor" class="intel-empty">— AYARLAR YÜKLENİYOR —</div></div>
+  </div>
+
+  <!-- ═══ TEMA PANELİ (koyu / orta / açık — 2026-08-27) ═══
+       Frontend-only: seçim localStorage'da, backend ayarı YOK. Sebep: tema
+       cihazın kendi tercihi; iki makinede aynı hesapla farklı ortam olabilir
+       (masaüstü karanlık oda, dizüstü aydınlık). Sunucuya yazmak yanlış
+       cihazda yanlış temayı dayatırdı. -->
+  <div id="hq-panel-tema" class="hq-panel oda">
+    <h2 data-i18n="hq.tema.tema" class="gorsel-gizli">Tema</h2>
+
+    <div class="oda-bas">
+      <div class="oda-bas-metin">
+        <h3 data-i18n="hq.tema.tema" class="oda-baslik">Tema</h3>
+        <!-- Amaç cümlesi odanın kararını taşıyor: seçim zevke göre değil ODANIN IŞIĞINA göre
+             (taslak B, 2026-10-01). Kartlar tema adı değil ortam anlatır. -->
+        <p data-i18n="hq.tema.calistigin-ortama-gore-sec" class="oda-amac">Hangisini seçeyim? Ekranın değil, odanın ışığına bak: Yuki üç ortam için
+          ayrı hazırlandı. Seçim yalnız bu bilgisayarda kalır.</p>
+      </div>
+    </div>
+
+    <div class="oda-govde">
+      <div data-i18n-aria-label="hq.tema.tema-secimi" id="tema-secenekler" class="tm-izgara" role="radiogroup" aria-label="Ortam seçimi"></div>
+      <!-- "Bilgisayarım karar versin" anahtarı + şu an satırı — js/tema-panel.js kurar -->
+      <div id="tema-sistem" class="tm-sistem"></div>
+    </div>
+  </div>
+
+  <!-- ═══ MODLAR ODASI ═══  (FAZ 9 · 2026-08-28 — oda kabuğuna taşındı)
+       Ölçülen kusur: sol AYARLAR menüsü + 224px'lik mod listesi sütunu +
+       form = ekranda ÜÇ dikey şerit. Mod listesi Hafıza Yöneticisi'ndeki
+       kapsam süzgeciyle aynı desene alındı (yatay, sarmalanan şerit) — bir
+       sütun eksildi ve iki oda aynı dili konuşuyor.
+
+       ⚠️ JS sözleşmesi korundu: `#hq-modes-list` (renderModesList basar),
+       `#hq-mode-form` + `#hq-mode-empty` (renderModeForm/hqModeDelete
+       display'lerini elle yönetir), `#hq-modes-sys`. -->
+  <!-- ═══ DUVAR KÂĞIDI PANELİ (kişiselden taşındı 2026-09-08) ═══
+       İçeriği `duvar.js::panelCiz` çizer. Boş kutu BİLEREK: kitaplık ve ayar
+       backend'den gelir, markup'ı ikinci kez HTML'e yazmak "aynı soruya iki
+       cevap" olurdu (`surum.js` dersi).
+       🔴 Açılış karşı-kuralı `css/duvar.css`'te:
+       `#tab-hq[data-hq="duvar"] #hq-panel-duvar{display:flex !important}`.
+       Onsuz panel İÇERİĞİ çizilir ama ekranda görünmez (kişiselde ölçüldü:
+       9061 karakter çizilmiş, ekran boş). -->
+  <div id="hq-panel-duvar" class="hq-panel oda">
+    <div class="oda-bas">
+      <div class="oda-bas-metin">
+        <h3 data-i18n="duvar.oda-baslik" class="oda-baslik">Duvar kâğıdı</h3>
+        <p data-i18n="duvar.oda-amac" class="oda-amac">Her sekmenin arkasına resim, GIF ya da kısa video koy. Önizleme, seçtiğin sekmenin nasıl görüneceğini gösterir.</p>
+      </div>
+    </div>
+    <div class="oda-govde dv-govde" id="dv-govde">
+      <div data-i18n="hq.duvar.duvar-kagidi-yukleniyor" class="intel-empty">— DUVAR KÂĞIDI YÜKLENİYOR —</div>
+    </div>
+  </div>
+
+  <!-- ═══ GOOGLE PANELİ (2026-09-14) ═══════════════════════════════
+       Müşteri KENDİ Google Cloud projesinin kimliğini girer, hesabını bağlar.
+       İçeriği `js/google-baglanti.js` çizer — boş kutu BİLEREK (duvar.js
+       deseni): üç durumun (kimlik yok / bağlı değil / bağlı) markup'ını
+       HTML'e ikinci kez yazmak "aynı soruya iki cevap" olurdu.
+       🔴 Açılış karşı-kuralı `css/hq.css`'te:
+       `#tab-hq[data-hq="google"] #hq-panel-google{display:flex !important}`.
+       Onsuz panel içeriği çizilir ama ekranda GÖRÜNMEZ (duvar panelinde
+       ölçüldü: 9061 karakter çizilmiş, ekran boş). -->
+
+  <!-- CİHAZLAR — içeriği js/cihazlar.js çizer; boş kutu BİLEREK
+       (duvar/yedekleme deseni): "kod yok / kod var / cihaz listesi" üç durumunun
+       markup'ını HTML'e ikinci kez yazmak "aynı soruya iki cevap" olurdu.
+       ⚠️ Açılış kuralı hq.css'te: #tab-hq[data-hq="cihazlar"] #hq-panel-cihazlar.
+       Onsuz içerik çizilir ama ekran BOŞ görünür (duvar panelinde ölçülmüştü). -->
+  <div id="hq-panel-cihazlar" class="hq-panel"></div>
+
+  <div id="hq-panel-google" class="hq-panel">
+    <div data-i18n="hq.google.google-baglantisi-yukleniyor" class="intel-empty">— GOOGLE BAĞLANTISI YÜKLENİYOR —</div>
+  </div>
+
+  <div id="hq-panel-modlar" class="hq-panel oda">
+    <h2 data-i18n="hq.modlar.modlar" class="gorsel-gizli">Modlar</h2>
+
+    <div class="oda-bas">
+      <div class="oda-bas-metin">
+        <h3 data-i18n="hq.modlar.modlar" class="oda-baslik">Modlar</h3>
+        <p data-i18n="hq.modlar.bir-kelimeyle-calisma" class="oda-amac">Bir kelimeyle çalışma düzenini kur: "çalışma modu" dediğinde
+          Yuki senin seçtiğin uygulamaları açsın,
+          doğru masaüstüne geçsin.</p>
+        <p class="md-bas-durum" id="hq-modes-durum" aria-live="polite"></p>
+      </div>
+      <div class="oda-eylem">
+        <span data-i18n-title="hq.modlar.kurulu-sistem-otomatik" id="hq-modes-sys" class="hq-modes-sys" title="Kurulu sistem otomatik algılandı">—</span>
+        <button data-i18n="hq.modlar.yeni-mod" type="button" class="dg" id="hq-mode-new-btn"
+                onclick="hqModeNew()">Yeni mod</button>
+      </div>
+    </div>
+
+    <div class="oda-govde">
+      <div data-i18n-aria-label="hq.modlar.kayitli-modlar" id="hq-modes-list" class="md-izgara" role="group" aria-label="Kayıtlı modlar"></div>
+      <div class="bos" id="hq-mode-empty" style="display:none">
+        <svg class="bos-ikon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>
+        </svg>
+        <p data-i18n="hq.modlar.henuz-mod-yok" class="bos-bas">Henüz mod yok</p>
+        <p data-i18n="hq.modlar.bir-mod-tek-komutla-acilan" class="bos-metin">Bir mod, tek komutla açılan çalışma düzenidir: hangi
+          uygulamalar açılsın, hangi masaüstüne geçilsin.
+          "Yeni mod" ile ilkini kur.</p>
+      </div>
+      <div id="hq-mode-form" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ═══ HAFIZA · DOSYA (2026-09-27 — kişisel ae87ce4 tasarımı, ürüne yeniden yazıldı) ═══
+       Solda "Yuki seni N şeyle tanıyor" (fact/preference/skill/task grupları, önem = 5 çentik),
+       sağda arama + konuşmalar gün gün balon. Üründe GEÇMİŞ paneli zaten yok — tek panelin dönüşümü.
+       🔴 Test çapaları: her grubun kabı `data-scope="<kat>"` taşır ve ilk `data-i18n`'i
+       `_MEMMGR_KAT[kat]` ile aynı anahtardır (rozet = başlık, aynı şeyin tek adı);
+       `data-i18n` taşıyan elemanın eleman çocuğu olmaz (sayaç kardeş `<b>`). -->
+  <div id="hq-panel-memmgr" class="hq-panel oda">
+    <h2 data-i18n="hq.hafiza.hafiza-yoneticisi" class="gorsel-gizli">Hafıza Yöneticisi</h2>
+
+    <div class="oda-bas">
+      <div class="oda-bas-metin">
+        <h3 data-i18n="hq.hafiza.hafiza-yoneticisi" class="oda-baslik">Hafıza Yöneticisi</h3>
+        <p data-i18n="hq.hafiza.yuki-nin-senin-hakkinda" class="oda-amac">Yuki'nin senin hakkında tuttuğu anılar burada. Ara, oku,
+          istemediğini sil. Ne kadarının cevaplara katılacağını ayarlamak için
+          HAFIZA odasına git.</p>
+      </div>
+      <div class="oda-eylem">
+        <!-- Dışa aktar: FAZ 4'te kaldırılan Alt+H hafıza overlay'inden taşındı. -->
+        <button data-i18n="hq.hafiza.disa-aktar" type="button" class="dg dg-ikincil" id="memmgr-export-btn"
+                onclick="_exportMemory()">Dışa aktar</button>
+      </div>
+    </div>
+
+    <div class="oda-govde hf-govde">
+      <section class="hf-dosya" aria-labelledby="hf-baslik">
+        <div class="hf-bas">
+          <h3 id="hf-baslik" class="hf-baslik">—</h3>
+          <p id="hf-alt" class="hf-alt"></p>
+        </div>
+        <div id="memmgr-scope-list" class="hf-gruplar">
+          <div class="hf-grup" data-scope="fact" hidden>
+            <div class="hf-hud"><span data-i18n="hq.hafiza.grup-kim">Kim olduğun</span> <b id="msc-fact">—</b></div>
+            <div class="hf-grup-liste" id="hf-grup-fact"></div>
+          </div>
+          <div class="hf-grup" data-scope="preference" hidden>
+            <div class="hf-hud"><span data-i18n="hq.hafiza.grup-sever">Neyi seversin</span> <b id="msc-preference">—</b></div>
+            <div class="hf-grup-liste" id="hf-grup-preference"></div>
+          </div>
+          <div class="hf-grup" data-scope="skill" hidden>
+            <div class="hf-hud"><span data-i18n="hq.hafiza.grup-yol">Öğrendiği yollar</span> <b id="msc-skill">—</b></div>
+            <div class="hf-grup-liste" id="hf-grup-skill"></div>
+          </div>
+          <div class="hf-grup" data-scope="task" hidden>
+            <div class="hf-hud"><span data-i18n="hq.hafiza.grup-gorev">Verdiğin görevler</span> <b id="msc-task">—</b></div>
+            <div class="hf-grup-liste" id="hf-grup-task"></div>
+          </div>
+        </div>
+        <p id="hf-bilgi-bos" class="hf-bos" data-i18n="hq.hafiza.bilgi-bos" hidden>Yuki henüz senin hakkında kalıcı bir şey öğrenmedi. Ona "şunu unutma: …" diyebilirsin.</p>
+      </section>
+
+      <div class="hf-arac">
+        <div class="hf-ara">
+          <span class="hf-ara-ikon" aria-hidden="true">⌕</span>
+          <input id="memmgr-search" type="search" autocomplete="off"
+                 data-i18n-placeholder="hq.hafiza.ara-ipucu" placeholder="Konuşmalarda ve bildiklerinde ara…"
+                 data-i18n-aria-label="hq.hafiza.hafizada-ara" aria-label="Hafızada ara"
+                 onkeydown="if(event.key==='Enter')memmgrSearch()" oninput="if(!this.value)memmgrSearch()"/>
+        </div>
+        <div class="hf-cipler" role="group" data-i18n-aria-label="hq.hafiza.konusma-suzgeci" aria-label="Konuşma süzgeci">
+          <button type="button" class="hf-cip on" data-scope="conversation" data-rol="" onclick="hfRolSec('')" aria-pressed="true"><span data-i18n="hq.hafiza.kapsam-konusma">Konuşmalar</span> <b id="msc-conversation">—</b></button>
+          <button type="button" class="hf-cip" data-rol="user" onclick="hfRolSec('user')" aria-pressed="false" data-i18n="hq.hafiza.sadece-sen">Sadece sen</button>
+          <button type="button" class="hf-cip" data-rol="assistant" onclick="hfRolSec('assistant')" aria-pressed="false" data-i18n="hq.hafiza.sadece-yuki">Sadece Yuki</button>
+        </div>
+      </div>
+
+      <section class="hf-akis-kap">
+        <div id="memmgr-list" aria-live="polite"></div>
+        <button data-i18n="hq.hafiza.daha-eski" type="button" id="memmgr-daha" class="hf-daha" onclick="memmgrDahaFazla()" hidden>Daha eski</button>
+        <p id="memmgr-stats" class="hf-not"></p>
+
+        <div class="hf-dip">
+          <!-- Bu metin 2026-08-08'de bilerek yazılmıştı: hafıza dosyası yerelde durur
+               AMA sohbet metni sağlayıcıya gider. Sınır burada açıkça yazılı kalmalı. -->
+          <p data-i18n="hq.hafiza.hafizan-bu-makinede-tek" id="memmgr-gizlilik" class="hf-dip-metin">
+            Hafızan bu makinede, tek dosyada durur — bize gitmez. (Sohbet ederken mesajın,
+            yanıtlanmak için seçtiğin sağlayıcıya gider; yerel model seçersen o da olmaz.)
+          </p>
+          <!-- Metin SQL'e karşı doğrulandı (memory_sqlite.py — `category='conversation'
+               AND importance < 0.35 AND created_at < cutoff`). -->
+          <div class="hf-temizlik">
+            <p class="hf-dip-metin" data-i18n-html="hq.hafiza.temizle-aciklama">Yalnız <b>konuşma</b> anılarından önemi düşük ve 7 günden
+              eski olanları siler. Bildiklerine dokunmaz.</p>
+            <button data-i18n="hq.hafiza.eski-anilari-temizle" type="button" class="dg dg-ikincil dg-tehlike" id="memmgr-cleanup-btn"
+                    onclick="memmgrCleanup()">Eski konuşmaları temizle</button>
+            <span id="memmgr-temizlik-durum" class="hf-not" aria-live="polite"></span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ═══ FAZ 19: TTS (SES) PANELİ — artık AYARLAR > Ses & TTS kategorisi altına gömülür (hqSelectCat) ═══ -->
+  <div id="hq-panel-tts" style="display:none;">
+    <h2 data-i18n="hq.ses.ses-ve-tts" class="gorsel-gizli">Ses ve TTS</h2>
+
+    <!-- Zincir Durumu -->
+    <div class="tts-section">
+      <h3 data-i18n="hq.ses.aktif-tts-zinciri" class="tts-section-title">◈ AKTİF TTS ZİNCİRİ</h3>
+      <div class="tts-chain" id="tts-chain-display">
+        <span data-i18n="hq.ses.yukleniyor" style="font-family:var(--font-hud);font-size:10px;color:var(--muted);">Yükleniyor…</span>
+      </div>
+      <div class="tts-node-note" id="tts-chain-note"></div>
+    </div>
+
+    <!-- Test Bölümü -->
+    <div class="tts-section">
+      <h3 data-i18n="hq.ses.tts-test" class="tts-section-title">▶ TTS TEST</h3>
+      <div class="tts-row">
+        <!-- 🪤 `value` ÇEVİRİ KANCASI İSTER (Blok 9). Panel turu bunu göremedi:
+             `<input>` değeri bir metin düğümü değil, TreeWalker'a görünmez —
+             İngilizce ekranda kutuda Türkçe bir cümle duruyordu ve ölçüm
+             "0 kaçak" diyordu. `value` çizicinin öznitelik listesinde zaten
+             vardı (`dil.js::OZNITELIKLER`), yalnız burada kullanılmamıştı.
+             ⚠️ Çizici yazdığını hatırlar: kullanıcı kutuyu değiştirdiyse dil
+             değişimi onun metnini SİLMEZ (`_sahibiBizMiyiz`). -->
+        <input data-i18n-placeholder="hq.ses.test-metni-girin" data-i18n-aria-label="hq.ses.tts-test-metni" data-i18n-value="hq.ses.test-metni" aria-label="TTS test metni" id="tts-test-text" class="tts-input" type="text"
+               value="Merhaba! Ses sistemi hazır ve çalışıyor."
+               placeholder="Test metni gir…"/>
+        <button data-i18n="hq.ses.seslendir" class="tts-btn" onclick="ttsTest()">SESLENDİR</button>
+      </div>
+      <audio id="tts-audio-player" controls></audio>
+    </div>
+
+    <!-- Karakter Başına Ses Atama -->
+    <div class="tts-section">
+      <h3 class="tts-section-title"><span data-i18n="hq.ses.karakter-profilleri">♪ KARAKTER SES PROFİLLERİ</span> <span style="font-size:8px;opacity:.5" data-i18n="hq.ses.edge-lokal">(Edge TTS — lokal)</span></h3>
+      <div class="tts-voice-grid" id="tts-voice-grid">
+        <!-- JS ile doldurulur -->
+      </div>
+    </div>
+
+    <!-- Fish TTS Referans Ses — 🔴 ayarı `available:false` ise BU BLOK DA gizlenir
+         (`hqSelectCat`). Yoksa "Fish Speech TTS" anahtarını listeden kaldırıp aynı
+         özelliğin dosya yükleme yüzeyini açık bırakırdık: müşteri ses dosyası
+         yükler, hiçbir şey olmaz — gizlemenin çözdüğü kusurun aynısı. -->
+    <div class="tts-section" data-ayar="USE_FISH_TTS">
+      <h3 data-i18n="hq.ses.fish-speech-referans-sesi" class="tts-section-title">🐟 FISH SPEECH REFERANS SESİ</h3>
+      <div class="tts-row">
+        <span data-i18n="hq.ses.wav-mp3-yukle" class="tts-label">WAV/MP3 yükle</span>
+        <input type="file" id="tts-ref-file" accept="audio/wav,audio/mp3,audio/mpeg"
+               style="display:none" onchange="ttsUploadRef()"/>
+        <button data-i18n="hq.ses.dosya-sec" class="tts-btn" onclick="document.getElementById('tts-ref-file').click()">DOSYA SEÇ</button>
+        <span id="tts-ref-filename">—</span>
+      </div>
+      <div data-i18n="hq.ses.yuklendi" id="tts-ref-status">✓ Yüklendi</div>
+      <div data-i18n="hq.ses.yukleme-sonrasi-fish" style="font-family:var(--font-hud);font-size:9px;color:rgba(255,255,255,0.3);margin-top:6px;">
+        Yükleme sonrası FISH_REFERENCE_AUDIO ortam değişkenini .env dosyasına ekleyip servisi yeniden başlat.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ BİLDİRİM · GELEN KUTUSU (2026-09-27 — kişisel 431c1ef tasarımı, ürüne yeniden yazıldı) ═══
+       Solda "Yuki ne dedi": kendiliğinden söyledikleri (alarm · sabah · gecikmiş · rutin · sistem)
+       ve her kanalın izi (EKRAN · TELEFON · SES); hiçbirine ulaşmadıysa KAÇIRDIN.
+       Sağda alarmlar + tek kutudan kurma + "sana nasıl ulaşırım" (ekran ışığı, telefon bağla/test).
+       Elle bildirim gönderme formu ve kayıt düzenleme KALKTI: bu oda bir gönderme aracı değil,
+       kullanıcı buraya "ne oldu" diye gelir (deneme için TEST GÖNDER yeter). -->
+  <div id="hq-panel-pushlog" class="hq-panel oda">
+    <h2 data-i18n="hq.bildirim.bildirim" class="gorsel-gizli">Bildirim</h2>
+
+    <div class="oda-bas">
+      <div class="oda-bas-metin">
+        <h3 data-i18n="hq.bildirim.bildirim" class="oda-baslik">Bildirim</h3>
+        <p data-i18n="hq.bildirim.oda-amac" class="oda-amac">Yuki'nin kendiliğinden söyledikleri, kurduğun alarmlar ve sana hangi yoldan ulaştığı.</p>
+      </div>
+      <div class="oda-eylem">
+        <button data-i18n="hq.bildirim.yenile" type="button" class="dg dg-ikincil" onclick="pushlogInit()">Yenile</button>
+      </div>
+    </div>
+
+    <div class="oda-govde bd-govde">
+      <section class="bd-gelen" aria-labelledby="bd-baslik">
+        <div class="bd-bas">
+          <h3 id="bd-baslik" data-i18n="hq.bildirim.yuki-ne-dedi" class="bd-baslik">Yuki ne dedi</h3>
+          <p id="bd-ozet" class="bd-ozet"></p>
+        </div>
+        <div id="hq-pushlog-list" class="bd-liste" aria-live="polite"></div>
+        <button data-i18n="hq.bildirim.daha-eski" type="button" id="bd-daha" class="bd-daha" onclick="pushlogDahaEski()" hidden>Daha eski</button>
+      </section>
+
+      <aside class="bd-yan">
+        <section class="bd-kutu" aria-labelledby="bd-alarm-bas">
+          <h4 id="bd-alarm-bas" class="bd-kutu-bas"><span data-i18n="hq.bildirim.alarmlar">Alarmlar</span> <b id="intel-reminder-count">0</b></h4>
+          <div class="bd-kur">
+            <input id="bd-alarm-girdi" class="girdi" type="text" autocomplete="off"
+                   data-i18n-placeholder="hq.bildirim.alarm-ipucu" placeholder="18:30 çamaşırı as"
+                   data-i18n-aria-label="hq.bildirim.alarm-kur" aria-label="Alarm kur"
+                   onkeydown="if(event.key==='Enter')bdAlarmKur()"/>
+            <button data-i18n="hq.bildirim.kur" type="button" class="dg dg-birincil" id="bd-alarm-kur" onclick="bdAlarmKur()">Kur</button>
+          </div>
+          <p id="bd-alarm-durum" class="bd-not" aria-live="polite"></p>
+          <p data-i18n="hq.bildirim.alarm-ornek" class="bd-not">Örnek: «yarın 09:00 toplantı» · «20 dk sonra çay» · «her 2 saat su iç»</p>
+          <div id="intel-reminder-list" class="bd-alarmlar"></div>
+        </section>
+
+        <section class="bd-kutu" aria-labelledby="bd-kanal-bas">
+          <h4 id="bd-kanal-bas" data-i18n="hq.bildirim.sana-nasil-ulasirim" class="bd-kutu-bas">Sana nasıl ulaşırım</h4>
+          <div id="bd-kanallar" class="bd-kanallar"></div>
+          <div class="bd-kanal-eylem">
+            <button data-i18n="hq.bildirim.bu-cihazi-bagla" type="button" class="dg dg-ikincil" id="bd-bagla" onclick="bdBagla()">Bu cihazı bağla</button>
+            <button data-i18n="hq.bildirim.test-gonder" type="button" class="dg dg-sessiz" id="bd-test" onclick="bdTest()">Deneme gönder</button>
+          </div>
+          <p id="bd-kanal-durum" class="bd-not" aria-live="polite"></p>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+</div><!-- /tab-hq -->
+
+<!-- PANEL sekmesi -->
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     MAP PANOSU (Dalga 3 kalanı, 2026-09-18)
+
+     2026-10-04 — "HARİTA ÖNCE": kişisel AliceAi'nin 09-28 kararı
+     (taslak A, commit 8dd7587) ürüne ÇEVRİLEREK taşındı. Harita tam ekran;
+     üstüne beş yüzen yüzey: ① YER ŞERİDİ (konum · hava · gün · gök)
+     ② GÖRÜNÜM + ARA + KATMANLAR ③ KATMANLAR çekmecesi (18 katman, gruplu,
+     satır = anahtar) ④ GÜNDEM (sol alt) ⑤ koordinat + araçlar + görsel mod.
+     Kalkanlar: 7 kart + sağ panel (Yuki portresi, YUKI KANALI, GÖREV
+     KONTROL, SİSTEM, SİNYAL, PİYASA), mod çubuğu, akan şerit, radar süsü.
+     Eski KONUM/HAVA/UZAY kartlarının kimlikleri ŞERİTTE aynen yaşıyor —
+     map-engine.js onlara yazıyor.
+
+     Sekme düğmesi `hidden` doğar; `tab-nav.js` kademeye bakıp açar
+     (panel/jobs deseninin aynısı). Uçlar `backend/app/api/map.py`.
+     Yerleşim css/map-hud.css · paneller css/map-controls.css.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="tab-map" class="gozlemevi" role="tabpanel" aria-labelledby="tab-btn-map" hidden>
+
+  <!-- Harita sahnesi — Leaflet · 3D · gezegen · zaman çizelgesi -->
+  <div id="map-center">
+    <canvas id="planet-canvas" style="display:none;position:absolute;inset:0;width:100%;height:100%;z-index:450;"></canvas>
+    <div id="planet-hud" style="display:none;position:absolute;inset:0;z-index:451;pointer-events:none;">
+      <div id="planet-hud-name"></div>
+      <div id="planet-hud-corners">
+        <div class="phc tl"></div><div class="phc tr"></div>
+        <div class="phc bl"></div><div class="phc br"></div>
+      </div>
+      <div id="planet-hud-stats"></div>
+      <div id="planet-orrery-wrap"><canvas id="planet-orrery" width="220" height="220"></canvas></div>
+    </div>
+    <div id="leaflet-map"></div>
+
+    <!-- 3D Holographic Map Container -->
+    <div id="map-3d-container">
+      <div id="maplibre-map"></div>
+      <div id="map-3d-grid"></div>
+      <div id="map-3d-scan"></div>
+      <div class="map3d-corner tl"></div>
+      <div class="map3d-corner tr"></div>
+      <div class="map3d-corner bl"></div>
+      <div class="map3d-corner br"></div>
+      <div id="map-3d-hud">
+        <div data-i18n="harita.h3d.baslik" class="h3d-title">◈ TAKTİK 3D</div>
+        <div data-i18n-yok id="h3d-eq">DEPREM: —</div>
+        <div data-i18n-yok id="h3d-fire">YANGIN: —</div>
+        <div data-i18n-yok id="h3d-plane">UÇAK: —</div>
+        <div data-i18n-yok id="h3d-ship">GEMİ: —</div>
+        <div data-i18n-yok id="h3d-sat">UYDU: —</div>
+        <div data-i18n-yok id="h3d-vol">VOLKAN: —</div>
+      </div>
+    </div>
+    <div id="map-scan-overlay"></div>
+    <div id="map-scope-overlay">
+      <div class="scope-corner tl"></div>
+      <div class="scope-corner tr"></div>
+      <div class="scope-corner bl"></div>
+      <div class="scope-corner br"></div>
+      <div class="scope-center-ring"></div>
+    </div>
+
+    <div id="map-click-toast"></div>
+    <div id="map-confirm" role="dialog" data-i18n-aria-label="harita.secilen-konum" aria-label="Seçilen konum">
+      <div data-i18n="harita.konum-secildi" id="map-confirm-loc">◈ KONUM SEÇİLDİ</div>
+      <div id="map-confirm-query"></div>
+      <div id="map-confirm-btns">
+        <button data-i18n="harita.yuki-ye-sor" type="button" class="map-confirm-btn ok" id="map-confirm-ok">▶ YUKI'YE SOR</button>
+        <button data-i18n="harita.iptal" type="button" class="map-confirm-btn no" onclick="mapConfirmClose()">✕ İPTAL</button>
+      </div>
+    </div>
+
+    <!-- Timeline Scrubber -->
+    <div id="map-timeline">
+      <div id="tl-header">
+        <span class="tl-title">◈ TIMELINE</span>
+        <span id="tl-window-label">—</span>
+        <div class="tl-spacer"></div>
+        <button type="button" class="tl-ctrl-btn live-pulse" id="tl-btn-live" onclick="tlGoLive()">● LIVE</button>
+        <button data-i18n="harita.gizle" type="button" class="tl-ctrl-btn" onclick="tlCollapse()">▼ GİZLE</button>
+      </div>
+      <div id="tl-body">
+        <canvas id="tl-canvas"></canvas>
+        <div id="tl-cursor-line" style="display:none;"></div>
+        <div id="tl-hover-tip"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ① YER ŞERİDİ — konum · hava · gün · gök (değerleri map-engine.js yazar) -->
+  <div id="map-serit" class="mh-cam" role="group" data-i18n-aria-label="harita.serit-etiket" aria-label="Konum, hava ve gökyüzü">
+    <div class="mh-bolum mh-yer sekme-baslik">
+      <span class="sekme-baslik__etiket" data-i18n="baslik.harita">HARİTA</span>
+      <span class="mh-sehir sekme-baslik__ad" id="map-city">—</span>
+      <span class="mh-d mh-tel-gizle"><span id="map-lat">—</span> · <span id="map-lon">—</span></span>
+    </div>
+    <div class="mh-bolum">
+      <span data-i18n="harita.hava-2" class="mh-etiket">HAVA</span>
+      <span class="mh-d" id="map-temp">—</span>
+      <span class="mh-ikincil mh-tel-gizle"><span class="mh-kucuk-harf" id="map-weather-desc">—</span> · <span id="map-wind">—</span></span>
+    </div>
+    <div class="mh-bolum">
+      <span data-i18n="harita.etiket-gun" class="mh-etiket">GÜN</span>
+      <span class="mh-d"><span id="map-sunrise">—</span> – <span id="map-sunset">—</span></span>
+    </div>
+    <!-- GÖK (Gözlemevi, 11-13): Kp telefonda da görünür; ISS · ay · güneş yalnız geniş ekranda -->
+    <div class="mh-bolum mh-gok">
+      <span data-i18n="harita.etiket-gok" class="mh-etiket">GÖK</span>
+      <span class="mh-ikincil">Kp</span><span class="mh-d mh-canli" id="map-kp">—</span><span class="mh-ikincil mh-kucuk-harf" id="map-kp-level">—</span>
+      <span class="mh-ikincil mh-tel-gizle">· ISS</span><span class="mh-d mh-canli mh-tel-gizle" id="map-iss-dist">—</span>
+      <span class="mh-ikincil mh-tel-gizle">·</span><span data-i18n="harita.etiket-ay" class="mh-ikincil mh-tel-gizle">ay</span><span class="mh-d mh-kucuk-harf mh-tel-gizle" id="map-moon">—</span>
+      <span id="map-solar-grup" class="mh-gunes mh-tel-gizle" hidden><span class="mh-ikincil">·</span><span data-i18n="harita.gunes" class="mh-ikincil">güneş</span><span class="mh-d mh-kucuk-harf" id="map-solar" data-i18n-title="harita.gunes-ipucu" title="Son 24 saatteki güneş patlaması (NASA DONKI)">—</span></span>
+    </div>
+    <!-- Telefonda şerit çekirdek üç bölümle kapalı başlar; bu düğme tamamını açar (masaüstünde gizli) -->
+    <button type="button" id="map-serit-ac" onclick="mapSeritAc()" aria-expanded="false" data-i18n-aria-label="harita.serit-tamami" data-i18n-title="harita.serit-tamami" aria-label="Konum, hava ve gök bilgisinin tamamı" title="Konum, hava ve gök bilgisinin tamamı"><span class="mh-ok" aria-hidden="true"></span></button>
+  </div>
+
+  <!-- BOŞ DURUM — hiç katman açık değilken (Gözlemevi, 11-13). Görünürlüğü map-hud.js
+       mapKatmanSay yönetir (hidden); düğme deprem + ISS'i açar, gerisi KATMANLAR'da. -->
+  <section id="map-bos" class="mh-cam" data-i18n-aria-label="harita.bos-etiket" aria-label="Harita boş" hidden>
+    <p class="mb-bas" data-i18n="harita.bos-baslik">Haritada açık katman yok</p>
+    <p class="mb-ne" data-i18n="harita.bos-metin">Yakınındaki depremler ve uzay istasyonuyla başla. Diğer 16 katman KATMANLAR'da.</p>
+    <button type="button" id="map-bos-ac" onclick="mapBosBasla()" data-i18n="harita.bos-ac">Deprem + ISS'i aç</button>
+  </section>
+
+  <!-- ② ARA + KATMANLAR (sağ üst; telefonda ⌕ yer kartında, KATMANLAR alt sırada) — GÖRÜNÜM sağ alta indi (11-13) -->
+  <div id="map-sag-ust">
+    <button type="button" id="map-ara-ac" class="mh-cam mh-ikon" onclick="mapAraAc()" data-i18n-aria-label="harita.konum-ara-2" data-i18n-title="harita.konum-ara-2" aria-label="Konum ara" title="Konum ara" aria-expanded="false" aria-controls="map-search-bar">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <button type="button" id="map-katman-ac" class="mh-cam mh-katbtn" onclick="mapKatmanCekmece()" aria-expanded="false" aria-controls="map-katman-cekmece">
+      <span data-i18n="harita.katmanlar">KATMANLAR</span> <span class="mh-d"><span id="map-katman-sayi">0</span> <span data-i18n="harita.acik">açık</span></span>
+    </button>
+  </div>
+
+  <!-- Harita araması — ⌕ ile açılır, Esc/⌕ ile kapanır -->
+  <!-- Formun kendi büyüteci YOK: ⌕ düğmesi hemen yanında (açıkken iki büyüteç görünüyordu, göz tur 2) -->
+  <form id="map-search-bar" class="mh-cam" role="search" data-i18n-aria-label="harita.konum-ara-2" aria-label="Konum ara" onsubmit="searchMapLocation(); return false;">
+    <input data-i18n-placeholder="harita.ara-yer-tutucu" data-i18n-aria-label="harita.aranacak-konum" id="map-search-input" type="search" placeholder="Şehir, adres ya da yer…" autocomplete="off" enterkeyhint="search" aria-label="Aranacak konum" />
+    <button data-i18n="harita.ara" data-i18n-aria-label="harita.konumu-ara" id="map-search-btn" type="submit" aria-label="Konumu ara">ARA</button>
+  </form>
+
+  <!-- ③ KATMANLAR çekmecesi — 18 katman, dört grup. Satırın kendisi anahtardır:
+       id="map-layer-<anahtar>" toggleLayer'ın yazdığı düğme (aria-checked JS'te eşitlenir).
+       Satırın adı `harita.katman.<anahtar>` — _katmanAdi() ile AYNI sözlük girdisi. -->
+  <aside id="map-katman-cekmece" class="mh-cam" data-i18n-aria-label="harita.katmanlar-etiket" aria-label="Harita katmanları">
+    <div class="mk-bas">
+      <span class="mh-etiket-ana"><span data-i18n="harita.katmanlar">KATMANLAR</span> · 18</span>
+      <span class="mk-bas-sag">
+        <button data-i18n="harita.yonetici" data-i18n-title="harita.yonetici-ipucu" data-i18n-aria-label="harita.katman-yoneticisi-2" type="button" class="mk-bas-b" id="map-btn-layer-mgr" onclick="toggleLayerMgr()" title="Katman yöneticisi — deprem filtresi, özel konumlar, Kp" aria-label="Katman yöneticisi" aria-expanded="false" aria-controls="map-layer-mgr">YÖNETİCİ</button>
+        <button data-i18n="harita.kapat" data-i18n-aria-label="harita.katmanlari-kapat" type="button" class="mk-bas-b" onclick="mapKatmanCekmece(false)" aria-label="Katmanları kapat">KAPAT ✕</button>
+      </span>
+    </div>
+    <div class="mk-ic">
+      <section class="mk-grup" aria-labelledby="mk-g-doga">
+        <h3 class="mk-grup-bas"><span data-i18n="harita.doga" id="mk-g-doga">DOĞA</span><span class="mk-grup-sayi"><b>0</b> / 6</span></h3>
+        <button type="button" class="mk-satir" id="map-layer-eq"      role="switch" aria-checked="false" onclick="toggleLayer('eq')"      data-i18n-title="harita.depremler-afad-usgs-sismik" title="Depremler — AFAD + USGS + Sismik Harita (Kandilli/EMSC)"><span data-i18n="harita.katman.eq" class="mk-ad">DEPREM</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.eq" class="mk-ne">AFAD · USGS · Kandilli</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-fire"    role="switch" aria-checked="false" onclick="toggleLayer('fire')"    title="NASA FIRMS"><span data-i18n="harita.katman.fire" class="mk-ad">YANGIN</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.fire" class="mk-ne">NASA FIRMS uydu tespiti</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-volcano" role="switch" aria-checked="false" onclick="toggleLayer('volcano')" data-i18n-title="harita.aktif-yanardaglar" title="Aktif Yanardağlar"><span data-i18n="harita.katman.volcano" class="mk-ad">VOLKAN</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.volcano" class="mk-ne">aktif yanardağlar</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-eonet"   role="switch" aria-checked="false" onclick="toggleLayer('eonet')"   title="NASA EONET"><span data-i18n="harita.katman.eonet" class="mk-ad">AFET</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.eonet" class="mk-ne">NASA EONET doğa olayları</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-air"     role="switch" aria-checked="false" onclick="toggleLayer('air')"     title="OpenAQ PM2.5"><span data-i18n="harita.katman.air" class="mk-ad">PM2.5</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.air" class="mk-ne">OpenAQ hava kalitesi</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-weather" role="switch" aria-checked="false" onclick="toggleLayer('weather')" data-i18n-title="harita.hava-durumu" title="Hava Durumu"><span data-i18n="harita.katman.weather" class="mk-ad">HAVA</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.weather" class="mk-ne">bulut · yağış</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+      </section>
+      <section class="mk-grup" aria-labelledby="mk-g-hareket">
+        <h3 class="mk-grup-bas"><span data-i18n="harita.hareket" id="mk-g-hareket">HAREKET</span><span class="mk-grup-sayi"><b>0</b> / 6</span></h3>
+        <button type="button" class="mk-satir" id="map-layer-plane"    role="switch" aria-checked="false" onclick="toggleLayer('plane')"    data-i18n-title="harita.opensky-ucuslar" title="OpenSky Uçuşlar"><span data-i18n="harita.katman.plane" class="mk-ad">UÇUŞ</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.plane" class="mk-ne">OpenSky canlı uçuş</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-adsb"     role="switch" aria-checked="false" onclick="toggleLayer('adsb')"     title="ADS-B"><span data-i18n="harita.katman.adsb" class="mk-ad">ADSB</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.adsb" class="mk-ne">ADS-B alçak uçuş</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-ship"     role="switch" aria-checked="false" onclick="toggleLayer('ship')"     data-i18n-title="harita.aisstream-gemiler" title="AISStream Gemiler"><span data-i18n="harita.katman.ship" class="mk-ad">GEMİ</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.ship" class="mk-ne">AIS gemi trafiği</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-iss"      role="switch" aria-checked="false" onclick="toggleLayer('iss')"      data-i18n-title="harita.iss-konum" title="ISS Konum"><span data-i18n="harita.katman.iss" class="mk-ad">ISS</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.iss" class="mk-ne">uzay istasyonu canlı</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-sat"      role="switch" aria-checked="false" onclick="toggleLayer('sat')"      data-i18n-title="harita.celestrak-uydular" title="CelesTrak Uydular"><span data-i18n="harita.katman.sat" class="mk-ad">UYDU</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.sat" class="mk-ne">CelesTrak takımyıldız</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-asteroid" role="switch" aria-checked="false" onclick="toggleLayer('asteroid')" title="NASA NeoWs"><span data-i18n="harita.katman.asteroid" class="mk-ad">ASTEROİD</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.asteroid" class="mk-ne">NASA NeoWs yakın geçiş</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+      </section>
+      <section class="mk-grup" aria-labelledby="mk-g-izleme">
+        <h3 class="mk-grup-bas"><span data-i18n="harita.izleme" id="mk-g-izleme">İZLEME</span><span class="mk-grup-sayi"><b>0</b> / 3</span></h3>
+        <button type="button" class="mk-satir" id="map-layer-cctv"       role="switch" aria-checked="false" onclick="toggleLayer('cctv')"       data-i18n-title="harita.trafik-kameralari" title="Trafik Kameraları"><span data-i18n="harita.katman.cctv" class="mk-ad">CCTV</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.cctv" class="mk-ne">açık trafik kameraları</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-livestream" role="switch" aria-checked="false" onclick="toggleLayer('livestream')" data-i18n-title="harita.canli-yayinlar" title="Canlı Yayınlar"><span data-i18n="harita.katman.livestream" class="mk-ad">YAYIN</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.livestream" class="mk-ne">canlı yayınlar</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-military"   role="switch" aria-checked="false" onclick="toggleLayer('military')"   data-i18n-title="harita.gdelt-askeri" title="GDELT Askeri"><span data-i18n="harita.katman.military" class="mk-ad">ASKERİ</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.military" class="mk-ne">GDELT askeri olaylar</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+      </section>
+      <section class="mk-grup" aria-labelledby="mk-g-ekstra">
+        <h3 class="mk-grup-bas"><span data-i18n="harita.ekstra" id="mk-g-ekstra">EKSTRA</span><span class="mk-grup-sayi"><b>0</b> / 3</span></h3>
+        <button type="button" class="mk-satir" id="map-layer-osmplaces" role="switch" aria-checked="false" onclick="toggleLayer('osmplaces')" data-i18n-title="harita.osm-yerler-restoran-otel" title="OSM Yerler — Restoran/Otel/Hastane"><span data-i18n="harita.katman.osmplaces" class="mk-ad">YERLER</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.osmplaces" class="mk-ne">OSM restoran · otel · hastane</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-poi"       role="switch" aria-checked="false" onclick="toggleLayer('poi')"       data-i18n-title="harita.ozel-konumlar" title="Özel Konumlar"><span data-i18n="harita.katman.poi" class="mk-ad">POI</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.poi" class="mk-ne">kayıtlı özel konumlar</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+        <button type="button" class="mk-satir" id="map-layer-kpindex"   role="switch" aria-checked="false" onclick="toggleLayer('kpindex')"   data-i18n-title="harita.noaa-kp-indeksi" title="NOAA Kp İndeksi"><span data-i18n="harita.katman.kpindex" class="mk-ad">Kp</span><span class="mk-sayi"></span><span data-i18n="harita.katman-ne.kpindex" class="mk-ne">NOAA jeomanyetik fırtına</span><span class="mk-anahtar" aria-hidden="true"></span></button>
+      </section>
+      <section class="mk-grup mk-gorunum" aria-labelledby="mk-g-gorunum">
+        <h3 class="mk-grup-bas"><span data-i18n="harita.gorunum-bolum" id="mk-g-gorunum">GÖRÜNÜM</span></h3>
+        <!-- 🔴 `mapGorselMod`, `setViewMode` DEĞİL: o ad global ve modes/chat-modes.js (sonra yüklenir)
+             onu SOHBET görünümü için eziyor — EO/FLIR/NV/CRT tıklaması sohbet modunu 'chat'e
+             çeviriyordu, harita filtresi hiç uygulanmıyordu (ölçüldü 10-04). -->
+        <div id="map-view-bar" class="mh-cam mh-seg" role="group" data-i18n-aria-label="harita.gorsel-mod" aria-label="Görsel mod">
+          <button type="button" class="mh-seg-b map-view-btn active" onclick="mapGorselMod('eo')"    id="vbtn-eo" aria-pressed="true">EO</button>
+          <button type="button" class="mh-seg-b map-view-btn"        onclick="mapGorselMod('flir')"  id="vbtn-flir" aria-pressed="false">FLIR</button>
+          <button type="button" class="mh-seg-b map-view-btn"        onclick="mapGorselMod('night')" id="vbtn-night" aria-pressed="false">NV</button>
+          <button type="button" class="mh-seg-b map-view-btn"        onclick="mapGorselMod('crt')"   id="vbtn-crt" aria-pressed="false">CRT</button>
+        </div>
+        <div class="mh-cam mh-seg mh-araclar" role="group" data-i18n-aria-label="harita.araclar" aria-label="Harita araçları">
+          <button type="button" class="mh-seg-b map-view-btn" onclick="toggleScope()" id="vbtn-scope" data-i18n-title="harita.nisangah" data-i18n-aria-label="harita.nisangah" title="Nişangâh" aria-label="Nişangâh" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5" stroke-linecap="round"/></svg></button>
+          <button type="button" class="mh-seg-b map-view-btn" onclick="tlToggle()"    id="vbtn-tl"    data-i18n-title="harita.zaman-cizelgesi" data-i18n-aria-label="harita.zaman-cizelgesi" title="Deprem zaman çizelgesi (7 gün)" aria-label="Deprem zaman çizelgesi (7 gün)" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12h18"/><path d="M7 8v8M12 5v14M17 9v6"/></svg></button>
+        </div>
+        <div id="map-coords" class="mh-cam" aria-live="off">LAT — · LON —</div>
+      </section>
+    </div>
+  </aside>
+
+  <!-- ④ YAKINDA · DÜNYA · GÜNDEM (Gözlemevi "Kubbe", 11-13) — sol alt; telefonda alt sayfa.
+       YAKINDA: açık deprem katmanından istemcide süzülür (300 km · 24 sa) + ISS + Kp.
+       DÜNYA: aynı veriden en büyük olaylar. GÜNDEM: bölge haberleri (`/api/map/news`; kimlikler
+       aynı: map-news-list, map-gundem-sayi). Mantık js/map-hud.js (mapYakinGuncelle). -->
+  <section id="map-gundem" class="mh-cam mh-yakin" data-i18n-aria-label="harita.olaylar-etiket" aria-label="Yakında, dünya ve gündem">
+    <span class="mh-tutamak" aria-hidden="true"></span>
+    <div class="mh-yk-bas">
+      <div class="mh-yk-sekmeler" role="tablist" data-i18n-aria-label="harita.olaylar" aria-label="Olaylar">
+        <button type="button" role="tab" class="mh-yk-sekme" data-yk="yakin" aria-selected="true" aria-controls="map-yakin-list"><span data-i18n="harita.yakinda">YAKINDA</span></button>
+        <button type="button" role="tab" class="mh-yk-sekme" data-yk="dunya" aria-selected="false" aria-controls="map-dunya-list"><span data-i18n="harita.dunya">DÜNYA</span></button>
+        <button type="button" role="tab" class="mh-yk-sekme" data-yk="gundem" aria-selected="false" aria-controls="map-news-list"><span data-i18n="harita.gundem">GÜNDEM</span> <span class="mh-d" id="map-gundem-sayi">—</span></button>
+      </div>
+      <button type="button" id="map-gundem-bas" onclick="mapGundemAc()" aria-expanded="true" aria-controls="map-yk-govde" data-i18n-aria-label="harita.paneli-daralt" aria-label="Paneli daralt ya da aç">
+        <span class="mh-ok" aria-hidden="true"></span>
+      </button>
+    </div>
+    <div id="map-yk-govde">
+      <ol id="map-yakin-list" class="mh-olaylar" role="tabpanel" data-i18n-aria-label="harita.yakinda-etiket" aria-label="Yakında"><li data-i18n="harita.yukleniyor" class="mh-bos">yükleniyor…</li></ol>
+      <ol id="map-dunya-list" class="mh-olaylar" role="tabpanel" data-i18n-aria-label="harita.dunya-etiket" aria-label="Dünya" hidden></ol>
+      <ol id="map-news-list" class="mh-haberler" role="tabpanel" data-i18n-aria-label="harita.gundem-etiket" aria-label="Gündem" hidden><li data-i18n="harita.yukleniyor" class="mh-bos">yükleniyor…</li></ol>
+      <div class="mh-yk-alt">
+        <span class="mh-lejant" data-i18n-aria-label="harita.lejant-etiket" aria-label="Halka boyu büyüklüğü gösterir"><i class="l2"></i><i class="l4"></i><i class="l6"></i> <span data-i18n="harita.lejant">M2 · M4 · M6 · 24 sa · 300 km</span></span>
+        <button type="button" id="map-yk-sor" onclick="mapYakinSor()" data-i18n="harita.yakin-yuki-ye-sor">Yuki'ye sor</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑤ GÖRÜNÜM (sağ alt, zoom'un solunda; telefonda tek alt sıranın solu) — Gözlemevi 11-13.
+       Koordinat, araçlar ve görsel mod çekmecenin GÖRÜNÜM bölümünde (kimlikler aynı). -->
+  <div id="map-alt-sag">
+    <div class="mh-cam mh-seg" id="map-gorunum" role="group" data-i18n-aria-label="harita.gorunum-etiket" aria-label="Görünüm">
+      <button data-i18n="harita.dunya" type="button" class="mh-seg-b active" id="map-btn-world"  onclick="setMapMode('world')" aria-pressed="true">DÜNYA</button>
+      <button data-i18n="harita.turkiye" type="button" class="mh-seg-b"        id="map-btn-turkey" onclick="setMapMode('turkey')" aria-pressed="false">TÜRKİYE</button>
+      <button type="button" class="mh-seg-b"        id="map-btn-3d"     onclick="toggle3DMode()" aria-pressed="false">3D</button>
+    </div>
+  </div>
+
+  <!-- ROTA — yol tarifi çizilince görünür (map-engine.js _mapRenderRouteHud) -->
+  <section id="map-card-route" class="mh-cam" style="display:none;" data-i18n-aria-label="harita.rota" aria-label="Rota">
+    <div class="mh-rota-bas">
+      <span data-i18n="harita.rota" class="mh-etiket-ana">ROTA</span>
+      <button data-i18n="harita.temizle" data-i18n-aria-label="harita.rotayi-temizle" type="button" id="map-route-clear" aria-label="Rotayı temizle">TEMİZLE ✕</button>
+    </div>
+    <div class="mh-rota-sat"><span data-i18n="harita.basl">BAŞL.</span><span class="mh-d" id="map-route-from">—</span></div>
+    <div class="mh-rota-sat"><span data-i18n="harita.hedef">HEDEF</span><span class="mh-d" id="map-route-to">—</span></div>
+    <div class="mh-rota-sat"><span data-i18n="harita.mesafe">MESAFE</span><span class="mh-d" id="map-route-dist">—</span></div>
+    <div class="mh-rota-sat"><span data-i18n="harita.sure">SÜRE</span><span class="mh-d" id="map-route-eta">—</span></div>
+    <div class="mh-rota-sat" id="map-route-stops-row" style="display:none;"><span data-i18n="harita.durak">DURAK</span><span class="mh-d" id="map-route-stops">—</span></div>
+    <div id="map-route-steps"></div>
+  </section>
+
+  <!-- Place Detail Panel (Google Maps tarzı) — haritada bir yere tıklanınca soldan açılır -->
+  <div id="place-detail-panel">
+    <div id="pdp-photo-wrap">
+      <button data-i18n-aria-label="harita.yer-detayini-kapat" type="button" id="pdp-close" onclick="closePlaceDetail()" aria-label="Yer detayını kapat">✕</button>
+      <img id="pdp-photo" src="" alt="">
+      <div id="pdp-photo-placeholder"></div>
+    </div>
+    <div id="pdp-body">
+      <div id="pdp-name">—</div>
+      <div id="pdp-category">—</div>
+      <div id="pdp-actions"></div>
+      <div id="pdp-divider"></div>
+      <div id="pdp-details"></div>
+      <button data-i18n="harita.yuki-ye-bu-yer-hakkinda-sor" type="button" id="pdp-ask-yuki" onclick="_pdpAskYuki()">◈ Yuki'ye Bu Yer Hakkında Sor</button>
+      <div id="pdp-photos-section" style="display:none">
+        <div data-i18n="harita.fotograflar" id="pdp-photos-label">Fotoğraflar</div>
+        <div id="pdp-photos-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Katman Yöneticisi — çekmecenin YÖNETİCİ düğmesiyle, çekmecenin üstünde açılır -->
+  <div id="map-layer-mgr" data-i18n-aria-label="harita.katman-yoneticisi-2" aria-label="Katman yöneticisi">
+    <div class="mlm-header">
+      <span data-i18n="harita.katman-yoneticisi-3">KATMAN YÖNETİCİSİ</span>
+      <button data-i18n-aria-label="harita.katman-yoneticisini-kapat" type="button" class="mlm-close" onclick="toggleLayerMgr()" aria-label="Katman yöneticisini kapat">✕</button>
+    </div>
+    <div class="mlm-section">
+      <div data-i18n="harita.deprem-filtresi" class="mlm-section-title">DEPREM FİLTRESİ</div>
+      <div class="mlm-filter-row">
+        <span class="mlm-filter-label">MIN MAG</span>
+        <input class="mlm-filter-input" id="mlm-eq-minmag" type="number" min="0" max="10" step="0.5" value="2.5" style="width:50px" onchange="updateLayerFilter('eq','min_mag',this.value)" />
+        <span data-i18n="harita.donem" class="mlm-filter-label">DÖNEM</span>
+        <select class="mlm-filter-input" id="mlm-eq-period" style="width:64px" onchange="updateLayerFilter('eq','period',this.value)">
+          <option value="hour" data-i18n="mon.donem-saat">1s</option>
+          <option value="day" selected data-i18n="mon.donem-gun">1g</option>
+          <option value="week" data-i18n="mon.donem-hafta">1h</option>
+          <option data-i18n="harita.1ay" value="month">1ay</option>
+        </select>
+      </div>
+    </div>
+    <div class="mlm-section">
+      <div data-i18n="harita.aktif-katmanlar" class="mlm-section-title">AKTİF KATMANLAR</div>
+      <div id="mlm-layer-list"></div>
+    </div>
+    <div class="mlm-section">
+      <div data-i18n="harita.ozel-konumlar-poi" class="mlm-section-title">ÖZEL KONUMLAR (POI)</div>
+      <button data-i18n="harita.yeni-konum-ekle" type="button" class="mlm-poi-add-btn" onclick="startPoiAdd()">+ YENİ KONUM EKLE</button>
+      <form id="mlm-poi-form" onsubmit="return false">
+        <input data-i18n-placeholder="harita.isim-zorunlu" class="mlm-poi-input" id="mlm-poi-name" type="text" placeholder="İsim (zorunlu)" />
+        <input data-i18n-placeholder="harita.emoji-varsayilan" class="mlm-poi-input" id="mlm-poi-icon" type="text" placeholder="Emoji (varsayılan 📍)" />
+        <input data-i18n-placeholder="harita.aciklama-istege-bagli" class="mlm-poi-input" id="mlm-poi-desc" type="text" placeholder="Açıklama (isteğe bağlı)" />
+        <input data-i18n-placeholder="harita.renk-hex-orn-ff4444" class="mlm-poi-input" id="mlm-poi-color" type="text" placeholder="Renk hex (örn: #ff4444)" />
+        <small data-i18n="harita.haritada-bir-noktaya-tiklayin" class="mlm-ipucu">⚑ Haritada bir noktaya tıkla, sonra Kaydet'e bas</small>
+        <div class="mlm-poi-form-btns">
+          <button data-i18n="harita.kaydet" type="button" class="mlm-poi-form-btn ok" onclick="confirmPoiAdd()">✓ KAYDET</button>
+          <button data-i18n="harita.iptal" type="button" class="mlm-poi-form-btn cancel" onclick="cancelPoiAdd()">✕ İPTAL</button>
+        </div>
+      </form>
+      <div id="mlm-poi-list"></div>
+    </div>
+    <div class="mlm-section">
+      <div data-i18n="harita.jeomanyetik-kp-indeksi" class="mlm-section-title">JEOMANYETIK Kp İNDEKSİ</div>
+      <div id="mlm-kp-gauge">
+        <div id="mlm-kp-val">—</div>
+        <div style="flex:1">
+          <div data-i18n="harita.yukleniyor-2" id="mlm-kp-level">YÜKLENİYOR</div>
+          <div id="mlm-kp-bar-wrap"><div id="mlm-kp-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <button data-i18n="harita.guncelle" type="button" class="mlm-refresh-btn" onclick="refreshKpGauge()" style="width:100%;margin-top:6px">⟳ GÜNCELLE</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- YEDEK sekmesi (11-13) — içeriği js/yedekleme.js çizer (eski HQ › Yedekleme paneli);
+     sekme başlığı burada, gövde #yedek-kok. Kapı yok: yedekleme tüm kurulumlarda açık (tab-nav.js _hepsiAcik). -->
+<div id="tab-yedek" role="tabpanel" aria-labelledby="tab-btn-yedek" hidden>
+  <div class="yedek-sayfa">
+    <!-- Sekme başlığı (11-13): öbür sekmelerle aynı köşe; odanın "Yedekleme" başlığı burada yalnız ekran okuyucuya kalır -->
+    <div class="sekme-baslik yedek-sekme-baslik"><span class="sekme-baslik__etiket" data-i18n="baslik.yedek-etiket">GOOGLE DRIVE</span><span class="sekme-baslik__ad" data-i18n="baslik.yedek">Yedek</span></div>
+    <div id="yedek-kok" class="yedek-kok"></div>
+  </div>
+</div><!-- /tab-yedek -->
+
+
+<!-- AJAN sekmesi — ajan-view.js doldurur -->
+<div id="tab-ajan" role="tabpanel" aria-labelledby="tab-btn-ajan" hidden>
+  <div id="ajan-content"></div>
+</div><!-- /tab-ajan -->
+
+<!-- GALERİ sekmesi — galeri.html (salt okunur gezgin); src tembel, ilk açılışta atanır -->
+<div id="tab-galeri" role="tabpanel" aria-labelledby="tab-btn-galeri" hidden>
+  <iframe id="galeri-iframe" src="" allowfullscreen style="width:100%;height:100%;border:none;display:block;"></iframe>
+</div><!-- /tab-galeri -->
+
+<!-- DOSYA sekmesi — dosya.html (salt okunur gezgin); src tembel, ilk açılışta atanır -->
+<div id="tab-dosya" role="tabpanel" aria-labelledby="tab-btn-dosya" hidden>
+  <iframe id="dosya-iframe" src="" allowfullscreen style="width:100%;height:100%;border:none;display:block;"></iframe>
+</div><!-- /tab-dosya -->
+  </main>
+</div><!-- /kabuk -->
+
+
+
+<!-- γ: VRM Three.js importmap + _load3DDeps — OYUN 3D katmanı (FAZ 0, 2026-07-10) -->
+<!-- three r160 module-scope self-host (vendor); window.THREE global YOK (r128 CDN kaldırıldı — ürün). -->
+<!-- NOT: SW cache uyumu için ?v= yeni asset ekleyince bump. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "/ui/vendor/three-0.160.0/three.module.min.js",
+    "three/addons/": "/ui/vendor/three-0.160.0/addons/",
+    "@pixiv/three-vrm": "/ui/vendor/three-vrm-3.1.6/three-vrm.module.min.js"
+  }
+}
+</script>
+<script type="module">
+  // yuki-3d.js (klasik script) buradan çeker — dinamik import'lar ilk çağrıda yüklenir,
+  // kapıyı geçemeyen cihaz (mobil) bu dosyaları HİÇ indirmez.
+  window._load3DDeps = async () => {
+    const [THREE, { OrbitControls }, { GLTFLoader }, { VRMLoaderPlugin, VRMUtils }] = await Promise.all([
+      import('three'),
+      import('three/addons/controls/OrbitControls.js'),
+      import('three/addons/loaders/GLTFLoader.js'),
+      import('@pixiv/three-vrm'),
+    ]);
+    return { THREE, OrbitControls, GLTFLoader, VRMLoaderPlugin, VRMUtils };
+  };
+</script>
+<!-- B7 karşılama perdesi ("Merhaba, ben Yuki 🌸") KALDIRILDI — geliştirici, 2026-09-06.
+     Açılışta sohbetin önüne bir adım daha koyuyordu. JS tarafı da silindi
+     (core.js `_maybeShowOnboarding`). -->
+
+<!-- B8 — Hafıza paneli: gör / sil (unut) / dışa aktar (Alt+H ile açılır) -->
+<!-- #memory-panel-overlay KALDIRILDI (FAZ 4, 2026-08-23) — çift iş.
+     HQ > Hafıza Yöneticisi (#hq-panel-memmgr) aynı işi yapıyordu ve her yönden
+     üstündü: arama · kategori filtresi · sayfalama · kategori dökümü. Bu overlay
+     yalnız /api/memory?limit=200 çekiyordu, sabit 200 anı, filtresiz.
+     Alt+H kısayolu KORUNDU — artık HQ'daki panele götürüyor (core.js::openMemoryPanel).
+     Dışa aktarma düğmesi ve gizlilik metni memmgr toolbar'ına taşındı. -->
+
+<!-- İndir-gerektiğinde model UX (window.ModelDownloader) — core.js mic butonundan ÖNCE tanımlı olmalı -->
+<!-- tek bildirim mekanizması. core.js::showToast ve intro-sequences.js::toast
+     ikisi de buraya devrediyor → core.js'ten ÖNCE yüklenmeli. -->
+<!-- 🔑 FAZ 3 · ÇEVİRİ — statik markup'ı ilk kareden ÖNCE çevir.
+     Yeri kaza değil: aşağıdaki `<script src=…>` bloğu ayrıştırmayı DURDURUR,
+     tarayıcı o ana kadar ayrıştırdığını boyayabilir. Çağrı bloktan sonraya
+     konsaydı İngilizce kullanıcı her açılışta bir Türkçe flaş görürdü —
+     `tema.js:7-9`'un FOUC gerekçesinin metin hâli (FOUT).
+     İkinci çağrı gövdenin sonunda: bu noktadan SONRAKİ markup'ı o kapsar. -->
+<script>window.YukiDil && window.YukiDil.ciz(document);</script>
+<script src="/ui/js/ilk-kurulum.js?v=4"></script>
+<script src="/ui/js/bildirim.js?v=3"></script>
+<script src="/ui/js/gecmis-temizle.js?v=1"></script>
+<script src="/ui/js/model-downloader.js?v=8"></script>
+<script src="/ui/js/updater-ui.js?v=10"></script>
+<script src="/ui/modes/gfx.js?v=3"></script>
+<script src="/ui/js/mic-devices.js?v=3"></script>
+<!-- app-lock core'dan ÖNCE: core.js'in `_authCheckAndInit`i 401 alınca
+     `window.AppLock`u sorar, o an tanımlı olmalı. Sonra yüklenirse kilitli
+     kurulumda eski AUTH_TOKEN perdesi açılır ve parola hiçbir zaman tutmaz. -->
+<script src="/ui/js/app-lock.js?v=10"></script>
+<script src="/ui/js/core.js?v=61"></script>
+<!-- Halka Konsolu küçültme — core.js'ten SONRA (window.girisKucult; "/" core.js'te GirisKonsol.ac çağırır) -->
+<script src="/ui/js/giris-konsol.js?v=1"></script>
+<script src="/ui/js/gorev-serit.js?v=10" defer></script>
+<!-- Kamera görüşü / ses kimliği (GORUS, SES_KIMLIK — varsayılan kapalı): panel HQ › Sistem odasında kurulur -->
+<script src="/ui/js/gorus.js?v=1" defer></script>
+<script src="/ui/js/ses-kimlik.js?v=1" defer></script>
+<script src="/ui/js/gorus-panel.js?v=1" defer></script>
+<script src="/ui/js/masaustu-capa.js?v=2" defer></script>  <!-- masaüstü Yuki çapası: PANEL + giriş hapı + açık paneller -->
+<!-- Odaklı Halka SİTELER deposu (10-11 ): müşterinin site kısayolları, yalnız bu cihazda.
+     hud-ring.js window.HalkaSiteler'i çizim anında okur — sıra önemsiz ama halkadan önce yüklenir. -->
+<script src="/ui/js/halka-siteler.js?v=1"></script>
+
+<!-- Ambient Watch Panel -->
+<div id="ambient-panel"></div>
+
+<script>
+  // iOS Safari: visualViewport resize → klavye açıldığında input alanını görünür tut
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+      document.getElementById('app').style.height = window.visualViewport.height + 'px';
+    });
+    window.visualViewport.addEventListener('scroll', () => {
+      document.getElementById('app').style.height = window.visualViewport.height + 'px';
+    });
+  }
+</script>
+
+<!-- HUD Enhancements: Waveform + Uptime + Emotion override (map-init.js = çekirdek HUD/duygu, isim yanıltıcı; KORUNDU) -->
+<script src="/ui/js/map-init.js?v=2"></script>
+
+<!-- Sekme yöneticisi -->
+<script src="/ui/js/tab-nav.js?v=34"></script>
+<!-- Mini HUD köprüsü — core.js'ten SONRA (yuki-state olayı + #messages + mikrofon
+     düğmeleri). Electron dışında sessizce hiçbir şey yapmaz. -->
+<script src="/ui/js/mini-kopru.js?v=2"></script>
+
+<!-- ── Camera Capture Modal ── -->
+<div id="camera-capture-modal" style="display:none;position:fixed;inset:0;z-index:9100;">
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,0.85);" onclick="closeCameraCapture()"></div>
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+              background:var(--yuzey-1);border:1px solid var(--kenar);border-radius:12px;
+              width:min(520px,92vw);display:flex;flex-direction:column;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--kenar);">
+      <span data-i18n="genel.fotograf-cek" style="color:var(--ink-1);font-size:13px;font-weight:600;letter-spacing:.05em;">FOTOĞRAF ÇEK</span>
+      <button data-i18n-aria-label="genel.fotograf-cekmeyi-kapat" aria-label="Fotoğraf çekmeyi kapat" onclick="closeCameraCapture()" style="background:none;border:none;color:var(--ink-3);cursor:pointer;font-size:18px;line-height:1;">×</button>
+    </div>
+    <div style="position:relative;background:#000;aspect-ratio:4/3;overflow:hidden;">
+      <video id="camera-video" autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+      <canvas id="camera-canvas" style="display:none;"></canvas>
+      <img data-i18n-alt="genel.onizleme" id="camera-preview" style="display:none;width:100%;height:100%;object-fit:cover;" alt="önizleme">
+    </div>
+    <div style="display:flex;gap:10px;padding:14px 16px;justify-content:center;">
+      <button data-i18n="genel.cek" id="camera-snap-btn" onclick="_cameraSnap()" style="background:var(--mor-yuzey);color:#fff;border:none;border-radius:8px;padding:8px 24px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.06em;">ÇEK</button>
+      <button data-i18n="genel.tekrar" id="camera-retake-btn" onclick="_cameraRetake()" style="display:none;background:var(--yuzey-2);color:var(--ink-1);border:1px solid var(--kenar);border-radius:8px;padding:8px 20px;font-size:13px;cursor:pointer;">Tekrar</button>
+      <button data-i18n="genel.gonder" id="camera-send-btn" onclick="_cameraSend()" style="display:none;background:var(--mor-yuzey);color:#fff;border:none;border-radius:8px;padding:8px 24px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.06em;">GÖNDER</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Media Upload + Gallery Picker ── -->
+<div id="gallery-picker-modal" style="display:none;position:fixed;inset:0;z-index:9000;">
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,0.72);" onclick="closeGalleryPicker()"></div>
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+              background:var(--yuzey-1);border:1px solid var(--kenar);border-radius:12px;
+              width:min(560px,90vw);max-height:70vh;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;
+                padding:14px 16px;border-bottom:1px solid var(--kenar);flex-shrink:0;">
+      <span data-i18n="genel.galeriden-sec" style="color:var(--ink-1);font-size:13px;font-weight:600;letter-spacing:.05em;">GALERİDEN SEÇ</span>
+      <span style="flex:1"></span>
+      <button data-i18n-title="genel.cihazdan-dosya-yukle-gorsel" id="gp-upload-btn" onclick="gpPickFiles()" title="Cihazdan dosya yükle (görsel, PDF, Excel, Word, CSV, TXT…)"
+              style="background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.4);border-radius:6px;
+                     color:var(--mor-ink);font-size:11px;font-weight:600;letter-spacing:.04em;padding:5px 12px;cursor:pointer;display:flex;align-items:center;gap:4px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        <span data-i18n="genel.dosya-yukle">DOSYA YÜKLE</span>
+      </button>
+      <button data-i18n-aria-label="genel.galeri-seciciyi-kapat" aria-label="Galeri seçiciyi kapat" onclick="closeGalleryPicker()"
+              style="background:none;border:none;color:var(--ink-3);font-size:18px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div id="gp-upload-status" style="display:none;padding:6px 16px;font-size:11px;color:var(--mor-ink);border-bottom:1px solid var(--kenar);"></div>
+    <div id="gallery-picker-grid"
+         style="display:flex;flex-wrap:wrap;gap:10px;padding:14px;overflow-y:auto;
+                min-height:80px;align-content:flex-start;">
+      <span data-i18n="genel.yukleniyor" style="color:var(--ink-3);font-size:12px;">Yükleniyor…</span>
+    </div>
+  </div>
+</div>
+
+<style>
+.gp-thumb {
+  position:relative;cursor:pointer;border:1px solid var(--kenar);border-radius:6px;
+  overflow:hidden;width:130px;height:82px;flex-shrink:0;
+}
+.gp-thumb:hover { border-color:var(--mor-ink);box-shadow:0 0 12px rgba(0,212,255,.22); }
+.gp-thumb img { display:block;width:130px;height:82px;object-fit:cover; }
+.gp-thumb-label {
+  position:absolute;bottom:0;left:0;right:0;
+  background:rgba(0,0,0,.80);color:var(--ink-3);font-size:10px;
+  padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+/* Doküman kartı (pdf/xls/docx/csv/txt…) — tıkla: Yuki okur */
+.gp-thumb.gp-doc {
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(96,165,250,0.05);
+}
+.gp-thumb.gp-doc:hover { border-color:var(--altin-ink);box-shadow:0 0 12px rgba(240,180,41,.22); }
+.gp-doc-icon { font-size:34px;line-height:1;margin-bottom:14px; }
+/* #upload-btn font-size kaldırıldı 2026-08-03 — ⋯ menüsünde .more-item ölçüsü geçerli */
+</style>
+
+<script src="/ui/js/tab-switcher.js?v=4"></script>
+<script src="/ui/js/ajan-view.js?v=5"></script>
+<!-- YÜZ sekmesi. tab-nav.js'ten SONRA: `tabchange` olayını dinliyor. -->
+<script src="/ui/js/faces.js?v=8"></script>
+<script src="/ui/js/duvar.js?v=7"></script>
+<!-- Google hesabı bağlama paneli. `duvar.js` gibi klasik <script>:
+     panel açılınca `switchHqTab` çağırır, önceden iş yapmaz. -->
+<script src="/ui/js/google-baglanti.js?v=6"></script>
+<script src="/ui/js/tema-panel.js?v=3"></script>
+<script src="/ui/js/yedek-rclone.js?v=1"></script>
+<script src="/ui/js/yedekleme.js?v=8"></script>
+<!-- QR üreteci: bağımlılıksız, dış istek yok. Python `qrcode` paketi
+     EKLENMEDİ — o `shell_id`'yi değiştirir ve mevcut müşteriyi 457 MB tam paket
+     indirmeye zorlardı; bu dosya `frontend/**` olduğu için delta ile gider. -->
+<script src="/ui/vendor/qr-uret.js?v=1"></script>
+<script src="/ui/js/cihazlar.js?v=11"></script>
+<!-- MAP panosu: kütüphaneler ÖNCE, motor sonra (map-engine.js açılışta L/maplibre arar) -->
+<script src="/ui/vendor/leaflet-1.9.4/leaflet.js?v=1"></script>
+<script src="/ui/vendor/markercluster-1.5.3/leaflet.markercluster.js?v=1"></script>
+<script src="/ui/vendor/maplibre-gl-4/maplibre-gl.js?v=1"></script>
+<script src="/ui/js/map-hud.js?v=4"></script>
+<script src="/ui/js/map-engine.js?v=13"></script>
+<script src="/ui/js/map-kopru.js?v=1"></script>  <!-- Yuki harita araçları (map_goto/layer/status) — map-engine.js'ten SONRA -->
+
+<script>
+(function(){
+
+// ── Offline Banner + Command Queue ───────────────────────────
+(function _initOffline() {
+  const QUEUE_KEY = 'yuki_offline_queue';
+  const banner = document.getElementById('offline-banner');
+  let bannerTimer = 0;
+
+  function _hideBanner() {
+    if (!banner) return;
+    banner.classList.remove('visible', 'baglandi');
+  }
+
+  function _showBanner(durum) {
+    if (!banner) return;
+    window.clearTimeout(bannerTimer);
+    const baglandi = durum === 'baglandi';
+    const anahtar = baglandi ? 'cevrimdisi.baglandi' : 'cevrimdisi.baglanti-yok';
+    banner.setAttribute('data-i18n', anahtar);   // dil değişince dil.js doğru metni çizsin
+    banner.textContent = _t(anahtar);
+    banner.classList.toggle('baglandi', baglandi);
+    banner.classList.add('visible');
+    if (baglandi) bannerTimer = window.setTimeout(_hideBanner, 1800);
+  }
+
+  /* Şerit, üst hapla AYNI kaynağı okur (core.js::_setWsPill → `yuki-baglanti` M3): WS açık VE ağ var. WS yeniden bağlanırken kısa kopmalarda şerit
+     yanıp sönmesin diye backend kopuşu 1,5 sn sürerse söylenir; ağ düşüşü anında.
+     "Bağlandı" yalnız önce "Bağlantı yok" denmişse söylenir. */
+  let kopukTimer = 0;
+  let kopukDendi = false;
+  function _baglantiDegisti(bagli) {
+    window.clearTimeout(kopukTimer);
+    if (bagli) {
+      if (kopukDendi) { kopukDendi = false; _showBanner('baglandi'); }
+      return;
+    }
+    kopukTimer = window.setTimeout(() => {
+      kopukDendi = true;
+      _showBanner('baglanti-yok');
+    }, navigator.onLine === false ? 0 : 1500);
+  }
+  window.addEventListener('yuki-baglanti', (e) => _baglantiDegisti(!!(e.detail && e.detail.bagli)));
+  if (typeof window.yukiBaglanti === 'function' && window.yukiBaglanti() === false) _baglantiDegisti(false);
+
+  function _enqueueCommand(text) {
+    try {
+      const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+      q.push({ text, ts: Date.now() });
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+    } catch(e) {}
+  }
+
+  function _flushQueue() {
+    try {
+      const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+      if (!q.length) return;
+      localStorage.removeItem(QUEUE_KEY);
+      q.forEach(item => {
+        const inp = document.getElementById('msg-input');
+        if (inp && typeof sendMessage === 'function') {
+          inp.value = item.text;
+          sendMessage();
+        }
+      });
+    } catch(e) {}
+  }
+
+  // Kuyruk yalnız AĞ düşüşünde dolar (aşağıdaki sendMessage yaması) → ağ dönünce boşalır.
+  window.addEventListener('online', _flushQueue);
+  if (!navigator.onLine) _baglantiDegisti(false);
+
+  // Patch sendMessage: offline iken kuyruğa al
+  const _origSend = window.sendMessage;
+  window.sendMessage = function() {
+    if (!navigator.onLine) {
+      const inp = document.getElementById('msg-input');
+      const txt = inp ? inp.value.trim() : '';
+      if (txt) { _enqueueCommand(txt); if(inp) inp.value=''; }
+      return;
+    }
+    if (typeof _origSend === 'function') _origSend.apply(this, arguments);
+  };
+})();
+
+})();
+</script>
+
+
+<!-- PROFILE MODAL KALDIRILDI (FAZ 4, 2026-08-23) — ÖLÜ KOD.
+     60 satırlık markup DOM'da duruyordu ama AÇILAMIYORDU: `profileModalOpen`
+     diye bir fonksiyon hiç yazılmamış, `profileModalClose` ve `pmPreviewPhoto`
+     da hiçbir JS dosyasında tanımlı değildi (frontend + backend + electron
+     tarandı, tek tanım yok). Kapat düğmesine basmak ReferenceError verirdi.
+     Yarım kalmış profil formuydu (ad · adres · fotoğraf · şifreleme notu).
+     Geri istenirse: git show <bu commit>^:frontend/index.html -->
+
+<!-- ══ Görünüm Modları (Faz 0): chat / fullbody / hud-ring / game ══
+     Mod yöneticisi + karakter sistemi. Widget modunda kendini kapatır. -->
+<!-- 🔴 SÜRÜM ZİNCİRİ (kural 2026-08-03'te düzeltildi):
+       ① buradaki ?v=  ==  ② modes/chat-modes.js içindeki ASSET_V      → EŞİT OLMAK ZORUNDA
+       ③ sw.js CACHE_VERSION  >=  ①                                     → yalnız GERİ KALMAMALI
+     ①=② zorunlu, çünkü ASSET_V cache'lenen dosyanın KENDİ İÇİNDE: buradaki ?v= artmazsa
+     tarayıcı eski chat-modes.js'i verir, o da eski mod CSS'ini ister → yalnız ASSET_V
+     bump'lamak hiçbir işe yaramaz. Kişiselde canlıda yaşandı (?v=124 · ASSET_V 149).
+     ③ AYRI bir mekanizma: tüm SW önbelleğini düşürür ve mod-dışı frontend değişikliklerinde
+     (style.css, core.js) de artar — bu yüzden doğal olarak ÖNDE gider. Eski "üçü de aynı"
+     kuralı bu yüzden tutulamıyordu; kural kendisi yanlıştı, sayılar değil.
+     Mekanik bekçi: backend/tests/test_surum_zinciri.py -->
+<script src="/ui/modes/chat-modes.js?v=199" defer></script>
+<!-- SOHBET sahnesi: chat-modes.js'ten SONRA — göç orada kipi yazar, burada okunur -->
+<script src="/ui/modes/sohbet-sahne.js?v=10" defer></script>
+<!-- Beceri/olay kazanım kartı — window.SkillCard.show({type,name,...}) -->
+<script src="/ui/modes/skill-card.js?v=4" defer></script>
+<!-- Alkış algılama — 1 alkış→dosya_yonetim · 2 alkış→kodlama -->
+<script src="/ui/modes/clap-detect.js?v=1" defer></script>
+
+<!-- Sekmeye-özgü AÇILIŞ SEKANSI: panel sade fade + sekmeye özel intro overlay -->
+<script>
+(function(){
+  'use strict';
+  var TAB_EL = { chat:'app', hq:'tab-hq', control:'tab-hq', planner:'tab-planner', panel:'tab-panel', ajan:'tab-ajan' };
+  var OPEN = {
+    chat:    { label:'YUKI',    sub:'ÇEVRİMİÇİ',     motif:'rings' },
+    hq:      { label:'AYARLAR', sub:'YAPILANDIRMA',  motif:'grid' },
+    control: { label:'AYARLAR', sub:'YAPILANDIRMA',  motif:'grid' },
+    planner: { label:'PLAN',    sub:'ZAMAN ÇİZGİSİ', motif:'bars' }
+  };
+  var NEURAL = '<svg class="to-neural" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">'+
+    '<line x1="200" y1="150" x2="120" y2="90"/><line x1="200" y1="150" x2="290" y2="80"/>'+
+    '<line x1="200" y1="150" x2="310" y2="200"/><line x1="200" y1="150" x2="110" y2="210"/>'+
+    '<line x1="120" y1="90" x2="200" y2="60"/><line x1="290" y1="80" x2="200" y2="60"/>'+
+    '<line x1="310" y1="200" x2="200" y2="240"/><line x1="110" y1="210" x2="200" y2="240"/>'+
+    '<circle cx="200" cy="150" r="6"/><circle cx="120" cy="90" r="4"/><circle cx="290" cy="80" r="4"/>'+
+    '<circle cx="310" cy="200" r="4"/><circle cx="110" cy="210" r="4"/><circle cx="200" cy="60" r="4"/><circle cx="200" cy="240" r="4"/></svg>';
+  function motifHtml(m){
+    if (m==='rings')     return '<div class="to-rings"></div><div class="to-ringd"></div>';
+    if (m==='radar')     return '<div class="to-radar"></div>'+
+      '<span class="to-blip" style="left:58%;top:33%;animation-delay:.5s"></span>'+
+      '<span class="to-blip" style="left:37%;top:61%;animation-delay:.72s"></span>'+
+      '<span class="to-blip" style="left:66%;top:55%;animation-delay:.94s"></span>';
+    if (m==='bars')      return '<div class="to-bars"><i style="height:45%"></i><i style="height:74%"></i><i style="height:58%"></i><i style="height:88%"></i><i style="height:52%"></i><i style="height:70%"></i><i style="height:40%"></i></div>';
+    if (m==='sweep')     return '<div class="to-sweep"></div><div class="to-stamp"></div>';
+    if (m==='grid')      return '<div class="to-grid"></div>';
+    if (m==='scanlines') return '<div class="to-scanlines"></div>';
+    if (m==='neural')    return NEURAL;
+    return '';
+  }
+  /* v2: başlığı harf span'lerine böl (kademeli giriş için) */
+  function letters(s){
+    var h='';
+    for (var i=0;i<s.length;i++) h+='<i class="to-ch" style="--i:'+i+'">'+s[i]+'</i>';
+    return h;
+  }
+  var prev = window.switchTab;
+  if (typeof prev !== 'function') return;
+  var seenTabs = {};  /* frekans kapısı: sinematik overlay oturumda sekme başına 1 kez */
+  window.switchTab = function(tab){
+    prev(tab);
+    try {
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var id = TAB_EL[tab], el = id && document.getElementById(id);
+      if (el) { el.classList.remove('tabfx'); void el.offsetWidth; el.classList.add('tabfx');
+        setTimeout(function(){ el.classList.remove('tabfx'); }, 400); }
+      var cfg = OPEN[tab]; if (!cfg) return;
+      if (seenTabs[tab]) return;  /* tekrar geçişler: sadece hızlı fade, sinematik yok */
+      seenTabs[tab] = 1;
+      document.querySelectorAll('.tabopen').forEach(function(n){ n.remove(); });
+      var ov = document.createElement('div');
+      ov.className = 'tabopen' + (cfg.gold ? ' gold' : '');
+      ov.innerHTML = '<div class="to-veil"></div>' + motifHtml(cfg.motif) +
+        '<div class="to-shineg"></div>' +
+        '<div class="to-corner tl"></div><div class="to-corner tr"></div>' +
+        '<div class="to-corner bl"></div><div class="to-corner br"></div>' +
+        '<div class="to-tick l"></div><div class="to-tick r"></div>' +
+        '<div class="to-scan"></div>' +
+        '<div class="to-label"><b>' + letters(cfg.label) + '</b><span>' + cfg.sub + '</span></div>';
+      document.body.appendChild(ov);
+      setTimeout(function(){ if (ov && ov.parentNode) ov.remove(); }, 1700);
+    } catch (_) {}
+  };
+})();
+</script>
+
+<!-- ═══════════ HQ AYARLAR + MOD YÖNETİCİSİ ═══════════ -->
+<script src="/ui/js/intro-sequences.js?v=85"></script>
+
+
+
+
+<!-- FAZ 3 · çeviri — ikinci geçiş: yukarıdaki erken çağrıdan SONRA gelen
+     statik markup (nav-fab, harita panelleri, galeri seçici…) buradan çevrilir.
+     `ciz` idempotent: yazdığını hatırlar, JS'in değiştirdiğine dokunmaz. -->
+<script>window.YukiDil && window.YukiDil.ciz(document);</script>
+</body>
+</html>

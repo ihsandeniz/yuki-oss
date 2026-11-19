@@ -1,0 +1,3007 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLAN — Yuki</title>
+<script src="/ui/vendor/sortable.min.js?v=1"></script>
+<!-- KANON ZİNCİRİ — sıra bağlayıcıdır: tokens → temel → ogeler → planner.
+     planner.css EN SON yüklenir, böylece çakışmada o kazanır: mevcut görünüm
+     KORUNUR, yalnız planner'da eksik olan doldurulur.
+
+     Ölçüldü 2026-08-25: planner.html AYRI BELGEDİR ve temel.css'i yüklemiyordu,
+     bu yüzden kanon odak halkası (temel.css:122) bu ekranda hiç uygulanmıyordu.
+     Ölçüldü 2026-08-26: ogeler.css de yüklenmiyordu — düğme sözlüğü (.dg, 7 varyant)
+     ve BOŞ DURUM bileşeni (.bos/.bos-ikon/.bos-metin/.bos-bas) bu ekrana hiç
+     ulaşmıyordu. planner.css'te düğme sınıfı 0, boş durum 0'dı; PRODUCT.md §7
+     "aynı iş = aynı görünüm" bu yüzden ihlal ediliyordu.
+
+     Çakışma ölçümü (2026-08-26, seçici kümesi karşılaştırması):
+       ogeler.css ↔ planner.css : 2 (yalnız @keyframes from/to) → pratikte yok
+       temel.css  ↔ planner.css : 8 (*, body, html, ::view-transition-*)
+       temel.css'in eleman kuralı: `input,button,textarea,select{font:inherit;color:inherit}`
+       → devralma kuralı, planner'ın 19 çıplak <button>'ında görünüm değiştirmez. -->
+<link rel="stylesheet" href="/ui/vendor/fonts-mono.css?v=1">
+<link rel="stylesheet" href="/ui/vendor/fonts.css?v=1">  <!-- GÜNDEM: Outfit (büyük sayı) + Inter (görev başlığı) -->
+<link rel="stylesheet" href="/ui/css/tokens.css?v=8">
+<script src="/ui/js/tema.js?v=6"></script>  <!-- FOUC: CSS sonrası SENKRON -->
+<script src="/ui/js/diller/tr.js?v=102"></script>
+<script src="/ui/js/diller/ja.js?v=5"></script>
+<script src="/ui/js/diller/en.js?v=102"></script>
+<script src="/ui/js/dil.js?v=7"></script>  <!-- FOUT: sözlüklerden SONRA, SENKRON -->
+<!-- Plan Gözlemevi (2026-11-13 arayüz turu): yeni metin anahtarlarının TÜRKÇE yedeği. Sözlükte anahtar varsa
+     (birleştirmede diller/*.js'e eklenir) dokunulmaz; yoksa ekran anahtar adını değil Türkçe metni gösterir.
+     en/ja zinciri tr'ye düştüğü için onlar da Türkçe yedeği görür. -->
+<script>(function(){var s=window.YukiSozluk&&window.YukiSozluk.tr;if(!s)return;var y={
+'plan.marka':'Plan','plan.marka-alt':'GÖZLEMEVİ','plan.cip-toplam':'TOPLAM',
+'plan.g-sayfa-alt':'— {ay} {yil} · günün sayfası','plan.g-alt-gec':'— geride kalan','plan.g-alt-gun':'— sırayla',
+'plan.g-alt-yakin':'— 7 gün','plan.g-alt-tarihsiz':'— listelerde','plan.g-yakin-bos':'Önümüzdeki 7 güne tarihli görev yok',
+'plan.g-oran-ipucu':'Bugün biten / bugünün toplamı'};
+for(var k in y){if(!Object.prototype.hasOwnProperty.call(s,k))s[k]=y[k];}})();</script>
+<script src="/ui/js/ozellik.js?v=3"></script>  <!-- FİTNES kapısı (ayarlardan açılır): SENKRON -->
+<link rel="stylesheet" href="/ui/css/temel.css?v=1">
+<link rel="stylesheet" href="/ui/css/ogeler.css?v=10">
+<link rel="stylesheet" href="/ui/css/planner.css?v=18">
+<!-- Plan Gözlemevi iskeleti (2026-11-13 arayüz turu): planner.css'i EZER, Fitnes kaplarına dokunmaz.
+     Geri alma = bu satırı ve <body class="kimlik-uyum">'u kaldırmak. -->
+<link rel="stylesheet" href="/ui/css/fontlar-gozlemevi.css?v=1">  <!-- @font-face: Fraunces · Figtree · Martian Mono (OFL, ORTAK şerit) -->
+<link rel="stylesheet" href="/ui/css/plan-gozlemevi.css?v=3">
+<!-- FİTNES (G3): ayrı dosyalar, planner.css'ten SONRA (aynı özgüllükte onlar kazanır) -->
+<link rel="stylesheet" href="/ui/css/fitnes-taban.css?v=1">
+<link rel="stylesheet" href="/ui/css/fitnes-beslenme.css?v=2">
+<link rel="stylesheet" href="/ui/css/fitnes-antrenman.css?v=3">
+<link rel="stylesheet" href="/ui/css/fitnes-oyun.css?v=3">
+<link rel="stylesheet" href="/ui/css/fitnes-gecmis.css?v=1">
+<link rel="stylesheet" href="/ui/css/fitnes-ayar.css?v=2">
+<!-- PLAN ekranının bildirim mekanizması YOKTU. `defer` DEĞİL — sayfa
+     içi script `window.bildir`i çağırıyor, o çalışmadan tanımlı olmalı. -->
+<script src="/ui/js/bildirim.js?v=3"></script>
+<script>(function(){var q=new URLSearchParams(location.search);if(q.get('widget')==='1'){document.documentElement.classList.add('widget-mode');document.addEventListener('DOMContentLoaded',function(){if(document.body)document.body.classList.add('widget-mode');});}})();</script>
+</head>
+<body class="kimlik-uyum">
+
+<!-- Plan Gözlemevi şeridi: marka · alt sekmeler · sayaç çipleri (sayaçlar şeritte; eski ayrı satır kalktı).
+     LİSTELER ayrı düğme ama ayrı mod değil: setMode('todo') + defter (seçili liste) — GÜNDEM ile aynı görünüm. -->
+<div id="tab-bar" class="sk-serit">
+  <div class="sk-ad marka"><span data-i18n="plan.marka">Plan</span><small data-i18n="plan.marka-alt">GÖZLEMEVİ</small></div>
+  <nav class="sk-altlar" aria-label="PLAN" data-i18n-aria-label="plan.gundem">
+    <button class="sk-alt mode-btn active" id="mode-todo" onclick="setMode('todo'); if(!_gundem) gundemAc()" data-i18n="plan.sekme-gundem">GÜNDEM</button>
+    <button class="sk-alt mode-btn" id="mode-lists" onclick="setMode('todo'); defterAc()" data-i18n="plan.sekme-listeler">LİSTELER</button>
+    <button class="sk-alt mode-btn" id="mode-cal" onclick="setMode('cal')" data-i18n="plan.sekme-takvim">TAKVİM</button>
+    <button class="sk-alt mode-btn" id="mode-budget" onclick="setMode('budget')" data-i18n="plan.sekme-butce">BÜTÇE</button>
+    <button class="sk-alt mode-btn" id="mode-fitness" data-ozellik="fitnes" onclick="setMode('fitness')" data-i18n="plan.sekme-fitnes">FİTNES</button>
+  </nav>
+  <div id="stats-bar" class="sk-durum">
+    <div class="sk-cip veri"><small data-i18n="plan.f-bugun">BUGÜN</small><span id="s-today">-</span></div>
+    <div class="sk-cip sk-genis"><small data-i18n="plan.f-hafta">HAFTA</small><span id="s-week">-</span></div>
+    <div class="sk-cip hata"><small data-i18n="plan.f-gecikmis">GECİKMİŞ</small><span id="s-overdue">-</span></div>
+    <div class="sk-cip sk-genis"><small data-i18n="plan.cip-toplam">TOPLAM</small><span id="s-total">-</span></div>
+  </div>
+</div>
+
+<!-- Widget-only sekme çubuğu — sadece widget-mode'da görünür -->
+<div id="widget-nav">
+  <button class="wnav-btn active" onclick="wnavSet(this,'todo')" data-i18n="plan.sekme-gorevler">GÖREVLER</button>
+  <button class="wnav-btn" onclick="wnavSet(this,'budget')" data-i18n="plan.sekme-butce">BÜTÇE</button>
+  <button class="wnav-btn" data-ozellik="fitnes" onclick="wnavSet(this,'antrenman')" data-i18n="plan.sekme-antrenman">ANTRENMAN</button>
+  <button class="wnav-btn" data-ozellik="fitnes" onclick="wnavSet(this,'beslenme')" data-i18n="plan.sekme-beslenme">BESLENME</button>
+</div>
+
+<div id="app">
+
+  <!-- LEFT -->
+  <div id="left-panel">
+    <div id="mini-cal">
+      <div class="cal-header">
+        <!-- Takvim katlanır (2026-08-27, geliştirici: "soldaki takvim içinde olanı
+             açıp kapanabilir yap"). Durum localStorage'da; başlığın kendisi
+             düğme DEĞİL — ay gezinme okları onun içinde, iç içe tıklama
+             hedefleri üretirdi. Ayrı bir katlama düğmesi var. -->
+        <button class="cal-nav cal-katla" id="cal-katla-btn" onclick="calKatlaToggle()"
+                title="Takvimi katla / aç" aria-label="Takvimi katla / aç"
+                data-i18n-title="plan.takvim-katla" data-i18n-aria-label="plan.takvim-katla"
+                aria-expanded="true" aria-controls="cal-govde">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
+        </button>
+        <button class="cal-nav" onclick="calNav(-1)">‹</button>
+        <span class="cal-title" id="cal-title" data-i18n-yok>OCAK 2026</span>
+        <button class="cal-nav" onclick="calNav(1)">›</button>
+      </div>
+      <div id="cal-govde"><div id="cal-grid"></div></div>
+    </div>
+
+    <div id="lists-header">
+      <span data-i18n="plan.listeler">LİSTELER</span>
+      <button id="add-list-btn" onclick="openAddList()" title="Yeni liste (L)" data-i18n-title="plan.yeni-liste-ipucu">+</button>
+    </div>
+    <div id="lists-container"></div>
+
+    <div id="gcal-events" style="display:none">
+      <div id="gcal-events-title" data-i18n="plan.sekme-takvim">TAKVİM</div>
+      <div id="gcal-events-list"></div>
+    </div>
+
+  </div>
+
+  <!-- MIDDLE -->
+  <div id="mid-panel">
+    <!-- FITNESS content moved to top-level #fitness-view (mode toggle) -->
+
+    <!-- GÖREV KOLONU -->
+    <div id="tasks-col">
+    <div id="gundem-view" aria-label="Gündem" data-i18n-aria-label="plan.gundem"></div>
+    <div id="defter-bas">
+      <nav id="defter-sayfalar" aria-label="Listeler" data-i18n-aria-label="plan.d-listeler-aria"></nav>
+      <div class="d-baslik">
+        <div><h1 id="defter-ad" data-i18n-yok></h1><div id="defter-sayac" data-i18n-yok></div></div>
+        <button id="defter-suz" onclick="defterSuz()" aria-expanded="false" aria-controls="filter-bar" data-i18n-yok></button>
+      </div>
+    </div>
+    <div id="filter-bar">
+      <button class="chip active" data-filter="all" onclick="setFilter('all')" data-i18n="plan.f-tumu">TÜMÜ</button>
+      <button class="chip" data-filter="today" onclick="setFilter('today')" data-i18n="plan.f-bugun">BUGÜN</button>
+      <button class="chip" data-filter="week" onclick="setFilter('week')" data-i18n="plan.f-hafta">HAFTA</button>
+      <button class="chip chip-overdue" data-filter="overdue" onclick="setFilter('overdue')" data-i18n="plan.f-gecikmis">GECİKMİŞ</button>
+      <button class="chip" data-filter="priority" data-ikincil onclick="setFilter('priority')" data-i18n="plan.f-oncelikli">ÖNCELİKLİ</button>
+      <button class="chip" data-filter="in_progress" data-ikincil onclick="setFilter('in_progress')" data-i18n="plan.f-devam">DEVAM</button>
+      <button class="chip chip-overdue" data-filter="blocked" data-ikincil onclick="setFilter('blocked')" data-i18n="plan.f-bloke">BLOKE</button>
+      <button class="chip chip-trash" data-filter="trash" data-ikincil onclick="setFilter('trash')" data-i18n="plan.f-cop">ÇÖP</button>
+      <button type="button" class="chip chip-daha" id="filter-daha"
+              onclick="chipCubuguAc('filter-bar', this)"
+              aria-expanded="false" aria-controls="filter-bar" data-i18n-yok>4 daha</button>
+      <input type="text" id="search-input" placeholder="/ ara..." data-i18n-placeholder="plan.ara-ph" autocomplete="off">
+      <button id="view-toggle" onclick="toggleView()" title="Kanban / Liste" data-i18n-title="plan.gorunum-degistir">⊞</button>
+      <button class="chip chip-trash" id="defter-sil" onclick="defterListeSil()" data-i18n="plan.d-liste-sil">✕ LİSTEYİ SİL</button>
+    </div>
+
+    <div id="tag-filter-bar">
+      <span id="tag-filter-label" data-i18n="plan.etiket-lbl">ETİKET:</span>
+    </div>
+
+    <div id="bulk-bar">
+      <span id="bulk-count" data-i18n-yok>0 SEÇİLDİ</span>
+      <button class="bulk-btn complete" onclick="bulkComplete()" data-i18n="plan.toplu-tamamla">✓ TAMAMLA</button>
+      <button class="bulk-btn delete" onclick="bulkDelete()" data-i18n="plan.toplu-sil">✕ SİL</button>
+      <button class="bulk-btn cancel" onclick="clearBulkSelect()" data-i18n="ortak.iptal">İPTAL</button>
+    </div>
+
+    <div id="kanban-board"></div>
+
+    <div id="tasks-wrapper">
+      <div id="tasks-list"></div>
+      <form id="defter-yeni" onsubmit="quickAdd(event)" autocomplete="off">
+        <span aria-hidden="true">+</span><input type="text" id="defter-yeni-input" placeholder="yeni satır… (yarın 15:00 doktor)"
+          data-i18n-placeholder="plan.d-yeni-satir-ph" aria-label="Yeni görev" data-i18n-aria-label="plan.d-yeni-aria">
+      </form>
+      <div id="completed-section" style="display:none">
+        <div id="completed-toggle" onclick="toggleCompleted()">
+          <span id="completed-arrow">▶</span> <span data-i18n="plan.tamamlananlar">TAMAMLANANLAR</span> (<span id="completed-count">0</span>)
+        </div>
+        <div id="completed-list" style="display:none"></div>
+      </div>
+    </div>
+
+    <div id="quick-add-bar">
+      <form id="quick-add-form" onsubmit="quickAdd(event)">
+        <input type="text" id="quick-add-input" placeholder="" data-i18n-yok autocomplete="off">
+        <button type="submit" id="quick-add-submit" data-i18n="ortak.ekle-art">+ EKLE</button>
+      </form>
+    </div>
+    </div><!-- /tasks-col -->
+  </div>
+
+  <!-- RIGHT -->
+  <div id="right-panel">
+    <div id="right-panel-header">
+      <span id="right-panel-title" data-i18n="plan.gorev-detayi">GÖREV DETAYI</span>
+      <button id="right-panel-close" onclick="clearDetail()" title="Kapat (Esc)" data-i18n-title="plan.kapat-esc">✕</button>
+    </div>
+    <div id="detail-empty">
+      <div class="icon">◈</div>
+      <span data-i18n="plan.gorev-secin">Görev seç</span>
+    </div>
+    <div id="detail-form" style="display:none">
+      <div class="detail-section">
+        <textarea class="detail-title-input" id="d-title" rows="2"
+          oninput="autoGrow(this)"
+          onchange="saveField('title', this.value)" placeholder="Görev başlığı..." data-i18n-placeholder="plan.gorev-basligi-ph"></textarea>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label" data-i18n="plan.notlar">NOTLAR</div>
+        <textarea class="detail-notes" id="d-notes" rows="3"
+          oninput="autoGrow(this)"
+          onchange="saveField('notes', this.value)" placeholder="Notlar..." data-i18n-placeholder="plan.notlar-ph"></textarea>
+      </div>
+      <div class="detail-section">
+        <div class="detail-row">
+          <label data-i18n="plan.baslangic">Başlangıç</label>
+          <input type="date" class="detail-input" id="d-start" onchange="saveField('start_date', this.value)">
+        </div>
+        <div class="detail-row">
+          <label data-i18n="plan.bitis">Bitiş</label>
+          <input type="date" class="detail-input" id="d-due" onchange="saveField('due_date', this.value)">
+        </div>
+        <div class="detail-row">
+          <label data-i18n="plan.hatirlat">Hatırlat</label>
+          <input type="datetime-local" class="detail-input" id="d-remind" onchange="saveField('reminder_at', this.value)">
+        </div>
+        <div class="detail-row">
+          <label data-i18n="plan.tekrar">Tekrar</label>
+        </div>
+        <div class="repeat-group" id="repeat-group">
+          <button class="repeat-chip" data-r="none"     onclick="setRepeat('none')" data-i18n="plan.tekrar-yok">YOK</button>
+          <button class="repeat-chip" data-r="daily"    onclick="setRepeat('daily')" data-i18n="plan.tekrar-gunluk">GÜNLÜK</button>
+          <button class="repeat-chip" data-r="weekdays" onclick="setRepeat('weekdays')" data-i18n="plan.tekrar-hafta-ici">HAFTA İÇİ</button>
+          <button class="repeat-chip" data-r="weekly"   onclick="setRepeat('weekly')" data-i18n="plan.tekrar-haftalik">HAFTALIK</button>
+          <button class="repeat-chip" data-r="biweekly" onclick="setRepeat('biweekly')" data-i18n="plan.tekrar-iki-hafta">2 HAFTADA</button>
+          <button class="repeat-chip" data-r="monthly"  onclick="setRepeat('monthly')" data-i18n="plan.tekrar-aylik">AYLIK</button>
+          <button class="repeat-chip" data-r="yearly"   onclick="setRepeat('yearly')" data-i18n="plan.tekrar-yillik">YILLIK</button>
+          <button class="repeat-chip" data-r="custom"   onclick="setRepeat('custom')" data-i18n="plan.tekrar-ozel">ÖZEL</button>
+        </div>
+        <div id="repeat-custom-row">
+          <span data-i18n="plan.tekrar-her">Her</span> <input type="number" id="repeat-custom-n" min="1" max="365" value="7" onchange="setRepeatCustomN()"> <span data-i18n="plan.tekrar-gunde-bir">günde bir</span>
+        </div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label" data-i18n="plan.oncelik">ÖNCELİK</div>
+        <div class="prio-group">
+          <button class="prio-btn" data-p="high" onclick="setPriority('high')" data-i18n="plan.oncelik-yuksek">YÜKSEK</button>
+          <button class="prio-btn" data-p="mid"  onclick="setPriority('mid')" data-i18n="plan.oncelik-orta">ORTA</button>
+          <button class="prio-btn" data-p="low"  onclick="setPriority('low')" data-i18n="plan.oncelik-dusuk">DÜŞÜK</button>
+        </div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label" data-i18n="plan.durum">DURUM</div>
+        <div class="status-group">
+          <button class="status-btn" data-s="todo"        onclick="setStatus('todo')" data-i18n="plan.durum-yapilacak">YAPILACAK</button>
+          <button class="status-btn" data-s="in_progress" onclick="setStatus('in_progress')" data-i18n="plan.durum-devam">DEVAM</button>
+          <button class="status-btn" data-s="blocked"     onclick="setStatus('blocked')" data-i18n="plan.durum-bloke">BLOKE</button>
+          <button class="status-btn" data-s="done"        onclick="setStatus('done')" data-i18n="plan.durum-tamamlandi">TAMAMLANDI</button>
+        </div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label" data-i18n="plan.etiketler">ETİKETLER</div>
+        <div id="tags-input-wrap">
+          <input type="text" id="tag-input" placeholder="Etiket ekle..." data-i18n-placeholder="plan.etiket-ekle-ph" onkeydown="tagKeydown(event)">
+        </div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label" data-i18n="plan.alt-gorevler">ALT GÖREVLER</div>
+        <div id="subtasks-list"></div>
+        <div class="sub-row">
+          <input type="text" id="add-subtask-input" placeholder="Alt görev ekle..." data-i18n-placeholder="plan.alt-gorev-ekle-ph" onkeydown="subtaskKeydown(event)">
+        </div>
+      </div>
+      <!-- #7 Pomodoro Timer -->
+      <div id="pomodoro-section" class="detail-section">
+        <div class="detail-label">POMODORO</div>
+        <div id="pomodoro-display">
+          <div>
+            <div id="pomo-time">25:00</div>
+            <div id="pomo-type" data-i18n="plan.pomo-calisma">ÇALIŞMA</div>
+          </div>
+          <div id="pomo-sessions">●●●●</div>
+        </div>
+        <div id="pomodoro-controls">
+          <button class="pomo-btn start" id="pomo-start-btn" onclick="pomoAction('start')" data-i18n="plan.pomo-baslat">▶ BAŞLAT</button>
+          <button class="pomo-btn pause" id="pomo-pause-btn" onclick="pomoAction('pause')" style="display:none" data-i18n="plan.pomo-durdur">⏸ DURDUR</button>
+          <button class="pomo-btn reset" onclick="pomoAction('reset')" data-i18n="plan.pomo-sifirla">↺ SIFIRLA</button>
+          <button class="pomo-btn" onclick="pomoAction('focus')" style="border-color:var(--purple);color:var(--purple)" data-i18n="plan.pomo-odak">⊙ ODAK</button>
+        </div>
+        <div id="pomo-bar-wrap"><div id="pomo-bar"></div></div>
+      </div>
+
+      <!-- #8 Zaman Tahmini -->
+      <div class="detail-section">
+        <div class="detail-row">
+          <label data-i18n="plan.sure-dk">Süre (dk)</label>
+          <input type="number" class="detail-input" id="d-estimate" min="5" max="480" step="5"
+            placeholder="90" onchange="saveField('estimated_time', this.value ? parseInt(this.value) : null)">
+        </div>
+      </div>
+
+      <!-- #11 Bağımlılıklar -->
+      <div class="detail-section" id="dep-section">
+        <div class="detail-label" data-i18n="plan.bagimliliklar">BAĞIMLILIKLAR</div>
+        <div style="font-size:9px;color:var(--text3);margin-bottom:3px" data-i18n="plan.bagimli-once">Önce bitirmesi gerekenler:</div>
+        <div id="dep-blocked-by" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px"></div>
+        <div style="font-size:9px;color:var(--text3);margin-bottom:3px" data-i18n="plan.bagimli-sonra">Bu göreve bağlı olanlar:</div>
+        <div id="dep-blocks" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px"></div>
+        <input type="text" id="dep-search" placeholder="Bağımlı görev ara..." data-i18n-placeholder="plan.bagimli-ara-ph" autocomplete="off"
+          oninput="depSearch(this.value)" onfocus="depSearch(this.value)">
+        <div id="dep-suggestions"></div>
+      </div>
+
+      <!-- #12 Bölüm -->
+      <div class="detail-section">
+        <div class="detail-row">
+          <label data-i18n="plan.bolum">Bölüm</label>
+          <input type="text" class="detail-input" id="d-section" placeholder="ör: Bu Hafta" data-i18n-placeholder="plan.bolum-ph"
+            onchange="setSection(_selectedTaskId, this.value)">
+        </div>
+      </div>
+
+      <div id="detail-actions">
+        <button class="action-btn complete-btn" id="d-complete-btn" onclick="toggleTaskComplete()" data-i18n="plan.d-tamamla">✓ TAMAMLA</button>
+        <button class="action-btn cal-btn" id="d-cal-btn" onclick="toggleCalSync()" data-i18n="plan.d-takvim">⊞ TAKVİM</button>
+        <button class="action-btn" onclick="pomoAction('focus')" style="border-color:var(--purple);color:var(--purple)" data-i18n="plan.pomo-odak">⊙ ODAK</button>
+        <button class="action-btn delete-btn" onclick="deleteCurrentTask()" data-i18n="plan.d-sil">✕ SİL</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- #9 Focus Mode Overlay -->
+<div id="focus-overlay">
+  <button class="focus-exit" onclick="exitFocus()" data-i18n="plan.odak-cikis">ESC — ÇIKIŞ</button>
+  <div id="focus-task-title" data-i18n-yok>Görev</div>
+  <div id="focus-task-meta"></div>
+  <div id="focus-subtasks"></div>
+  <div id="focus-pomo-time">25:00</div>
+  <div id="focus-pomo-type" data-i18n="plan.pomo-calisma">ÇALIŞMA</div>
+  <div id="focus-bar-wrap"><div id="focus-bar" style="width:0%"></div></div>
+  <div id="focus-controls">
+    <button class="focus-btn primary" id="focus-start-btn" onclick="pomoAction('start')" data-i18n="plan.pomo-baslat">▶ BAŞLAT</button>
+    <button class="focus-btn" onclick="pomoAction('reset')" data-i18n="plan.pomo-sifirla">↺ SIFIRLA</button>
+  </div>
+</div>
+
+<!-- Add List Modal -->
+<div class="modal-overlay hidden" id="add-list-modal">
+  <div class="modal">
+    <h3 data-i18n="plan.yeni-liste">YENİ LİSTE</h3>
+    <div class="modal-field">
+      <label data-i18n="plan.isim">İSİM</label>
+      <input type="text" class="modal-input" id="new-list-name" placeholder="Liste adı..." data-i18n-placeholder="plan.liste-adi-ph">
+    </div>
+    <div class="modal-field">
+      <label data-i18n="plan.ikon">İKON</label>
+      <input type="text" class="modal-input" id="new-list-icon" value="" style="width:60px">
+    </div>
+    <div class="modal-field">
+      <label data-i18n="plan.renk">RENK</label>
+      <div class="color-group" id="color-picker">
+        <div class="color-swatch active" data-color="cyan"   style="background:#3b82f6" onclick="selectColor('cyan')"></div>
+        <div class="color-swatch"        data-color="gold"   style="background:#f0b429" onclick="selectColor('gold')"></div>
+        <div class="color-swatch"        data-color="purple" style="background:#a855f7" onclick="selectColor('purple')"></div>
+        <div class="color-swatch"        data-color="green"  style="background:#22c55e" onclick="selectColor('green')"></div>
+        <div class="color-swatch"        data-color="red"    style="background:#ff4e6a" onclick="selectColor('red')"></div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn" onclick="closeModal('add-list-modal')" data-i18n="ortak.iptal">İPTAL</button>
+      <button class="modal-btn primary" onclick="createList()" data-i18n="ortak.olustur">OLUŞTUR</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── BÜTÇE · FİŞ (09-26 — kişisel a16c96a'nın ürün karşılığı; eski üç kopya tek ekrana indi) ── -->
+<div id="budget-view">
+  <div id="fis">
+    <div id="fis-ay">
+      <button type="button" class="fis-ok" onclick="fisAy(-1)" data-i18n-aria-label="butce.onceki-ay" aria-label="Önceki ay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+      <h1 id="fis-ay-ad" aria-live="polite" data-i18n-yok>—</h1>
+      <button type="button" class="fis-ok" onclick="fisAy(1)" data-i18n-aria-label="butce.sonraki-ay" aria-label="Sonraki ay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+    </div>
+    <div id="fis-govde">
+      <div id="fis-sol">
+        <section id="fis-kalan"><span class="fis-hud" id="fis-kalan-ad" data-i18n-yok></span><b id="fis-kalan-tutar" data-i18n-yok>—</b>
+          <div id="fis-ozet"></div><div id="fis-oran" aria-hidden="true"><i></i></div></section>
+        <section id="fis-dagilim" data-i18n-aria-label="butce.dagilim-aria" aria-label="Giderin dağılımı"></section>
+        <section id="fis-tekrar" hidden><span class="fis-hud" id="fis-tekrar-ad" data-i18n-yok></span><div id="fis-tekrar-liste"></div></section>
+      </div>
+      <div id="fis-kagit-kutu">
+        <button type="button" id="fis-gorunum" onclick="fisGorunum()" data-i18n-yok><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/></svg></button>
+        <div id="fis-kagit" aria-live="polite"></div>
+      </div>
+    </div>
+    <form id="fis-gir" onsubmit="fisEkle(event)" autocomplete="off">
+      <span id="fis-durum" role="status" data-i18n-yok></span>
+      <div class="fis-tur" role="group" data-i18n-aria-label="butce.tur-aria" aria-label="Tür">
+        <button type="button" class="on" data-t="expense" onclick="fisTur('expense')" aria-pressed="true" data-i18n-aria-label="butce.gider" aria-label="GİDER"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+        <button type="button" data-t="income" onclick="fisTur('income')" aria-pressed="false" data-i18n-aria-label="butce.gelir" aria-label="GELİR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+      <input id="fis-tutar" inputmode="decimal" maxlength="120" data-i18n-placeholder="butce.fis-ph" placeholder="₺ 250 a101" data-i18n-aria-label="butce.tutar-aria" aria-label="Tutar ve not">
+      <select id="fis-kat" data-i18n-aria-label="butce.kategori-aria" aria-label="Kategori"></select>
+      <button type="submit" class="fis-ekle" data-i18n-aria-label="butce.ekle-aria" aria-label="Fişe yaz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    </form>
+  </div>
+</div>
+
+<!-- ── TAKVİM · AY PANOSU (09-26 — kişisel e1dec80'in ürün karşılığı) ── -->
+<div id="gcal-view">
+  <div id="ayp-ust">
+    <button type="button" class="ayp-ok" onclick="aypAy(-1)" data-i18n-aria-label="gtakvim.onceki-ay" aria-label="Önceki ay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+    <h1 id="ayp-ay" aria-live="polite" data-i18n-yok>—</h1>
+    <button type="button" class="ayp-ok" onclick="aypAy(1)" data-i18n-aria-label="gtakvim.sonraki-ay" aria-label="Sonraki ay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+    <button type="button" class="ayp-hap" id="ayp-bugun" onclick="aypBugun()" data-i18n="gtakvim.bugun">BUGÜN</button>
+  </div>
+  <div id="ayp-serit" hidden><span id="ayp-serit-metin" data-i18n-yok></span><button type="button" class="ayp-hap" id="ayp-serit-dugme" onclick="aypSeritDugme()" data-i18n-yok>—</button></div>
+  <div id="ayp-govde">
+    <div id="ayp-pano">
+      <div class="ayp-dow" id="ayp-dow" aria-hidden="true"></div>
+      <div id="ayp-izgara" role="grid"></div>
+    </div>
+    <section id="ayp-gun" aria-live="polite">
+      <div id="ayp-gun-bas"><h2 id="ayp-gun-ad" data-i18n-yok></h2><span id="ayp-gun-say" data-i18n-yok></span></div>
+      <div id="ayp-liste"></div>
+    </section>
+    <form id="ayp-yeni" onsubmit="aypEkle(event)" autocomplete="off">
+      <span id="ayp-yeni-durum" role="status" data-i18n-yok></span>
+      <input type="text" id="ayp-yeni-input" maxlength="200" data-i18n-aria-label="gtakvim.ekle-aria" aria-label="Seçili güne etkinlik ekle">
+      <button class="ayp-hap" type="submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="gtakvim.ekle">EKLE</span></button>
+    </form>
+  </div>
+</div>
+
+<!-- ── FİTNES VIEW (mode toggle) — G3: metni js/fitnes/dil.js yazar (data-ft*), bu yüzden data-i18n-yok ── -->
+<div id="fitness-view" data-i18n-yok>
+  <div id="fitness-view-inner">
+    <header id="fitness-view-title"><h1 class="fit-bas" data-ft="isk.baslik">Fitnes</h1><div id="fitnes-ust-sv"></div>
+      <button type="button" id="fitnes-ayar-ac" data-ft="isk.ayarlar" data-ft-aria="isk.ayarlar-aria">⚙ AYARLAR</button></header>
+    <div id="fitnes-bildirimler" aria-live="polite"></div>
+    <!-- Sekme şeridi: 390'da 4 sekme; ≥1000 px'de DURUM sağ sütunda, düğmesi gizli -->
+    <nav id="fstrip-tabs" data-ft-aria="isk.bolumler">
+      <button type="button" class="fstrip-tab active" data-tab="nutr" data-ft="isk.beslenme">BESLENME</button>
+      <button type="button" class="fstrip-tab" data-tab="wkt" data-ft="isk.antrenman">ANTRENMAN</button>
+      <button type="button" class="fstrip-tab" data-tab="gecmis" data-ft="isk.gecmis">GEÇMİŞ</button>
+      <button type="button" class="fstrip-tab" data-tab="durum" data-ft="isk.durum">DURUM</button>
+    </nav>
+    <div id="fitnes-govde">
+    <!-- BESLENME -->
+    <div id="fstrip-pane-nutr" class="fstrip-pane fstrip-pane-active">
+      <div id="tb-gun">
+        <button type="button" class="tb-ok" id="tb-geri" data-ft-aria="isk.onceki-gun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+        <h2 id="tb-gun-ad" aria-live="polite">—</h2>
+        <button type="button" class="tb-ok" id="tb-ileri" data-ft-aria="isk.sonraki-gun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div>
+      <div id="tb-ust">
+        <div id="tb-halka"><svg viewBox="0 0 124 124" aria-hidden="true"><circle class="iz" cx="62" cy="62" r="54"/><circle id="tb-halka-dolu" cx="62" cy="62" r="54" stroke-dasharray="0 340"/></svg>
+          <div class="ic"><b id="tb-kcal">0</b><small id="tb-hedef"></small><em id="tb-kalan"></em></div></div>
+        <div id="tb-makro"></div>
+      </div>
+      <div id="fitnes-hizli" data-ft-aria="isk.hizli"></div>
+      <div id="tb-tabaklar"></div>
+      <form id="tb-form" hidden autocomplete="off">
+        <input id="tb-ad" maxlength="120" data-ft-ph="isk.yemek-ph" data-ft-aria="isk.yemek">
+        <label class="tb-alan"><span>kcal</span><input id="tb-kcal-inp" inputmode="decimal" data-ft-aria="isk.kalori"></label>
+        <label class="tb-alan"><span data-ft="isk.p">P(g)</span><input id="tb-p" inputmode="decimal" data-ft-aria="isk.protein"></label>
+        <label class="tb-alan"><span data-ft="isk.k">K(g)</span><input id="tb-k" inputmode="decimal" data-ft-aria="isk.karb"></label>
+        <label class="tb-alan"><span data-ft="isk.y">Y(g)</span><input id="tb-y" inputmode="decimal" data-ft-aria="isk.yag"></label>
+        <span id="tb-durum" role="status"></span>
+        <div class="tb-dugmeler">
+          <button type="button" id="tb-ara" data-ft="isk.ara">ARA</button>
+          <button type="button" id="tb-vazgec" data-ft="ortak.vazgec">VAZGEÇ</button>
+          <button type="submit" class="ekle" data-ft="isk.ekle">EKLE</button>
+        </div>
+      </form>
+      <section id="tb-hafta"><div class="tb-hafta-bas"><span id="tb-hafta-bas">SON 7 GÜN · KCAL</span><span id="tb-hafta-hedef"></span></div><div id="tb-cubuk"></div></section>
+    </div>
+    <!-- ANTRENMAN: kip şeridi + oturum şeridi + sahne -->
+    <div id="fstrip-pane-wkt" class="fstrip-pane">
+      <div id="od-tarih" class="od-tarih" role="status" hidden><span class="od-tarih-etiket" data-ft="isk.gecmise">GEÇMİŞE YAZIYORSUN</span><b id="od-tarih-ad"></b><button type="button" class="od-ikinci" data-bugunedon="1" data-ft="isk.bugune-don">BUGÜNE DÖN</button></div>
+      <nav id="od-kipler" data-ft-aria="isk.kipler"><button type="button" data-kip="sablon" aria-pressed="false" data-ft="isk.kip-sablon">ŞABLONLAR</button><button type="button" data-kip="odak" aria-pressed="false" data-ft="isk.kip-odak">ODAK</button><button type="button" data-kip="liste" aria-pressed="false" data-ft="isk.kip-liste">LİSTE</button></nav>
+      <div id="od-ozet" hidden><div class="ad"><b id="od-ad">—</b><small><span id="od-set">0/0</span> <span data-ft="isk.set">set</span> · <span id="od-sure">—</span><span class="genis"> · <span id="od-ton">0</span> kg</span></small></div>
+        <button type="button" id="od-gun-bitir" class="od-ikinci" data-ft="ant.bitir">ANTRENMANI BİTİR</button>
+        <div id="od-zincir" class="od-ray" role="progressbar" data-ft-aria="isk.oran" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div></div>
+      <section id="od-sahne" aria-live="polite"></section>
+      <div id="od-sonraki"></div>
+    </div>
+    <!-- GEÇMİŞ -->
+    <div id="fstrip-pane-gecmis" class="fstrip-pane"></div>
+    <!-- DURUM: ≥1000 px'de sağ sütun -->
+    <div id="fstrip-pane-durum" class="fstrip-pane"></div>
+    </div>
+    <!-- Yemek arama (Open Food Facts) -->
+    <div id="fs-search-overlay" role="dialog" aria-modal="true" data-ft-aria="isk.yemek-ara">
+      <div id="fs-search-card">
+        <div class="fss-title" data-ft="isk.yemek-ara">Yemek Ara</div>
+        <div class="fss-meal-row">
+          <button type="button" class="fss-meal-btn" data-fss-ogun="kahvalti" data-ft="isk.o-kahvalti">Kahvaltı</button>
+          <button type="button" class="fss-meal-btn" data-fss-ogun="ogle" data-ft="isk.o-ogle">Öğle</button>
+          <button type="button" class="fss-meal-btn" data-fss-ogun="aksam" data-ft="isk.o-aksam">Akşam</button>
+          <button type="button" class="fss-meal-btn active" data-fss-ogun="ara" data-ft="isk.o-ara">Ara öğün</button>
+        </div>
+        <input type="text" id="fss-input" class="fss-inp" data-ft-ph="isk.ara-ph" data-ft-aria="isk.yemek-ara">
+        <div class="fss-qty-row">
+          <label class="fss-qty-lbl" for="fss-qty" data-ft="isk.miktar">MİKTAR</label>
+          <input type="number" id="fss-qty" class="fss-qty-inp" value="100" min="1" max="9999">
+          <span class="fss-qty-lbl" data-ft="isk.miktar-not">g · makrolar otomatik hesaplanır</span>
+        </div>
+        <div id="fss-status" class="fss-status" role="status"></div>
+        <div id="fss-results" class="fss-results"></div>
+        <button type="button" class="fss-close" id="fss-kapat" data-ft="ortak.kapat">KAPAT</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="shortcut-hint">
+  <div class="shortcut-item"><span class="shortcut-key">N</span> <span data-i18n="plan.ks-yeni-gorev">yeni görev</span></div>
+  <div class="shortcut-item"><span class="shortcut-key">L</span> <span data-i18n="plan.ks-yeni-liste">yeni liste</span></div>
+  <div class="shortcut-item"><span class="shortcut-key">/</span> <span data-i18n="plan.ks-ara">ara</span></div>
+  <div class="shortcut-item"><span class="shortcut-key">SPC</span> <span data-i18n="plan.ks-tamamla">tamamla</span></div>
+  <div class="shortcut-item"><span class="shortcut-key">Del</span> <span data-i18n="plan.ks-sil">sil</span></div>
+  <div class="shortcut-item"><span class="shortcut-key">?</span> <span data-i18n="plan.ks-kapat">kapat</span></div>
+</div>
+
+<!-- FOUT: markup'ın TAMAMI ayrıştırıldı, aşağıdaki büyük betik bloğu ayrıştırmayı
+     durdurmadan ÖNCE çiz. Geç kalsaydı İngilizce kullanıcı bir Türkçe flaş görürdü
+     (index.html:1889 ile aynı gerekçe). -->
+<!-- FİTNES (G3): planner yardımcılarını (_tok, esc, _yerelGun …) yalnız ÇAĞRI anında kullanır;
+     ana betikten ÖNCE yüklenir ki init() → fsHydrate() tanımlı olsun. dil.js ilk (fT, fYerel, iskelet metni). -->
+<script src="/ui/js/fitnes/dil.js?v=2"></script>
+<script src="/ui/js/fitnes/ortak.js?v=1"></script>
+<script src="/ui/js/fitnes/hareket.js?v=1"></script>
+<script src="/ui/js/fitnes/ayar.js?v=1"></script>
+<script src="/ui/js/fitnes/beslenme.js?v=1"></script>
+<script src="/ui/js/fitnes/durum.js?v=2"></script>
+<script src="/ui/js/fitnes/antrenman.js?v=2"></script>
+<script src="/ui/js/fitnes/gecmis.js?v=2"></script>
+<script>window.YukiDil && window.YukiDil.ciz(document);</script>
+
+<script>
+// ── YEREL GÜN / DAKİKA ────────────────────────────────────────────────────────
+// 🔴 2026-09-18 (FAZ 0): bu dosyada "bugün" **20 yerde**
+// `new Date().toISOString().slice(0,10)` ile hesaplanıyordu. `toISOString()` UTC
+// üretir, yerel günü DEĞİL:
+//   · Türkiye (UTC+3): gece 00:00–03:00 arası "bugün" DÜNÜ gösteriyordu
+//   · Los Angeles (UTC−8): 16:00'dan sonra YARINI gösterir
+// → günlük görev, öğün ve bütçe girişi yanlış güne yazılıyordu.
+//
+// Hatırlatma saati aynı sınıftaydı ve daha kötüydü: `slice(0,16)` "14:00"ı
+// **11:00** diye kaydediyordu. Bu dosyanın geri kalanı zaten NAIVE YEREL saat
+// sözleşmesi kullanıyor — `<input type="datetime-local">` (satır ~366) yerel
+// üretir, `loadDetail` onu `slice(0,16)` ile aynı alana geri yazar, backend
+// `_parse_dt` = `datetime.fromisoformat` naive okur. Tek aykırı yer parseNL idi.
+function _yerelGun(d) {
+  const t = d instanceof Date ? d : new Date(d);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`;
+}
+function _yerelDakika(d) {
+  const t = d instanceof Date ? d : new Date(d);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${_yerelGun(t)}T${p(t.getHours())}:${p(t.getMinutes())}`;
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+const API = '/api/todo';
+const COLOR_MAP = { cyan:'#3b82f6', gold:'#f0b429', purple:'#a855f7', green:'#22c55e', red:'#ff4e6a' };
+let _token = new URLSearchParams(location.search).get('token') || '';
+let _lists = [], _tasks = [], _completedTasks = [];
+let _activeListId = null, _selectedTaskId = null;
+let _activeFilter = 'all', _calMonthOffset = 0, _calSelectedDate = null;
+let _completedOpen = false, _newListColor = 'cyan';
+let _sortable = null, _searchDebounce = null;
+let _activeTag = null;
+let _selectedIds = new Set();
+let _viewMode = 'list';
+let _kSortables = [];
+
+function authHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  if (_token) h['Authorization'] = 'Bearer ' + _token;
+  return h;
+}
+
+async function api(method, path, body) {
+  const opts = { method, headers: authHeaders() };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail || r.statusText); }
+  return r.status === 204 ? null : r.json();
+}
+
+/*  · C4 "sessiz başarısızlık = 0" — 2026-08-28
+   PLAN ekranının HİÇ bildirim mekanizması yoktu (index.html'de iki tane vardı,
+   burada sıfır) → 9 CRUD `catch(e){}` bloğu kullanıcının tıkladığı işlemi
+   tamamen sessizce yutuyordu. `js/bildirim.js` artık bu sayfada da yüklü.
+
+   ⚠️ Mesaj kuralı: "bir hata oluştu" YAZMA. Kullanıcının bilmesi gereken şey
+   hatanın olduğu değil, EKRANDA GÖRDÜĞÜ İLE GERÇEĞİN NEREDE AYRIŞTIĞI —
+   "kalıcı sil"e onay verip istek düşerse görev çöp kutusunda DURUYORDUR. */
+function plHata(mesaj) {
+  if (typeof window.bildir === 'function') window.bildir(mesaj, 'hata');
+  else console.error('[yuki] ' + mesaj);
+}
+
+/* ── DİL ──────────────────────────────────────────────────────────────────────
+   FAZ 3 · Dalga 2 · dosya kuyruğu (2026-09-20)
+
+   🔴 ADI `t` DEĞİL. `dil.js` çeviriyi `YukiDil.t` olarak sunuyor ve öbür
+   dosyalarda sarmalayıcının adı `t`'dir — burada OLAMAZ: bu dosyada `t` yirmiden
+   fazla yerde YEREL değişken (görev nesnesi, tarih). Bir `function t()` global'i
+   o gövdelerin hepsinde gölgelenir ve çeviri sessizce `undefined`'a düşerdi.
+   Blok 1'de aynı tuzak ÜÇ yerde çıkmıştı; burada yirmi yerde çıkardı.
+
+   🔴 `_yerel()` — `toLocaleString('tr-TR')` bu dosyada BEŞ yerde sabitti. Metin
+   çevrilse bile biçim Türkçe kalırdı: İngilizce ekranda "15 Eyl" bir Türkçe ay
+   adıdır (Blok 3'ün TR BİÇİM dersi). */
+function _t(anahtar, degerler) {
+  return window.YukiDil ? window.YukiDil.t(anahtar, degerler) : anahtar;
+}
+function _tc(anahtar, sayi, degerler) {
+  return window.YukiDil ? window.YukiDil.tc(anahtar, sayi, degerler) : anahtar;
+}
+function _yerel() {
+  return window.YukiDil ? window.YukiDil.yerel() : 'tr-TR';
+}
+/* Para tutarı: kuruş YUVARLANMAZ. Tutar alanları step="0.01" — 1.250,50'lik fiş
+   ekranda 1.251 görünüyordu (kişisel AliceAi a16c96a'da aynı kusur kapandı). */
+function _tutar(v) {
+  const n = Number(v);
+  const kurus = Math.round(Math.abs(n) * 100) % 100 !== 0;   // 1.250,50 · 1.250 — "1.250,5" değil
+  return n.toLocaleString(_yerel(), { minimumFractionDigits: kurus ? 2 : 0, maximumFractionDigits: 2 });
+}
+
+
+/* Dil değişince JS'in çizdiği her yüzey yeniden çizilmeli — `dil.js::ciz` yalnız
+   `data-i18n` taşıyan STATİK markup'ı tazeler. Blok 6/9/10'da aynı kusur BEŞ kez
+   çıktı: açık panel dil değişiminde donuyordu.
+
+   🔑 Çizici yalnız VARSA çağrılır (`typeof`): bu dosyadaki çizimlerin bir kısmı
+   sekmeye/kipe bağlı ve hepsi her zaman tanımlı değil. Yutulan bir `ReferenceError`
+   listenin GERİ KALANINI da düşürürdü. */
+window.addEventListener('yuki-dil-degisti', function () {
+  ['fisCiz', 'renderLists', 'renderTasks', 'renderCalendar', 'aypCiz',
+   'tabakCiz', 'odakCiz',
+   'chipDahaEtiketle'].forEach(function (ad) {
+    try { if (typeof window[ad] === 'function') window[ad](); }
+    catch (e) { console.warn('[yuki] dil tazeleme: ' + ad, e); }
+  });
+});
+
+// ── BÜTÇE · FİŞ (2026-09-26) ─────────────────────────────────────────────────
+/* Kişisel AliceAi a16c96a "A" taslağının ürün karşılığı. Tek ekran: telefon,
+   masaüstü ve widget aynı #budget-view'u kullanır (eskiden üç kopya — sol panel
+   widget'ı, mobil şerit, masaüstü görünümü — aynı veriyi üç id setiyle basıyordu).
+   Kaldırılanlar: TÜM ZAMANLAR, kategori çipi süzgeci, donut, sağdan açılan form. */
+/* Kategori ADI ≠ kategori KİMLİĞİ. Kimlik ('market') backend'e o hâliyle gider ve
+   eskiden `BUDGET_CAT_META`'nın anahtarıydı — çevrilirse veri bozulur. Yalnız görünen ad
+   çevrilir; sözlükte karşılığı yoksa kimliğin kendisi basılır.
+
+   🔴 `t()` bilinmeyen anahtarda ANAHTARI döndürür (boş string değil) — `!m` ile
+   sorsaydık ekranda `butce.kat-market` görünürdü. `intro-sequences.js::_catAd`
+   ile aynı kademe, aynı gerekçe. */
+function _katAd(kimlik) {
+  const a = 'butce.kat-' + _KAT_SLUG[kimlik];
+  if (!_KAT_SLUG[kimlik]) return kimlik;
+  const m = _t(a);
+  return m === a ? kimlik : m;
+}
+const _KAT_SLUG = {
+  'market': 'market', 'fatura': 'fatura', 'kira': 'kira', 'ulaşım': 'ulasim',
+  'yemek': 'yemek', 'sağlık': 'saglik', 'eğlence': 'eglence', 'giyim': 'giyim',
+  'eğitim': 'egitim', 'teknoloji': 'teknoloji', 'maaş': 'maas',
+  'freelance': 'freelance', 'yatırım': 'yatirim', 'hediye': 'hediye',
+  'diğer': 'diger',
+};
+
+/* 🔴 Ay adları MODÜL DÜZEYİ SABİT olarak yazılmıyor — anahtar tutuyor, çözüm
+   çağrı anında. Dizi sabiti bir kez çözülürse dil değişiminde ESKİ dilde kalır;
+   Blok 7/10'da aynı kusur BEŞ kez çıktı (`_EVOL_LABELS`, `_TERM_LABELS`…). */
+const _AY_ANAHTAR = ['ocak','subat','mart','nisan','mayis','haziran',
+                     'temmuz','agustos','eylul','ekim','kasim','aralik'];
+/* 🪤 İKİ AYRI SIRA var ve karıştırmak sessiz bir kayma üretir:
+   `_PAZ` → `Date.getDay()` sırası (0=Pazar) — 7 günlük trend şeridi kullanır.
+   `_PZT` → takvim ızgarası sırası (0=Pazartesi) — mini takvim + Google görünümü.
+   Tek dizi tutulsaydı bir yüzeyin günleri bir gün kayardı ve kimse fark etmezdi. */
+const _GUN_ANAHTAR_PAZ = ['paz','pzt','sal','car','per','cum','cmt'];
+const _GUN_ANAHTAR_PZT = ['pzt','sal','car','per','cum','cmt','paz'];
+
+const _FIS_GIDER = ['market', 'fatura', 'kira', 'ulaşım', 'yemek', 'sağlık', 'eğlence', 'giyim', 'eğitim', 'teknoloji', 'diğer'];
+const _FIS_GELIR = ['maaş', 'freelance', 'yatırım', 'hediye', 'diğer'];
+const _FIS_ANAHTAR = 'yuki_fis_v1';   // { gorunum: 'kagit' | 'koyu' } — karar 3-A+B
+let _budgetMonth = null;        // 'YYYY-MM'
+let _fisTurSecili = 'expense';
+let _fisKayit = [];             // görüntülenen ayın kayıtları
+let _fisTumu = [];              // son 500 kayıt — tekrar edenler + "son kayıt" için
+let _fisHata = false;
+let _fisYuklendi = false;
+let _fisYeniId = null;          // az önce eklenen satır (vurgu)
+let _fisTekListe = [];
+
+/* Yüzde biçimi dile ait ("%48" ↔ "48%"); sıfır olmayan küçük pay "%0" değil "%<1". */
+function _fisYuzde(x, sade) {
+  const n = x > 0 && x < 1 ? '<1' : String(Math.round(x));
+  return sade ? n : _t('butce.yuzde', { n });
+}
+function _fisTl(n) { return _tutar(Math.abs(Number(n) || 0)); }
+function _fisIsaretli(n, isaret) { return `${isaret}₺${_fisTl(n)}`; }
+function budgetCurrentMonth() { return _yerelGun(new Date()).slice(0, 7); }
+function _fisAyBh(m) { return _t('tarih.ay-bh-' + _AY_ANAHTAR[m]); }
+function _fisGunBaslik(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  return `${_t('tarih.gun-ay', { g: d.getDate(), ay: _t('tarih.ay-kisa-' + _AY_ANAHTAR[d.getMonth()]) })} ${_t('tarih.gun-kisa-' + _GUN_ANAHTAR_PAZ[d.getDay()])}`.toLocaleUpperCase(_yerel());
+}
+
+/* Kaydın hangi güne yazılacağı: görüntülenen ay bu aysa bugün; değilse `gun` verildiyse
+   o ayın o günü (tekrar edenler geçen seferki gününe yazılır), yoksa ayın 1'i. */
+function _budgetEntryDate(gun) {
+  const bugun = _yerelGun(new Date());
+  if (_budgetMonth === bugun.slice(0, 7)) return bugun;
+  if (gun) {
+    const son = new Date(+_budgetMonth.slice(0, 4), +_budgetMonth.slice(5), 0).getDate();
+    return `${_budgetMonth}-${String(Math.min(gun, son)).padStart(2, '0')}`;
+  }
+  return `${_budgetMonth}-01`;
+}
+
+function fisTur(t) {
+  _fisTurSecili = t;
+  document.querySelectorAll('.fis-tur button').forEach(b => {
+    b.classList.toggle('on', b.dataset.t === t); b.setAttribute('aria-pressed', String(b.dataset.t === t));
+  });
+  const sel = document.getElementById('fis-kat');
+  if (!sel) return;
+  const eski = sel.value, liste = t === 'income' ? _FIS_GELIR : _FIS_GIDER;
+  sel.innerHTML = liste.map(k => `<option value="${esc(k)}">${esc(_katAd(k))}</option>`).join('');
+  sel.value = liste.includes(eski) ? eski : liste[0];
+}
+
+function fisAy(delta) {
+  const d = new Date(+_budgetMonth.slice(0, 4), +_budgetMonth.slice(5) - 1 + delta, 1);
+  _budgetMonth = _yerelGun(d).slice(0, 7);
+  budgetRefresh(true);
+}
+
+/* Seçim bellekte de tutulur: localStorage atan ortamda (gizli pencere) düğme yine çalışsın. */
+let _fisGorunumSecim = null;
+function _fisGorunumOku() {
+  if (_fisGorunumSecim) return _fisGorunumSecim;
+  try { _fisGorunumSecim = JSON.parse(localStorage.getItem(_FIS_ANAHTAR) || '{}').gorunum === 'koyu' ? 'koyu' : 'kagit'; }
+  catch (_) { _fisGorunumSecim = 'kagit'; }
+  return _fisGorunumSecim;
+}
+function _fisGorunumUygula() {
+  const koyu = _fisGorunumOku() === 'koyu';
+  const fis = document.getElementById('fis'), d = document.getElementById('fis-gorunum');
+  if (fis) fis.classList.toggle('koyu', koyu);
+  if (d) { const e = _t(koyu ? 'butce.fis-kagit' : 'butce.fis-koyu'); d.setAttribute('aria-label', e); d.title = e; }
+}
+function fisGorunum() {
+  _fisGorunumSecim = _fisGorunumOku() === 'koyu' ? 'kagit' : 'koyu';
+  try { localStorage.setItem(_FIS_ANAHTAR, JSON.stringify({ gorunum: _fisGorunumSecim })); } catch (_) { /* yalnız bu oturum */ }
+  _fisGorunumUygula();
+}
+
+/* Her ay tekrar eden: aynı tür + aynı tutar en az 2 farklı ayda. Ad/kategori = en son kaydınki. */
+function _fisTekrarlar() {
+  const grup = {};
+  _fisTumu.forEach(e => { const k = e.type + '|' + Number(e.amount); (grup[k] = grup[k] || []).push(e); });
+  return Object.values(grup)
+    .filter(l => new Set(l.map(e => String(e.entry_date).slice(0, 7))).size >= 2)
+    .map(l => {
+      l.sort((a, b) => String(b.entry_date).localeCompare(String(a.entry_date)));
+      const son = l[0];
+      return { type: son.type, amount: Number(son.amount), category: son.category,
+               note: (l.find(e => e.note) || {}).note || null, gun: +String(son.entry_date).slice(8, 10) };
+    })
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 8);
+}
+
+async function budgetRefresh(bas) {
+  if (!_budgetMonth) _budgetMonth = budgetCurrentMonth();
+  const istenen = _budgetMonth;
+  const [ay, tumu] = await Promise.all([
+    api('GET', `/budget/entries?month=${istenen}&limit=500`).catch(() => null),
+    api('GET', '/budget/entries?month=all&limit=500').catch(() => null),
+  ]);
+  if (istenen !== _budgetMonth) return;   // hızlı ay değişimi: geç gelen cevap başka ayı çizmesin
+  _fisHata = !ay;
+  _fisKayit = ay ? (ay.entries || []) : [];
+  if (tumu) _fisTumu = tumu.entries || [];
+  _fisYuklendi = true;
+  fisCiz(bas);
+}
+
+function fisCiz(bas) {
+  if (!_fisYuklendi || !document.getElementById('fis-kagit')) return;
+  const [y, m] = _budgetMonth.split('-').map(Number);
+  const simdiki = budgetCurrentMonth();
+  document.getElementById('fis-ay-ad').textContent = `${_fisAyBh(m - 1)} ${y}`;
+  _fisGorunumUygula();
+
+  const gel = _fisKayit.filter(e => e.type === 'income').reduce((a, e) => a + Number(e.amount), 0);
+  const gid = _fisKayit.filter(e => e.type === 'expense').reduce((a, e) => a + Number(e.amount), 0);
+  const kal = gel - gid;
+  document.getElementById('fis-kalan-ad').textContent =
+    _t(_budgetMonth === simdiki ? 'butce.kalan-bu-ay' : _budgetMonth < simdiki ? 'butce.kalan-ay-sonu' : 'butce.kalan');
+  const kt = document.getElementById('fis-kalan-tutar');
+  kt.textContent = _fisHata ? '—' : _fisIsaretli(kal, kal < 0 ? '−' : '');
+  kt.className = _fisHata ? '' : kal > 0 ? 'arti' : kal < 0 ? 'eksi' : '';
+  const oran = gel ? _t('butce.o-harcandi', { n: _fisYuzde(gid / gel * 100, true) }) : (gid ? _t('butce.o-gelir-yok') : '—');
+  document.getElementById('fis-ozet').innerHTML = _fisHata ? '' :
+    `<span>${esc(_t('butce.o-gelir'))} <em>${_fisTl(gel)}</em></span><span>${esc(_t('butce.o-gider'))} <em>${_fisTl(gid)}</em></span><span>${esc(oran)}</span>`;
+  const or = document.querySelector('#fis-oran i');
+  or.style.inlineSize = (gel ? Math.min(100, gid / gel * 100) : (gid ? 100 : 0)) + '%';
+  or.classList.toggle('asti', gid > gel && gid > 0);
+
+  const kat = {};
+  _fisKayit.filter(e => e.type === 'expense').forEach(e => kat[e.category] = (kat[e.category] || 0) + Number(e.amount));
+  const sira = Object.entries(kat).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  document.getElementById('fis-dagilim').innerHTML = sira.length
+    ? `<span class="fis-hud">${esc(_t('butce.dagilim'))}</span>` + sira.map(([k, t], i) =>
+      `<span>${esc(_katAd(k))}</span><i><b class="${i ? '' : 'ilk'}" style="inline-size:${Math.round(t / sira[0][1] * 100)}%"></b></i><em>${_fisTl(t)}</em><small>${esc(_fisYuzde(t / gid * 100))}</small>`).join('')
+    : '';
+
+  // Tekrar edenler — bu ay zaten girildiyse ✓ ve kapalı (çift kayıt olmasın).
+  _fisTekListe = _fisHata ? [] : _fisTekrarlar();
+  const tb = document.getElementById('fis-tekrar');
+  tb.hidden = !_fisTekListe.length;
+  document.getElementById('fis-tekrar-ad').textContent = _t(_fisKayit.length ? 'butce.tekrar' : 'butce.tekrar-dokun');
+  const ARTI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+  const TIK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+  document.getElementById('fis-tekrar-liste').innerHTML = _fisTekListe.map((t, i) => {
+    const var_ = _fisKayit.some(e => e.type === t.type && Number(e.amount) === t.amount);
+    return `<button type="button" class="fis-tek${t.type === 'income' ? ' gel' : ''}" data-i="${i}"${var_ ? ` disabled title="${esc(_t('butce.tekrar-girildi'))}"` : ''}>${var_ ? TIK : ARTI}${esc(t.note || _katAd(t.category))} <b>${t.type === 'income' ? '+' : '−'}${_fisTl(t.amount)}</b></button>`;
+  }).join('');
+
+  // Fiş
+  const ayKisa = _t('tarih.ay-kisa-' + _AY_ANAHTAR[m - 1]).toLocaleUpperCase(_yerel());
+  let h = `<div class="fis-bas"><span>${esc(_t('butce.fis-baslik'))}</span><span>${esc(ayKisa)} ${y}</span></div><hr>`;
+  if (_fisHata) {
+    h += `<div class="fis-bos">— ${esc(_t('butce.fis-alinamadi'))} —</div>`;
+  } else if (!_fisKayit.length) {
+    const son = _fisTumu[0];
+    h += `<div class="fis-bos">— ${esc(_t('butce.fis-bos'))} —${son ? `<br>${esc(_t('butce.son-kayit', { tarih: _gKisa(String(son.entry_date).slice(0, 10)) }).toLocaleUpperCase(_yerel()))}` : ''}</div>`;
+  } else {
+    const gunler = {};
+    _fisKayit.forEach(e => { const g = String(e.entry_date).slice(0, 10); (gunler[g] = gunler[g] || []).push(e); });
+    Object.keys(gunler).sort().reverse().forEach(g => {
+      h += `<div class="fis-gun">${esc(_fisGunBaslik(g))}</div>`;
+      h += gunler[g].map(e => {
+        const ad = e.note || _katAd(e.category), gelir = e.type === 'income';
+        const tutar = `${gelir ? '+' : '−'}${_fisTl(e.amount)}`;
+        return `<button type="button" class="fis-s${e.id === _fisYeniId ? ' yeni' : ''}" data-id="${esc(String(e.id))}" aria-label="${esc(_t('butce.satir-aria', { ad, tutar }))}">` +
+          `<span class="ad">${esc(ad)}</span>${e.note ? `<span class="kat">${esc(_katAd(e.category))}</span>` : ''}<span class="dot"></span>` +
+          `<span class="t${gelir ? ' g' : ''}">${tutar}</span><span class="sil">${esc(_t('butce.sil'))}</span></button>`;
+      }).join('');
+      h += '<hr>';
+    });
+    h += `<div class="fis-top"><span>${esc(_t('butce.gelir'))}</span><span>+${_fisTl(gel)}</span></div>` +
+         `<div class="fis-top"><span>${esc(_t('butce.gider'))}</span><span>−${_fisTl(gid)}</span></div><hr>` +
+         `<div class="fis-top buyuk"><span>${esc(_t('butce.kalan'))}</span><span${kal < 0 ? ' class="eksi"' : ''}>${_fisIsaretli(kal, kal < 0 ? '−' : '')}</span></div>`;
+  }
+  const k = document.getElementById('fis-kagit');
+  k.innerHTML = h;
+  if (bas) { k.classList.remove('basiliyor'); void k.offsetWidth; k.classList.add('basiliyor'); }
+  _fisYeniId = null;
+  // Dil değişince seçenek adları da çevrilsin (kimlik aynı kalır)
+  fisTur(_fisTurSecili);
+}
+
+/* "250 a101" · "1.250,50 kira" · "12.50 coffee" · "250" — ilk sayı tutar, gerisi not.
+   Virgülden sonra 1-2 hane = ondalık (TR); 3 haneli grup = binlik ayracı (TR ve EN). */
+function _fisCoz(metin) {
+  const m = metin.trim().match(/^([\d.,]+)\s*(.*)$/);
+  if (!m) return null;
+  let t = m[1];
+  if (/,\d{1,2}$/.test(t)) t = t.replace(/\./g, '').replace(',', '.');
+  else t = t.replace(/[.,](?=\d{3}(\D|$))/g, '').replace(',', '.');
+  const tutar = Math.round(parseFloat(t) * 100) / 100;
+  return tutar > 0 ? { tutar, not: m[2].trim().slice(0, 100) || null } : null;
+}
+function _fisDurum(metin, tamam) {
+  const d = document.getElementById('fis-durum');
+  d.textContent = metin; d.classList.toggle('tamam', !!tamam);
+  if (tamam) setTimeout(() => { if (d.textContent === metin) d.textContent = ''; }, 2500);
+}
+async function _fisYaz(govde) {
+  try {
+    const r = await api('POST', '/budget', govde);
+    _fisYeniId = r && r.id;
+    await budgetRefresh();
+    return true;
+  } catch (e) { _fisDurum(_t('butce.fis-eklenemedi')); return false; }
+}
+async function fisEkle(e) {
+  e.preventDefault();
+  const inp = document.getElementById('fis-tutar'), form = document.getElementById('fis-gir');
+  const c = _fisCoz(inp.value);
+  if (!c) { form.classList.remove('hata'); void form.offsetWidth; form.classList.add('hata'); _fisDurum(_t('butce.fis-once-tutar')); return; }
+  const ok = await _fisYaz({ type: _fisTurSecili, amount: c.tutar, category: document.getElementById('fis-kat').value, note: c.not, entry_date: _budgetEntryDate() });
+  if (ok) {
+    inp.value = ''; form.classList.remove('hata');
+    _fisDurum(_t('butce.fis-yazildi', { tutar: `${_fisTurSecili === 'income' ? '+' : '−'}${_fisTl(c.tutar)}` }), true);
+  }
+}
+document.addEventListener('input', e => {
+  if (e.target && e.target.id === 'fis-tutar') { document.getElementById('fis-gir').classList.remove('hata'); const d = document.getElementById('fis-durum'); if (!d.classList.contains('tamam')) d.textContent = ''; }
+});
+
+document.addEventListener('click', async e => {
+  const tek = e.target.closest && e.target.closest('.fis-tek:not(:disabled)');
+  if (tek) {
+    const t = _fisTekListe[+tek.dataset.i];
+    if (!t) return;
+    tek.disabled = true;
+    const ok = await _fisYaz({ type: t.type, amount: t.amount, category: t.category, note: t.note, entry_date: _budgetEntryDate(t.gun) });
+    if (ok) _fisDurum(_t('butce.fis-eklendi', { ad: t.note || _katAd(t.category) }), true); else tek.disabled = false;
+    return;
+  }
+  // Fiş satırı: ilk dokunuş SİL'i gösterir, ikinci dokunuş siler (yanlışlıkla silme yok, confirm() yok).
+  const sat = e.target.closest && e.target.closest('.fis-s');
+  document.querySelectorAll('.fis-s.acik').forEach(x => { if (x !== sat) x.classList.remove('acik'); });
+  if (!sat) return;
+  if (!sat.classList.contains('acik')) { sat.classList.add('acik'); return; }
+  try { await api('DELETE', `/budget/${encodeURIComponent(sat.dataset.id)}`); await budgetRefresh(); _fisDurum(_t('butce.satir-silindi'), true); }
+  catch (err) { _fisDurum(_t('butce.silinemedi')); }
+});
+
+function budgetInit() {
+  _budgetMonth = budgetCurrentMonth();
+  fisTur('expense');
+  _fisGorunumUygula();
+}
+
+// ── FİTNES: js/fitnes/*.js (G3 — ayrı modüller; planner ile sözleşme fsHydrate · tabakYukle · odakYukle · fstripTab) ──
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    await loadLists();
+    await loadStats();
+  } catch(e) {
+    console.error('[PLANNER] init failed:', e);
+    throw e;
+  }
+  renderCalendar();
+  chipDahaEtiketle();
+  loadCalStatus();
+  budgetInit();
+  fsHydrate().catch(() => {});
+  setInterval(loadStats, 30000);
+  document.getElementById('search-input').addEventListener('input', e => {
+    clearTimeout(_searchDebounce);
+    _searchDebounce = setTimeout(() => {
+      const q = e.target.value.trim();
+      if (q.length >= 2) searchTasks(q);
+      else if (!q) loadTasksForActiveList();
+    }, 300);
+  });
+}
+
+// ── LISTS ─────────────────────────────────────────────────────────────────────
+async function loadLists() {
+  const data = await api('GET', '/lists');
+  // Yanıt beklenen şekilde gelmezse (ağ hatası, 403, kısmi/bozuk gövde) eskiden
+  // _lists undefined kalıyor, renderLists içindeki .forEach patlıyor ve PLAN'ın
+  // TAMAMI açılmadan ölüyordu — kullanıcı sebepsiz boş ekran görüyordu.
+  // Ölçüldü 2026-08-26 (genişlik turu): "[PLANNER] init failed: Cannot read
+  // properties of undefined (reading 'forEach')" · DOM 5 öğede kalıyordu.
+  _lists = Array.isArray(data?.lists) ? data.lists : [];
+  renderLists();
+  if (!_activeListId && _lists.length) {
+    // İkinci parametre `false` idi → ilk açılışta görevler HİÇ yüklenmiyordu;
+    // kullanıcı listeye tıklayana kadar orta bölüm bomboştu (ölçüldü 08-25 §11
+    // ve 08-27 mobil turunda aynı boşluk). İçerik varsa gösterilir.
+    // 09-26: ilk açılış GÜNDEM — tüm listeler tek akışta. Hızlı ekleme ilk
+    // listeye (Gelen Kutusu) yazar, o yüzden _activeListId yine dolu.
+    _activeListId = _lists[0].id;
+    gundemAc();
+  } else if (!_lists.length) {
+    // HİÇ LİSTE YOK — ilk açılışın gerçek hâli. Burada selectList çağrılmadığı için
+    // loadTasks/renderTasks hiç koşmaz; orta bölüm bomboş kalır ve kullanıcı ne
+    // yapacağını anlamaz. renderTasks'taki boş durum bu dala HİÇ ulaşmıyordu
+    // (ölçüldü 2026-08-26: boş durum eklendi ama DOM öğe sayısı değişmedi).
+    const orta = document.getElementById('tasks-list');
+    if (orta) {
+      orta.innerHTML = '';
+      orta.appendChild(bosDurum({
+        baslik: _t('plan.bos-liste-baslik'),
+        metin: _t('plan.bos-liste-metin'),
+        eylem: { etiket: _t('plan.bos-liste-eylem'), calistir: () => openAddList() },
+      }));
+    }
+  }
+}
+
+function renderLists() {
+  const c = document.getElementById('lists-container');
+  c.innerHTML = '';
+  if (_lists.length) {
+    const g = document.createElement('div');
+    g.className = 'list-item gundem-item' + (_gundem ? ' active' : '');
+    g.dataset.id = 'gundem';
+    g.innerHTML = `<div class="list-dot"></div><span class="list-icon">${_G_IKON}</span>
+      <span class="list-name">${esc(_t('plan.gundem'))}</span><span class="list-count"></span>`;
+    g.onclick = () => { gundemAc(); if (isMobile()) mobileTab('tasks'); };
+    c.appendChild(g);
+  }
+  _lists.forEach(l => {
+    const div = document.createElement('div');
+    div.className = 'list-item' + (!_gundem && l.id === _activeListId ? ' active' : '');
+    div.dataset.id = l.id;
+    div.style.setProperty('--lc', COLOR_MAP[l.color] || COLOR_MAP.cyan);
+    div.innerHTML = `
+      <div class="list-dot"></div>
+      <span class="list-icon">${esc(l.icon)}</span>
+      <span class="list-name">${esc(l.name)}</span>
+      <span class="list-count">${_listeAcik(l) ?? ''}</span>
+      <button class="list-del-btn" title="Listeyi sil" data-lid="${l.id}">✕</button>
+    `;
+    div.onclick = () => selectList(l.id);
+    div.querySelector('.list-del-btn').onclick = (e) => { e.stopPropagation(); deleteList(l.id, l.name); };
+    c.appendChild(div);
+  });
+}
+
+async function deleteList(id, name) {
+  if (!confirm(_t('plan.liste-sil-onay', { ad: name }))) return;
+  try {
+    await api('DELETE', `/lists/${id}`);
+    if (_activeListId === id) {
+      _activeListId = null;
+      clearDetail();
+    }
+    await loadLists();
+    await loadStats();
+  } catch(e) {
+    plHata(_t('ortak.hata-ayrinti', { mesaj: _t('plan.islem-basarisiz'), ayrinti: e.message }));
+  }
+}
+
+// ── GÜNDEM (2026-09-26) ───────────────────────────────────────────────────────
+// Kişisel AliceAi 2ae348c'nin ürün karşılığı. Veri kaynağı ayrı DEĞİL: _tasks /
+// _completedTasks TÜM listelerden dolar, renderTasks() gündemdeyken gundemCiz()'e
+// düşer → checkTask, selectTask, quickAdd, detay kaydı ek kod istemeden çalışır.
+// Metinler sözlükten (plan.g-*, tarih.*); ay/gün adları çağrı anında çözülür.
+let _gundem = false, _gundemGun = null, _gundemOran = 0;
+const _gundemAcikGrup = new Set();
+const _G_IKON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="1"/></svg>';
+const _G_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
+function _gGunEkle(iso, n) { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return _yerelGun(d); }
+function _gFark(a, b) { return Math.round((new Date(a + 'T12:00:00') - new Date(b + 'T12:00:00')) / 864e5); }
+function _gKisa(iso) {
+  const [, m, g] = iso.split('-');
+  return _t('tarih.gun-ay', { g: +g, ay: _t('tarih.ay-kisa-' + _AY_ANAHTAR[+m - 1]) });
+}
+function _gGunTam(iso) { return _t('tarih.gun-tam-' + _GUN_ANAHTAR_PAZ[new Date(iso + 'T12:00:00').getDay()]); }
+function _gBaslik(t) { return (t.title || '').split('\n').map(x => x.trim()).find(Boolean) || _t('plan.basliksiz'); }
+function _gListeAd(id) { return (_lists.find(l => l.id === id) || {}).name || ''; }
+
+function gundemAc() {
+  _gundem = true;
+  _gundemGun = null;
+  _calSelectedDate = null;
+  _activeFilter = 'all';
+  _activeTag = null;
+  clearBulkSelect();
+  document.body.classList.add('gundem');
+  document.querySelectorAll('.list-item').forEach(li => li.classList.toggle('active', li.dataset.id === 'gundem'));
+  gundemYukle();
+}
+
+async function gundemYukle() {
+  const sonuc = await Promise.all(_lists.map(l =>
+    api('GET', `/lists/${l.id}/tasks?include_completed=true`).catch(() => ({ tasks: [] }))));
+  if (!_gundem) return;   // beklerken bir listeye geçildiyse ezme
+  const hepsi = sonuc.flatMap(r => (r && r.tasks) || []);
+  _tasks = hepsi.filter(t => !t.completed_at);
+  _completedTasks = hepsi.filter(t => t.completed_at);
+  renderTasks();
+}
+
+function _gKart(t, tur, sag) {
+  const id = esc(t.id);
+  const liste = tur === 'tarihsiz' ? '' : _gListeAd(t.list_id);   // grubun içinde liste adı zaten başlıkta
+  return `<div class="g-kart${tur === 'gec' ? ' gec' : ''}" data-id="${id}" onclick="selectTask('${id}')">
+    <button class="g-tik" onclick="gundemTik(event,'${id}')" aria-label="${esc(_t('plan.g-tamamla'))}"></button>
+    <div class="g-m"><p>${esc(_gBaslik(t))}</p>${liste ? `<small>${esc(liste)}</small>` : ''}</div>
+    ${sag ? `<span class="g-sag">${esc(sag)}</span>` : ''}</div>`;
+}
+
+function gundemCiz() {
+  const kok = document.getElementById('gundem-view');
+  if (!kok || !_gundem) return;
+  const bugun = _yerelGun(new Date());
+  const secili = _gundemGun || bugun;
+  const acik = _tasks;
+  const gec = acik.filter(t => t.due_date && t.due_date < bugun).sort((a, b) => a.due_date.localeCompare(b.due_date));
+  const gunun = acik.filter(t => t.due_date === secili);
+  const yakin = _gundemGun ? [] : acik.filter(t => t.due_date && t.due_date > bugun && t.due_date <= _gGunEkle(bugun, 7))
+    .sort((a, b) => a.due_date.localeCompare(b.due_date));
+  const tarihsiz = acik.filter(t => !t.due_date);
+  const biten = _completedTasks.filter(t => t.completed_at && _yerelGun(new Date(t.completed_at)) === bugun).length;
+  const bugunAcik = acik.filter(t => t.due_date === bugun).length;
+  const toplam = biten + bugunAcik;
+  const oran = toplam ? biten / toplam : 0;
+
+  // Hafta şeridi: bu haftanın Pazartesi–Pazar'ı (takvim ızgarasıyla aynı sıra: _PZT)
+  // Gün adı iki harf (PT·SA·ÇA…; kişisel Yuki ile aynı, 11-15 tam hizala) — tam adı aria-label'da.
+  const d0 = new Date(bugun + 'T12:00:00');
+  const pzt = _gGunEkle(bugun, -((d0.getDay() + 6) % 7));
+  const hafta = _GUN_ANAHTAR_PZT.map((k, i) => {
+    const iso = _gGunEkle(pzt, i);
+    const var_ = acik.some(t => t.due_date === iso);
+    const cls = ['g-gun', iso === bugun ? 'bugun' : '', iso === secili ? 'secili' : '',
+      var_ ? (iso < bugun ? 'gecti' : 'var') : ''].join(' ').trim();
+    return `<button class="${cls}" onclick="gundemGunSec('${iso}')" aria-pressed="${iso === secili}"
+      aria-label="${esc(_gGunTam(iso) + ' ' + _gKisa(iso))}"><span>${esc(_t('tarih.gun-harf-' + k))}</span><b>${+iso.slice(8)}</b><i></i></button>`;
+  }).join('');
+
+  const listeler = _lists.map(l => [l, tarihsiz.filter(t => t.list_id === l.id)]).filter(x => x[1].length);
+  const secAd = secili === bugun ? _t('plan.f-bugun') : `${_gGunTam(secili)} · ${_gKisa(secili)}`;
+  const ayUzun = _t('tarih.ay-' + _AY_ANAHTAR[d0.getMonth()]).toLocaleLowerCase(_yerel());
+  const sayi = (n, cls) => `<span class="sayi${cls ? ' ' + cls : ''}">${n}</span>`;
+  // Gözlemevi (2026-11-13 arayüz turu): kart kutusu yok; her bölüm "deste" = üst kıl çizgi +
+  // versal etiket + serif italik alt yazı + sağda canlı sayı. Günün sayfası serif başlık + ince ilerleme rayı.
+  const bas = (ad, alt, n, cls) => `<div class="bas"><h2>${esc(ad)}</h2><em>${esc(alt)}</em>${sayi(n, cls)}</div>`;
+
+  kok.innerHTML = `<div class="g-ic">
+   <section class="g-ana">
+    <div class="deste altin g-sayfa">
+      <div class="bas"><h2>${d0.getDate()} ${esc(_gGunTam(bugun).toLocaleUpperCase(_yerel()))}</h2>
+        <em>${esc(_t('plan.g-sayfa-alt', { ay: ayUzun, yil: d0.getFullYear() }))}</em>
+        <span class="sayi g-oran${toplam && biten === toplam ? ' tam' : ''}" title="${esc(_t('plan.g-oran-ipucu'))}"
+          role="img" aria-label="${esc(_t('plan.g-halka-aria', { biten, toplam }))}">${biten} / ${toplam}</span></div>
+      <div class="ray"><i style="width:${Math.round(_gundemOran * 100)}%"></i></div>
+      <div class="g-hafta">${hafta}</div>
+    </div>
+    ${gec.length ? `<div class="deste kirmizi">${bas(_t('plan.f-gecikmis'), _t('plan.g-alt-gec'), gec.length, 'hata')}
+      ${gec.map(t => _gKart(t, 'gec', _tc('plan.g-gecikme', _gFark(bugun, t.due_date)))).join('')}</div>` : ''}
+    <div class="deste">${bas(secAd, _t('plan.g-alt-gun'), gunun.length)}
+    ${gunun.length ? gunun.map(t => _gKart(t, 'gun', '')).join('')
+      : `<div class="g-bos">${esc(_t(secili === bugun ? 'plan.g-bugun-bos' : 'plan.g-gun-bos'))}</div>`}</div>
+   </section>
+   <aside class="g-yan">
+    ${_gundemGun ? '' : `<div class="deste">${bas(_t('plan.g-yaklasan'), _t('plan.g-alt-yakin'), yakin.length)}
+      ${yakin.length ? yakin.map(t => _gKart(t, 'yakin', _gKisa(t.due_date))).join('')
+        : `<div class="g-bos">${esc(_t('plan.g-yakin-bos'))}</div>`}</div>`}
+    ${tarihsiz.length ? `<div class="deste">${bas(_t('plan.g-tarihsiz'), _t('plan.g-alt-tarihsiz'), tarihsiz.length)}
+      ${listeler.map(([l, ts]) => {
+        const ac = _gundemAcikGrup.has(l.id);
+        return `<button class="g-grup" onclick="gundemGrup('${esc(l.id)}')" aria-expanded="${ac}">
+          <span>${esc(l.name)}</span><span><b>${ts.length}</b>${_G_OK}</span></button>
+          ${ac ? `<div class="g-grup-ic">${ts.map(t => _gKart(t, 'tarihsiz', '')).join('')}</div>` : ''}`;
+      }).join('')}</div>` : ''}
+   </aside>
+  </div>`;
+
+  // İmza hareketi: günün sayfasındaki ray eski orandan yenisine dolar
+  const ray = kok.querySelector('.g-sayfa .ray i');
+  if (ray && oran !== _gundemOran) requestAnimationFrame(() => requestAnimationFrame(() => {
+    ray.style.width = Math.round(oran * 100) + '%';
+  }));
+  _gundemOran = oran;
+}
+
+function gundemTik(e, id) {
+  e.stopPropagation();
+  const k = document.querySelector(`.g-kart[data-id="${CSS.escape(id)}"]`);
+  if (k) k.classList.add('bitiyor');
+  checkTask(e, id);
+}
+
+function gundemGunSec(iso) {
+  _gundemGun = (iso === _yerelGun(new Date()) || iso === _gundemGun) ? null : iso;
+  _calSelectedDate = _gundemGun;
+  renderCalendar();
+  gundemCiz();
+}
+
+function gundemGrup(id) {
+  if (_gundemAcikGrup.has(id)) _gundemAcikGrup.delete(id); else _gundemAcikGrup.add(id);
+  gundemCiz();
+}
+
+function selectList(id, loadTasks = true) {
+  _gundem = false;
+  document.body.classList.remove('gundem');
+  _activeListId = id;
+  _activeFilter = 'all';
+  _activeTag = null;
+  _calSelectedDate = null;
+  clearBulkSelect();
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('.chip[data-filter="all"]').classList.add('active');
+  document.querySelectorAll('.list-item').forEach(li => li.classList.toggle('active', li.dataset.id === id));
+  clearDetail();
+  if (loadTasks) loadTasksForActiveList();
+}
+
+async function loadTasksForActiveList() {
+  if (_gundem) return gundemYukle();
+  if (!_activeListId) return;
+  const data = await api('GET', `/lists/${_activeListId}/tasks?include_completed=true`);
+  _tasks = (data?.tasks ?? []).filter(t => !t.completed_at);
+  _completedTasks = (data?.tasks ?? []).filter(t => t.completed_at);
+  renderTasks();
+}
+
+// ── LİSTELER · DEFTER (2026-09-26) ────────────────────────────────────────────
+// Kişisel AliceAi 20b6492'nin ürün karşılığı. Sayfa sekmeleri + başlık. Açık
+// sayılar backend'in /lists yanıtındaki `open_count`'tan (eskiden `task_count`
+// okunuyordu — backend o alanı hiç döndürmüyor, sol paneldeki sayı hep boştu);
+// açık listenin sayısı canlı `_tasks`'tan.
+const _SUZ_ANAHTAR = ['today', 'week', 'overdue', 'priority', 'in_progress', 'blocked', 'trash'];
+const _D_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+function _listeAcik(l) { return l.open_count != null ? l.open_count : (l.task_count != null ? l.task_count : null); }
+function _suzAd(f) { return _SUZ_ANAHTAR.includes(f) ? _t('plan.suz-' + f.replace('_', '-')) : f; }
+
+function defterBasCiz() {
+  const bas = document.getElementById('defter-bas');
+  if (!bas || _gundem) return;
+  const suzlu = _activeFilter && _activeFilter !== 'all';
+  const L = _lists.find(l => l.id === _activeListId);
+
+  const nav = document.getElementById('defter-sayfalar');
+  nav.innerHTML = _lists.map(l => {
+    const n = (!suzlu && L && l.id === L.id) ? _tasks.length : _listeAcik(l);
+    return `<button class="d-sayfa${!suzlu && l.id === _activeListId ? ' on' : ''}" onclick="selectList('${esc(l.id)}')"
+      ${!suzlu && l.id === _activeListId ? 'aria-current="page"' : ''}>${esc(l.name)}${n != null ? `<b>${n}</b>` : ''}</button>`;
+  }).join('') + `<button class="d-sayfa" onclick="openAddList()">${esc(_t('plan.d-yeni-liste'))}</button>`;
+  const on = nav.querySelector('.d-sayfa.on');
+  if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+
+  const bugun = _yerelGun(new Date());
+  const gec = _tasks.filter(t => t.due_date && t.due_date < bugun).length;
+  document.getElementById('defter-ad').textContent = suzlu ? _suzAd(_activeFilter) : (L ? L.name : '');
+  document.getElementById('defter-sayac').innerHTML = suzlu
+    ? esc(_tc('plan.d-suz-sayac', _tasks.length))
+    : [esc(_t('plan.d-acik', { n: _tasks.length })),
+       gec ? `<span class="gec">${esc(_t('plan.d-gecikmis', { n: gec }))}</span>` : '',
+       esc(_t('plan.d-bitti', { n: _completedTasks.length }))].filter(Boolean).join(' · ');
+  document.body.classList.toggle('suzlu', !!suzlu);
+  const suz = document.getElementById('defter-suz');
+  suz.classList.toggle('dolu', !!suzlu || !!_activeTag);
+  suz.innerHTML = esc(suzlu ? _t('plan.d-suz') + ' · ' + _suzAd(_activeFilter) : _t('plan.d-suz')) + _D_OK;
+  const yeni = document.getElementById('defter-yeni');
+  if (yeni) yeni.hidden = !!suzlu;
+}
+
+function defterSuz(ac) {
+  const acik = ac === undefined ? !document.body.classList.contains('suz-acik') : ac;
+  document.body.classList.toggle('suz-acik', acik);
+  document.getElementById('defter-suz').setAttribute('aria-expanded', acik);
+  defterBasCiz();
+}
+
+function defterAc() {
+  if (!_lists.length) { mobileTab('lists'); return; }   // hiç liste yok: boş durum + "liste ekle" sol panelde
+  if (_gundem || !_activeListId) selectList(_activeListId || _lists[0].id);
+  mobileTab('tasks');
+}
+
+function defterListeSil() {
+  const L = _lists.find(l => l.id === _activeListId);
+  if (L) deleteList(L.id, L.name);
+}
+
+// ── RENDER TASKS ──────────────────────────────────────────────────────────────
+function getTagFilteredTasks(tasks) {
+  if (!_activeTag) return tasks;
+  return tasks.filter(t => (t.tags || []).includes(_activeTag));
+}
+
+function renderTagChips() {
+  const bar = document.getElementById('tag-filter-bar');
+  const label = document.getElementById('tag-filter-label');
+  const allTasks = [..._tasks, ..._completedTasks];
+  const tags = [...new Set(allTasks.flatMap(t => t.tags || []))].sort();
+  bar.innerHTML = '';
+  bar.appendChild(label);
+  if (!tags.length) { bar.classList.remove('visible'); return; }
+  bar.classList.add('visible');
+  tags.forEach(tag => {
+    const btn = document.createElement('button');
+    btn.className = 'tag-filter-chip' + (_activeTag === tag ? ' active' : '');
+    btn.textContent = '#' + tag;
+    btn.onclick = () => setTagFilter(tag);
+    bar.appendChild(btn);
+  });
+}
+
+function setTagFilter(tag) {
+  _activeTag = _activeTag === tag ? null : tag;
+  renderTagChips();
+  const list = document.getElementById('tasks-list');
+  list.innerHTML = '';
+  getTagFilteredTasks(_tasks).forEach(t => list.appendChild(makeTaskRow(t)));
+  const compList = document.getElementById('completed-list');
+  if (compList.style.display !== 'none') {
+    compList.innerHTML = '';
+    getTagFilteredTasks(_completedTasks).forEach(t => compList.appendChild(makeTaskRow(t)));
+  }
+}
+
+/* Boş durum — kanon bileşen (ogeler.css: .bos/.bos-ikon/.bos-bas/.bos-metin).
+   ogeler.css 2026-08-26'da planner'a bağlandı; öncesinde bu ekranda boş durum
+   YOKTU (ölçüldü: `length === 0` kontrolü 0, `.bos` kullanımı 0) ve kullanıcı
+   ilk açılışta bomboş bir orta bölüm görüyordu.
+   Kural (ogeler.css:446): TEK eylem — iki seçenek sunmak boş durumu karar
+   ekranına çevirir. */
+function bosDurum({ baslik, metin, eylem }) {
+  const d = document.createElement('div');
+  d.className = 'bos';
+  const svg = '<svg class="bos-ikon" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+              '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>';
+  d.innerHTML = svg +
+    `<p class="bos-bas">${esc(baslik)}</p>` +
+    `<p class="bos-metin">${esc(metin)}</p>`;
+  if (eylem) {
+    const b = document.createElement('button');
+    b.className = 'dg dg-birincil';
+    b.textContent = eylem.etiket;
+    b.addEventListener('click', eylem.calistir);
+    d.appendChild(b);
+  }
+  return d;
+}
+
+function renderTasks() {
+  const qa = document.getElementById('quick-add-input');
+  if (qa) qa.placeholder = _gundem
+    ? (isMobile() ? _t('plan.g-ekle-ph-kisa') : _t('plan.g-ekle-ph', { liste: (_lists[0] || {}).name || '' }))
+    : _t('plan.yeni-gorev-ph');
+  document.body.classList.toggle('defter', !_gundem && !document.body.classList.contains('widget-mode'));
+  if (_gundem) { gundemCiz(); renderCalendar(); return; }
+  defterBasCiz();
+  if (_viewMode === 'kanban') { renderKanban(); renderTagChips(); renderCalendar(); return; }
+
+  const list = document.getElementById('tasks-list');
+  const filtered = getTagFilteredTasks(_tasks);
+  const hasSections = filtered.some(t => t.section_name);
+  if (hasSections) {
+    renderTasksWithSections(filtered, list);
+  } else {
+    list.innerHTML = '';
+    if (!filtered.length) {
+      // İki ayrı boş durum: "hiç görev yok" ile "filtre eledi" farklı sorunlardır.
+      // Tek metin gösterilseydi kullanıcı etiket filtresini fark etmeyip listeyi
+      // boş sanardı.
+      list.appendChild(_tasks.length
+        ? bosDurum({
+            baslik: _t('plan.bos-suzgec-baslik'),
+            metin: _t('plan.bos-suzgec-metin'),
+          })
+        : bosDurum({
+            baslik: _t('plan.bos-gorev-baslik'),
+            metin: _t('plan.bos-gorev-metin'),
+            eylem: {
+              etiket: _t('plan.bos-gorev-eylem'),
+              calistir: () => document.getElementById('quick-add-input')?.focus(),
+            },
+          }));
+    } else {
+      filtered.forEach(t => list.appendChild(makeTaskRow(t)));
+    }
+  }
+
+  const compSec = document.getElementById('completed-section');
+  const compList = document.getElementById('completed-list');
+  document.getElementById('completed-count').textContent = _completedTasks.length;
+  if (_completedTasks.length) {
+    compSec.style.display = '';
+    compList.innerHTML = '';
+    getTagFilteredTasks(_completedTasks).forEach(t => compList.appendChild(makeTaskRow(t)));
+  } else {
+    compSec.style.display = 'none';
+  }
+  renderTagChips();
+  initSortable();
+  renderCalendar();
+}
+
+function makeTaskRow(t) {
+  const today = _yerelGun(new Date());
+  const isOverdue = t.due_date && t.due_date < today && !t.completed_at;
+  const lc = COLOR_MAP[(_lists.find(l => l.id === t.list_id) || {}).color] || COLOR_MAP.cyan;
+  const div = document.createElement('div');
+  div.className = 'task-row'
+    + (t.completed_at ? ' completed' : '')
+    + (isOverdue ? ' overdue' : '')
+    + (t.id === _selectedTaskId ? ' selected' : '')
+    + (_selectedIds.has(t.id) ? ' bulk-selected' : '');
+  div.dataset.id = t.id;
+  div.style.setProperty('--lc', lc);
+
+  const subCount = (t.subtasks || []).length;
+  const subDone  = (t.subtasks || []).filter(s => s.completed_at).length;
+  const subText  = subCount ? `<span class="task-subtask-count">◻ ${subDone}/${subCount}</span>` : '';
+  const dueText  = t.due_date ? `<span class="task-due">${isOverdue
+    ? esc(_gKisa(t.due_date) + ' · ' + _t('plan.d-gun-kisa', { n: _gFark(today, t.due_date) }))
+    : formatDate(t.due_date)}</span>` : '';
+  const prioText = t.priority !== 'mid'
+    ? `<span class="task-priority ${t.priority}">${t.priority === 'high' ? 'HI' : 'LO'}</span>` : '';
+  const statusLabels = { in_progress: _t('plan.durum-devam'), blocked: _t('plan.durum-bloke'),
+                         done: _t('plan.durum-bitti') };
+  const statusText = (t.status && t.status !== 'todo')
+    ? `<span class="task-status ${t.status}">${statusLabels[t.status] || t.status}</span>` : '';
+  const estText = t.estimated_time
+    ? `<span class="task-estimate">${t.estimated_time >= 60
+        ? _t('plan.sure-saat', { n: Math.floor(t.estimated_time/60) })
+          + (t.estimated_time%60 ? ' ' + _t('plan.sure-dakika', { n: t.estimated_time%60 }) : '')
+        : _t('plan.sure-dakika', { n: t.estimated_time })}</span>` : '';
+
+  div.innerHTML = `
+    <span class="drag-handle">⠿</span>
+    <div class="task-check" onclick="checkTask(event,'${t.id}')">
+      <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+        <path d="M1 3.5L3.5 6L8 1" stroke="#0a0a0f" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="task-title">${esc(t.title)}</span>
+    <div class="task-meta">${estText}${subText}${dueText}${statusText}${prioText}</div>
+  `;
+  div.addEventListener('click', e => {
+    if (e.target.closest('.task-check') || e.target.closest('.drag-handle')) return;
+    if (e.shiftKey) { toggleBulkSelect(t.id); return; }
+    clearBulkSelect();
+    selectTask(t.id);
+  });
+  return div;
+}
+
+// ── BULK SELECT ───────────────────────────────────────────────────────────────
+function toggleBulkSelect(id) {
+  if (_selectedIds.has(id)) _selectedIds.delete(id);
+  else _selectedIds.add(id);
+  document.querySelectorAll('.task-row').forEach(r => {
+    r.classList.toggle('bulk-selected', _selectedIds.has(r.dataset.id));
+  });
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulk-bar');
+  const cnt = document.getElementById('bulk-count');
+  if (_selectedIds.size > 0) {
+    bar.classList.add('visible');
+    cnt.textContent = _t('plan.secildi', { n: _selectedIds.size });
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+
+function clearBulkSelect() {
+  _selectedIds.clear();
+  document.querySelectorAll('.task-row.bulk-selected').forEach(r => r.classList.remove('bulk-selected'));
+  updateBulkBar();
+}
+
+async function bulkComplete() {
+  if (!_selectedIds.size) return;
+  const ids = [..._selectedIds];
+  clearBulkSelect();
+  await Promise.all(ids.map(id => api('POST', `/tasks/${id}/complete`).catch(() => {})));
+  await loadTasksForActiveList();
+  loadStats(); loadLists();
+}
+
+async function bulkDelete() {
+  if (!_selectedIds.size) return;
+  const ids = [..._selectedIds];
+  clearBulkSelect();
+  ids.forEach(id => {
+    _tasks = _tasks.filter(t => t.id !== id);
+    _completedTasks = _completedTasks.filter(t => t.id !== id);
+  });
+  renderTasks();
+  await Promise.all(ids.map(id => api('DELETE', `/tasks/${id}`).catch(() => {})));
+  loadStats(); loadLists();
+}
+
+// ── KANBAN BOARD ──────────────────────────────────────────────────────────────
+/* 🔴 Etiketler ANAHTAR taşır, çözüm çizimde: modül düzeyi sabit dizi dil
+   değişiminde eski dilde donar (Blok 7/10'da beş kez çıktı). */
+const KANBAN_COLS = [
+  { key: 'todo',        anahtar: 'plan.durum-yapilacak', color: '#3b82f6' },
+  { key: 'in_progress', anahtar: 'plan.durum-devam',     color: '#a855f7' },
+  { key: 'blocked',     anahtar: 'plan.durum-bloke',     color: '#ff4e6a' },
+  { key: 'done',        anahtar: 'plan.durum-bitti',     color: '#22c55e' },
+];
+
+function toggleView() {
+  _viewMode = _viewMode === 'list' ? 'kanban' : 'list';
+  const btn = document.getElementById('view-toggle');
+  const board = document.getElementById('kanban-board');
+  const wrapper = document.getElementById('tasks-wrapper');
+  if (_viewMode === 'kanban') {
+    btn.classList.add('active');
+    btn.textContent = '≡';
+    board.classList.add('visible');
+    wrapper.style.display = 'none';
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = '⊞';
+    board.classList.remove('visible');
+    wrapper.style.display = '';
+  }
+  renderTasks();
+}
+
+function makeKanbanCard(t) {
+  const today = _yerelGun(new Date());
+  const isOverdue = t.due_date && t.due_date < today && !t.completed_at;
+  const lc = COLOR_MAP[(_lists.find(l => l.id === t.list_id) || {}).color] || COLOR_MAP.cyan;
+  const div = document.createElement('div');
+  div.className = 'kanban-card';
+  div.dataset.id = t.id;
+  div.style.setProperty('--lc', lc);
+  const tags = (t.tags || []).map(g => `<span class="k-tag">#${esc(g)}</span>`).join('');
+  const due = t.due_date ? `<span class="k-due${isOverdue?' overdue':''}">${formatDate(t.due_date)}</span>` : '';
+  const prio = t.priority !== 'mid' ? `<span class="k-prio ${t.priority}">${t.priority==='high'?'↑HI':'↓LO'}</span>` : '';
+  div.innerHTML = `
+    <div class="k-card-title">${esc(t.title)}</div>
+    <div class="k-card-meta">${due}${prio}${tags}</div>
+  `;
+  div.addEventListener('click', () => selectTask(t.id));
+  return div;
+}
+
+function renderKanban() {
+  _kSortables.forEach(s => s.destroy());
+  _kSortables = [];
+  const board = document.getElementById('kanban-board');
+  board.innerHTML = '';
+  const allActive = getTagFilteredTasks(_tasks);
+  KANBAN_COLS.forEach(col => {
+    const cards = col.key === 'done'
+      ? getTagFilteredTasks(_completedTasks)
+      : allActive.filter(t => (t.status || 'todo') === col.key);
+    const colEl = document.createElement('div');
+    colEl.className = 'kanban-col';
+    colEl.innerHTML = `
+      <div class="kanban-col-header">
+        <span class="k-dot" style="background:${col.color}"></span>
+        <span class="k-title" style="color:${col.color}">${_t(col.anahtar)}</span>
+        <span class="k-count">${cards.length}</span>
+      </div>
+    `;
+    const body = document.createElement('div');
+    body.className = 'kanban-col-body';
+    body.dataset.status = col.key;
+    cards.forEach(t => body.appendChild(makeKanbanCard(t)));
+    colEl.appendChild(body);
+    board.appendChild(colEl);
+    if (typeof Sortable !== 'undefined') {
+      const s = Sortable.create(body, {
+        group: 'kanban',
+        animation: 120,
+        ghostClass: 'sortable-ghost',
+        onEnd: async (evt) => {
+          const id = evt.item.dataset.id;
+          const newStatus = evt.to.dataset.status;
+          if (newStatus === 'done') {
+            await api('POST', `/tasks/${id}/complete`).catch(() => {});
+          } else {
+            await api('PATCH', `/tasks/${id}`, { status: newStatus }).catch(() => {});
+          }
+          await loadTasksForActiveList();
+          loadStats(); loadLists();
+        }
+      });
+      _kSortables.push(s);
+    }
+  });
+}
+
+// ── FILTER & SEARCH ───────────────────────────────────────────────────────────
+function setFilter(f) {
+  _activeFilter = f;
+  _activeTag = null;
+  _calSelectedDate = null;
+  clearBulkSelect();
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  const chip = document.querySelector(`.chip[data-filter="${f}"]`);
+  if (chip) chip.classList.add('active');
+  clearDetail();
+  defterBasCiz();
+  if (f === 'trash') { loadTrash(); return; }
+  if (f === 'all') { loadTasksForActiveList(); return; }
+  api('GET', `/filter?f=${f}`).then(data => {
+    _tasks = (data?.tasks ?? []).filter(t => !t.completed_at);
+    _completedTasks = (data?.tasks ?? []).filter(t => t.completed_at);
+    renderTasks();
+  });
+}
+
+async function searchTasks(q) {
+  const data = await api('GET', `/search?q=${encodeURIComponent(q)}`);
+  _tasks = (data?.tasks ?? []).filter(t => !t.completed_at);
+  _completedTasks = (data?.tasks ?? []).filter(t => t.completed_at);
+  renderTasks();
+}
+
+// ── TASK ACTIONS ──────────────────────────────────────────────────────────────
+async function quickAdd(e) {
+  e.preventDefault();
+  /* 09-26: defter satırından (#defter-yeni) da çağrılır — hangi formdan geldiyse onun kutusu */
+  const inp = (e.target && e.target.querySelector && e.target.querySelector('input')) || document.getElementById('quick-add-input');
+  const raw = inp.value.trim();
+  if (!raw) return;
+  const parsed = parseNL(raw);
+  const listId = _gundem ? _lists[0]?.id : (_activeListId || _lists[0]?.id);
+  if (!listId) return;
+  inp.value = '';
+  const tmp = { id: 'tmp-' + Date.now(), list_id: listId, title: parsed.title, priority: parsed.priority, due_date: parsed.due_date, completed_at: null, subtasks: [] };
+  _tasks.push(tmp);
+  renderTasks();
+  try {
+    const body = { title: parsed.title, priority: parsed.priority };
+    if (parsed.due_date) body.due_date = parsed.due_date;
+    if (parsed.reminder_at) body.reminder_at = parsed.reminder_at;
+    const t = await api('POST', `/lists/${listId}/tasks`, body);
+    const idx = _tasks.findIndex(x => x.id === tmp.id);
+    if (idx >= 0) _tasks[idx] = t;
+    renderTasks();
+    await Promise.all([loadStats(), loadLists()]);
+  } catch {
+    _tasks = _tasks.filter(x => x.id !== tmp.id);
+    renderTasks();
+  }
+}
+
+async function checkTask(e, id) {
+  e.stopPropagation();
+  const t = [..._tasks, ..._completedTasks].find(x => x.id === id);
+  if (!t) return;
+  const row = document.querySelector(`.task-row[data-id="${id}"]`);
+  if (!t.completed_at) {
+    if (row) row.classList.add('completing');
+    t.completed_at = new Date().toISOString();
+    _tasks = _tasks.filter(x => x.id !== id);
+    _completedTasks.unshift(t);
+    setTimeout(() => { renderTasks(); loadStats(); loadLists(); }, 420);
+    await api('POST', `/tasks/${id}/complete`).catch(() => {
+      t.completed_at = null;
+      _completedTasks = _completedTasks.filter(x => x.id !== id);
+      _tasks.push(t);
+      renderTasks();
+    });
+  } else {
+    t.completed_at = null;
+    _completedTasks = _completedTasks.filter(x => x.id !== id);
+    _tasks.push(t);
+    renderTasks();
+    await api('POST', `/tasks/${id}/uncomplete`).catch(() => {
+      t.completed_at = new Date().toISOString();
+      _tasks = _tasks.filter(x => x.id !== id);
+      _completedTasks.push(t);
+      renderTasks();
+    });
+  }
+  if (_selectedTaskId === id) updateDetailCompleteBtn(t);
+}
+
+async function deleteCurrentTask() {
+  if (!_selectedTaskId) return;
+  const id = _selectedTaskId;
+  const row = document.querySelector(`.task-row[data-id="${id}"]`);
+  if (row) { row.classList.add('removing'); await new Promise(r => setTimeout(r, 250)); }
+  clearDetail();
+  _tasks = _tasks.filter(t => t.id !== id);
+  _completedTasks = _completedTasks.filter(t => t.id !== id);
+  renderTasks();
+  await api('DELETE', `/tasks/${id}`);
+  await Promise.all([loadStats(), loadLists()]);
+}
+
+async function toggleTaskComplete() {
+  if (!_selectedTaskId) return;
+  await checkTask({ stopPropagation: () => {} }, _selectedTaskId);
+}
+
+// ── TASK DETAIL ───────────────────────────────────────────────────────────────
+function selectTask(id) {
+  if (_selectedTaskId === id) { clearDetail(); return; }
+  _selectedTaskId = id;
+  document.getElementById('app').classList.add('has-detail');
+  document.querySelectorAll('.task-row').forEach(r => r.classList.toggle('selected', r.dataset.id === id));
+  const t = [..._tasks, ..._completedTasks].find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('detail-empty').style.display = 'none';
+  document.getElementById('detail-form').style.display = 'flex';
+  document.getElementById('d-title').value = t.title || '';
+  document.getElementById('d-notes').value = t.notes || '';
+  autoGrow(document.getElementById('d-title'));
+  autoGrow(document.getElementById('d-notes'));
+  document.getElementById('d-start').value = t.start_date || '';
+  document.getElementById('d-due').value = t.due_date || '';
+  document.getElementById('d-remind').value = t.reminder_at ? t.reminder_at.slice(0, 16) : '';
+  const rv = t.repeat || 'none';
+  const isCustomRep = rv.startsWith('custom:');
+  document.querySelectorAll('.repeat-chip').forEach(b =>
+    b.classList.toggle('active', b.dataset.r === rv || (isCustomRep && b.dataset.r === 'custom'))
+  );
+  const customRepRow = document.getElementById('repeat-custom-row');
+  if (isCustomRep) {
+    customRepRow.classList.add('visible');
+    document.getElementById('repeat-custom-n').value = rv.split(':')[1] || '7';
+  } else {
+    customRepRow.classList.remove('visible');
+  }
+  document.querySelectorAll('.prio-btn').forEach(b => b.classList.toggle('active', b.dataset.p === (t.priority || 'mid')));
+  document.querySelectorAll('.status-btn').forEach(b => b.classList.toggle('active', b.dataset.s === (t.status || 'todo')));
+  renderTags(t.tags || []);
+  renderSubtasks(t.subtasks || []);
+  updateDetailCompleteBtn(t);
+  const calBtn = document.getElementById('d-cal-btn');
+  calBtn.classList.toggle('synced', !!t.calendar_synced);
+  calBtn.textContent = t.calendar_synced ? _t('plan.d-takvimde') : _t('plan.d-takvim');
+  // #8 estimated time
+  const estimateEl = document.getElementById('d-estimate');
+  if (estimateEl) estimateEl.value = t.estimated_time || '';
+  // #12 section
+  const sectionEl = document.getElementById('d-section');
+  if (sectionEl) sectionEl.value = t.section_name || '';
+  // #11 dependencies
+  loadDeps(id).catch(() => {});
+}
+
+function clearDetail() {
+  _selectedTaskId = null;
+  document.getElementById('app').classList.remove('has-detail');
+  document.getElementById('detail-empty').style.display = '';
+  document.getElementById('detail-form').style.display = 'none';
+  document.querySelectorAll('.task-row').forEach(r => r.classList.remove('selected'));
+}
+
+// Başlık/not textarea'sını içeriğe göre büyüt (CSS max-height ile sınırlı → sonra kaydırır)
+function autoGrow(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight + 2, 240) + 'px';
+}
+
+function updateDetailCompleteBtn(t) {
+  const btn = document.getElementById('d-complete-btn');
+  if (btn) btn.textContent = t.completed_at ? _t('plan.geri-al') : _t('plan.d-tamamla');
+}
+
+async function saveField(field, value) {
+  if (!_selectedTaskId) return;
+  const body = {};
+  body[field] = (field === 'due_date' || field === 'start_date' || field === 'reminder_at') ? (value || null) : value;
+  const updated = await api('PATCH', `/tasks/${_selectedTaskId}`, body);
+  const t = [..._tasks, ..._completedTasks].find(x => x.id === _selectedTaskId);
+  if (t) Object.assign(t, updated);
+  const row = document.querySelector(`.task-row[data-id="${_selectedTaskId}"]`);
+  if (row) row.replaceWith(makeTaskRow(updated));
+}
+
+function setPriority(p) {
+  document.querySelectorAll('.prio-btn').forEach(b => b.classList.toggle('active', b.dataset.p === p));
+  saveField('priority', p);
+}
+
+function setStatus(s) {
+  document.querySelectorAll('.status-btn').forEach(b => b.classList.toggle('active', b.dataset.s === s));
+  saveField('status', s);
+}
+
+function setRepeat(r) {
+  const customRow = document.getElementById('repeat-custom-row');
+  document.querySelectorAll('.repeat-chip').forEach(b =>
+    b.classList.toggle('active', b.dataset.r === r)
+  );
+  if (r === 'custom') {
+    customRow.classList.add('visible');
+    const n = document.getElementById('repeat-custom-n').value || '7';
+    saveField('repeat', 'custom:' + n);
+  } else {
+    customRow.classList.remove('visible');
+    saveField('repeat', r);
+  }
+}
+
+function setRepeatCustomN() {
+  const n = parseInt(document.getElementById('repeat-custom-n').value);
+  if (n > 0) saveField('repeat', 'custom:' + n);
+}
+
+// ── TAGS ──────────────────────────────────────────────────────────────────────
+function renderTags(tags) {
+  const wrap = document.getElementById('tags-input-wrap');
+  const inp = document.getElementById('tag-input');
+  wrap.innerHTML = '';
+  tags.forEach(tag => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.innerHTML = `${esc(tag)}<span class="tag-remove" onclick="removeTag('${esc(tag)}')">×</span>`;
+    wrap.appendChild(chip);
+  });
+  wrap.appendChild(inp);
+}
+
+function tagKeydown(e) {
+  if (e.key !== 'Enter' && e.key !== ',') return;
+  e.preventDefault();
+  const val = e.target.value.trim().replace(/,/g, '');
+  if (!val) return;
+  e.target.value = '';
+  const t = [..._tasks, ..._completedTasks].find(x => x.id === _selectedTaskId);
+  if (!t) return;
+  const tags = [...(t.tags || [])];
+  if (!tags.includes(val)) tags.push(val);
+  t.tags = tags;
+  renderTags(tags);
+  saveField('tags', tags);
+}
+
+function removeTag(tag) {
+  const t = [..._tasks, ..._completedTasks].find(x => x.id === _selectedTaskId);
+  if (!t) return;
+  t.tags = (t.tags || []).filter(x => x !== tag);
+  renderTags(t.tags);
+  saveField('tags', t.tags);
+}
+
+// ── SUBTASKS ──────────────────────────────────────────────────────────────────
+function renderSubtasks(subtasks) {
+  const list = document.getElementById('subtasks-list');
+  list.innerHTML = '';
+  subtasks.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'sub-row';
+    div.innerHTML = `
+      <div class="sub-check ${s.completed_at ? 'done' : ''}" onclick="toggleSubtask('${s.id}')"></div>
+      <span class="sub-title ${s.completed_at ? 'done' : ''}" contenteditable="true"
+        onblur="saveSubtask('${s.id}', this.textContent)">${esc(s.title)}</span>
+      <button class="sub-del" onclick="deleteSubtask('${s.id}')">×</button>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function subtaskKeydown(e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const inp = e.target;
+  const title = inp.value.trim();
+  if (!title || !_selectedTaskId) return;
+  inp.value = '';
+  api('POST', `/tasks/${_selectedTaskId}/subtasks`, { title }).then(t => {
+    const task = [..._tasks, ..._completedTasks].find(x => x.id === _selectedTaskId);
+    if (task) task.subtasks = t.subtasks;
+    renderSubtasks(t.subtasks || []);
+  });
+}
+
+async function toggleSubtask(subId) {
+  if (!_selectedTaskId) return;
+  const t = [..._tasks, ..._completedTasks].find(x => x.id === _selectedTaskId);
+  const sub = (t?.subtasks || []).find(s => s.id === subId);
+  if (!sub) return;
+  const completed_at = sub.completed_at ? null : new Date().toISOString();
+  const updated = await api('PATCH', `/tasks/${_selectedTaskId}/subtasks/${subId}`, { completed_at });
+  if (t) t.subtasks = updated.subtasks;
+  renderSubtasks(updated.subtasks || []);
+}
+
+async function saveSubtask(subId, title) {
+  if (!_selectedTaskId || !title.trim()) return;
+  await api('PATCH', `/tasks/${_selectedTaskId}/subtasks/${subId}`, { title: title.trim() });
+}
+
+async function deleteSubtask(subId) {
+  if (!_selectedTaskId) return;
+  const t = [..._tasks, ..._completedTasks].find(x => x.id === _selectedTaskId);
+  await api('DELETE', `/tasks/${_selectedTaskId}/subtasks/${subId}`);
+  if (t) t.subtasks = (t.subtasks || []).filter(s => s.id !== subId);
+  renderSubtasks(t?.subtasks || []);
+}
+
+// ── CALENDAR SYNC ─────────────────────────────────────────────────────────────
+async function toggleCalSync() {
+  if (!_selectedTaskId) return;
+  const t = [..._tasks, ..._completedTasks].find(x => x.id === _selectedTaskId);
+  if (!t) return;
+  try {
+    if (t.calendar_synced) {
+      await api('DELETE', `/tasks/${_selectedTaskId}/calendar`);
+      t.calendar_synced = false; t.calendar_event_id = null;
+    } else {
+      const res = await api('POST', `/tasks/${_selectedTaskId}/calendar`);
+      t.calendar_synced = true; t.calendar_event_id = res.event_id;
+    }
+    const btn = document.getElementById('d-cal-btn');
+    btn.classList.toggle('synced', t.calendar_synced);
+    btn.textContent = t.calendar_synced ? _t('plan.d-takvimde') : _t('plan.d-takvim');
+  } catch (err) { console.error(err); }
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  const s = await api('GET', '/stats').catch(() => null);
+  if (!s) return;
+  // `s` geçerli ama ALANLARI eksik olabilir (kısmi gövde, eski/yeni şema farkı).
+  // Eskiden doğrudan yazılıyordu ve kullanıcı üst şeritte "BUGÜN: undefined/undefined"
+  // görüyordu — ölçüldü 2026-08-26, genişlik turu ekran görüntüsünde yakalandı;
+  // öğe sayısı ölçümü bunu göstermez, yalnız göze bakınca çıkar.
+  // "0" yazmak yanlış olurdu: veri gelmemesi ile sıfır görev olması aynı şey değil.
+  // HTML'deki varsayılan '-' zaten "bilinmiyor" demek; oraya dönüyoruz.
+  const yaz = (id, deger) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = (deger === undefined || deger === null) ? '-' : deger;
+  };
+  const ikili = (a, b) =>
+    (a === undefined || a === null || b === undefined || b === null) ? '-' : `${a}/${b}`;
+
+  // `due_today` yalnız AÇIK görevleri sayar (PG ve gömülü depo aynı) → payda bitenle toplanır; aksi hâlde
+  // 1 biten + 3 açık "1/3" görünüyordu (goz 11-13). Gündem şeridi de aynı hesabı yapar (biten + bugunAcik).
+  yaz('s-today', ikili(s.done_today, (s.due_today === undefined || s.due_today === null || s.done_today == null)
+    ? s.due_today : s.done_today + s.due_today));
+  yaz('s-week', s.due_week);
+  yaz('s-overdue', s.overdue);
+  yaz('s-total', s.total_open);
+}
+
+// ── MINI CALENDAR ─────────────────────────────────────────────────────────────
+function renderCalendar() {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() + _calMonthOffset, 1);
+  document.getElementById('cal-title').textContent =
+    `${_t('tarih.ay-bh-' + _AY_ANAHTAR[d.getMonth()])} ${d.getFullYear()}`;
+
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+  // Pazartesi'den başlar (takvim ızgarası) — trend şeridinin Pazar sırasından FARKLI
+  _GUN_ANAHTAR_PZT.map(k => _t('tarih.gun-harf-' + k)).forEach(dow => {
+    const s = document.createElement('div'); s.className = 'cal-dow'; s.textContent = dow; grid.appendChild(s);
+  });
+
+  let startDow = new Date(d.getFullYear(), d.getMonth(), 1).getDay();
+  startDow = startDow === 0 ? 6 : startDow - 1;
+  const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  const prevDays    = new Date(d.getFullYear(), d.getMonth(), 0).getDate();
+  const todayStr    = _yerelGun(new Date());
+  const taskDates   = new Set([..._tasks, ..._completedTasks].map(t => t.due_date).filter(Boolean));
+
+  for (let i = 0; i < 42; i++) {
+    const dayDiv = document.createElement('div');
+    dayDiv.className = 'cal-day';
+    if (i < startDow) {
+      dayDiv.textContent = prevDays - startDow + i + 1;
+      dayDiv.classList.add('other-month');
+    } else if (i >= startDow + daysInMonth) {
+      dayDiv.textContent = i - startDow - daysInMonth + 1;
+      dayDiv.classList.add('other-month');
+    } else {
+      const day = i - startDow + 1;
+      const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      dayDiv.textContent = day;
+      if (ds === todayStr) dayDiv.classList.add('today');
+      if (ds === _calSelectedDate) dayDiv.classList.add('selected');
+      if (taskDates.has(ds)) dayDiv.classList.add('has-task');
+      if (taskDates.has(ds) && ds < todayStr) dayDiv.classList.add('gecti');
+      dayDiv.onclick = () => calSelectDate(ds);
+    }
+    grid.appendChild(dayDiv);
+  }
+}
+
+/* Takvim katlama (2026-08-27) — durum kalıcı; PLAN dar ekranda zaten
+   katlanıyor, bu geniş ekranda "listelere daha çok yer" içindir. */
+function calKatlaToggle() {
+  var mc = document.getElementById('mini-cal');
+  var btn = document.getElementById('cal-katla-btn');
+  if (!mc) return;
+  var kapali = mc.classList.toggle('katli');
+  if (btn) btn.setAttribute('aria-expanded', kapali ? 'false' : 'true');
+  try { localStorage.setItem('yukiCalKatli_v1', kapali ? '1' : '0'); } catch (e) {}
+}
+(function () {
+  try {
+    if (localStorage.getItem('yukiCalKatli_v1') === '1') {
+      document.addEventListener('DOMContentLoaded', function () {
+        var mc = document.getElementById('mini-cal');
+        var btn = document.getElementById('cal-katla-btn');
+        if (mc) mc.classList.add('katli');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      });
+    }
+  } catch (e) {}
+})();
+
+function calNav(dir) { _calMonthOffset += dir; renderCalendar(); }
+
+function calSelectDate(ds) {
+  if (_gundem) return gundemGunSec(ds);   // Gündem'de mini takvim = hafta şeridiyle aynı seçim
+  _calSelectedDate = _calSelectedDate === ds ? null : ds;
+  renderCalendar();
+  if (_calSelectedDate) {
+    const all = [..._tasks, ..._completedTasks].filter(t => t.due_date === ds);
+    _tasks = all.filter(t => !t.completed_at);
+    _completedTasks = all.filter(t => t.completed_at);
+    renderTasks();
+  } else {
+    loadTasksForActiveList();
+  }
+}
+
+// ── TAKVİM · AY PANOSU (2026-09-26) ──────────────────────────────────────────
+/* Kişisel AliceAi e1dec80 "A" taslağının ürün karşılığı. Ay ızgarası = pano,
+   dokunulan gün = altında saatli liste, altta tek satır ekleme.
+   Veri yalnız Google Takvim'den (görev/bütçe/fitnes buraya karışmaz — sekme sınırı).
+   Durum dört hâllidir — `/google/status` "bağlı mı" ile "kimlik girilmiş mi"yi AYRI söyler:
+     'bagli' · 'yok' (kimlik var, bağlanmamış → BAĞLAN) · 'kimliksiz' (→ AYARLAR) ·
+     'bilinmiyor' (durum ucu cevap vermedi → YENİLE). Bağlıyken Google cevap vermezse
+     `_aypHata` — "bu gün boş" demesin.
+   Kişiselden farklar: saat dilimi sabit +03:00 değil (ızgara başı istemcinin yerel gece
+   yarısı, ofsetiyle gider; eklemede tarayıcının IANA dilimi) · adlar sözlükten ·
+   renk rolleri geliştiricinin 09-26 kararı (2-A): süreli = mor · tüm gün = yeşil · anlık = gri,
+   seçili gün ALTIN (4-B).
+   🔴 2026-09-28 (GOOGLE panel 11): hata TEŞHİSİ ayrıldı — eskiden her ret "Google cevap vermedi"ydi,
+   oysa çoğu zaman Google cevap vermişti ya da ret bizdendi. Kaynak artık okunuyor:
+     401 = BİZİM oturum kilidimiz · 429 = bize çok sık istek · ağ yok = Yuki'ye ulaşılamadı ·
+     409 + `X-Google-Durum` = Google tarafı (kopuk · izin-yok · bagli-degil) · 502 = Google GERÇEKTEN cevapsız.
+   Backend artık kopuk bağlantının token'ını SİLMİYOR → `durum:'kopuk'` hâli var (AYARLAR'a yollar). */
+let _gcalNowInterval = null;
+let _currentMode = 'todo';
+
+function setMode(mode) {
+  // FİTNES ilk sürümde yok (ozellik.js): kapalıyken her yol (düğme, widget, mobil şerit) GÖREVLER'e düşer.
+  if (mode === 'fitness' && !(window.YukiOzellik && window.YukiOzellik.acik('fitnes'))) mode = 'todo';
+  _currentMode = mode;
+  const appEl     = document.getElementById('app');
+  const calEl     = document.getElementById('gcal-view');
+  const budEl     = document.getElementById('budget-view');
+  const fitEl     = document.getElementById('fitness-view');
+  const btnTodo   = document.getElementById('mode-todo');
+  const btnCal    = document.getElementById('mode-cal');
+  const btnBudget = document.getElementById('mode-budget');
+  const btnFit    = document.getElementById('mode-fitness');
+  // reset all
+  appEl.style.display = 'none';
+  calEl.style.display = 'none';
+  if (budEl) budEl.style.display = 'none';
+  if (fitEl) fitEl.style.display = 'none';
+  btnTodo.classList.remove('active');
+  btnCal.classList.remove('active');
+  if (btnBudget) btnBudget.classList.remove('active');
+  if (btnFit) btnFit.classList.remove('active');
+  if (mode === 'cal') {
+    calEl.style.display = 'flex';
+    btnCal.classList.add('active');
+    loadCalStatus();
+  } else if (mode === 'budget' && budEl) {
+    budEl.style.display = 'flex';
+    if (btnBudget) btnBudget.classList.add('active');
+    budgetRefresh(true);
+  } else if (mode === 'fitness' && fitEl) {
+    fitEl.style.display = 'flex';
+    if (btnFit) btnFit.classList.add('active');
+    // Göç (sunucuya hiç gitmemiş eski öğünler) bitmeden çizilirse o kayıtlar bir tur eksik görünür.
+    fsHydrate().catch(() => {}).then(() => { tabakYukle(); odakYukle(); });
+  } else {
+    appEl.style.display = '';
+    btnTodo.classList.add('active');
+  }
+  if (mode !== 'cal' && _gcalNowInterval) { clearInterval(_gcalNowInterval); _gcalNowInterval = null; }
+}
+
+let _aypDurum = 'bilinmiyor';
+let _aypYil = new Date().getFullYear();
+let _aypAyNo = new Date().getMonth();
+let _aypSecili = _yerelGun(new Date());
+let _aypOnbellek = {};          // 'YYYY-MM' → { gunIso: [olay] }
+let _aypHata = false;
+
+function _aypAnahtar(y, m) { return `${y}-${String(m + 1).padStart(2, '0')}`; }
+// Izgara pazartesiden başlar: ayın 1'inin haftasının pazartesisi.
+function _aypIzgaraBas(y, m) { const d = new Date(y, m, 1); d.setDate(1 - (d.getDay() + 6) % 7); return _yerelGun(d); }
+// Yerel gece yarısı, ofsetiyle: "2026-08-31T00:00:00+03:00". Sunucu UTC sanıp bir gün kaydırmasın.
+function _aypYerelIso(iso) {
+  const o = -new Date(iso + 'T00:00:00').getTimezoneOffset(), a = Math.abs(o);
+  return `${iso}T00:00:00${o < 0 ? '-' : '+'}${String(Math.floor(a / 60)).padStart(2, '0')}:${String(a % 60).padStart(2, '0')}`;
+}
+function _aypSaat(d) { return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }
+function _aypSure(dk) {
+  const s = Math.floor(dk / 60), d = dk % 60;
+  return [s ? _t('gtakvim.sure-sa', { n: s }) : '', d ? _t('gtakvim.sure-dk', { n: d }) : ''].filter(Boolean).join(' ');
+}
+function _aypAyAdi(m) { return _t('tarih.ay-bh-' + _AY_ANAHTAR[m]); }
+
+// Google olayını güne dağıt: tüm gün olay [start, end) aralığındaki her güne, saatli olay başladığı YEREL güne.
+function _aypGrupla(olaylar) {
+  const harita = {};
+  const koy = (g, o) => (harita[g] = harita[g] || []).push(o);
+  (olaylar || []).forEach(ev => {
+    if (!ev.start) return;
+    if (ev.all_day) {
+      const bit = (ev.end || ev.start).slice(0, 10);
+      let g = ev.start.slice(0, 10), n = 0;
+      do { koy(g, { ...ev, tur: 'tum' }); g = _gGunEkle(g, 1); } while (g < bit && ++n < 60);
+      return;
+    }
+    const b = new Date(ev.start), s = ev.end ? new Date(ev.end) : b;
+    if (isNaN(b)) return;
+    const dk = Math.max(0, Math.round((s - b) / 60000));
+    koy(_yerelGun(b), { ...ev, tur: dk ? 'sure' : 'an', bas: b, bit: s, dk });
+  });
+  Object.values(harita).forEach(l => l.sort((a, b) => (a.tur === 'tum' ? 0 : 1) - (b.tur === 'tum' ? 0 : 1) || (a.bas || 0) - (b.bas || 0)));
+  return harita;
+}
+
+/* Adı korunur: init ve setMode('cal') çağırıyor. Her girişte önbellek boşalır —
+   takvim başka cihazdan da değişir, sekmeye dönen kullanıcı bayat ay görmesin. */
+/* Bizim ucumuzun reddi → PLAN'ın hata türü. Google'ın reddi başka yoldan gelir (409/502, başlıklı). */
+function _aypRet(r) {
+  if (!r) return 'ulasilamadi';
+  if (r.status === 401) return 'kilitli';
+  if (r.status === 429) return 'cok';
+  const g = r.headers && r.headers.get('X-Google-Durum');
+  if (g === 'izin-yok') return 'izin';
+  if (g === 'cevapsiz') return 'google';
+  return 'bilinmeyen';
+}
+// `/google/status` → PLAN hâli. `durum` yoksa (eski backend) eski kural: dosya var = bağlı.
+function _aypDurumdan(s) {
+  if (s.durum === 'kopuk') return 'kopuk';
+  if (s.durum === 'bagli' || s.durum === 'denenmedi') return 'bagli';
+  if (s.durum === 'hazir') return 'yok';
+  if (s.durum === 'yok') return 'kimliksiz';
+  return s.connected ? 'bagli' : s.kimlik_var ? 'yok' : 'kimliksiz';
+}
+async function _aypDurumSor() {
+  const r = await fetch('/api/planner/google/status', { headers: authHeaders() }).catch(() => null);
+  const s = r && r.ok ? await r.json().catch(() => null) : null;
+  if (s) { _aypDurum = _aypDurumdan(s); _aypHata = false; }
+  else { _aypDurum = 'bilinmiyor'; _aypHata = _aypRet(r); }
+}
+async function loadCalStatus() {
+  await _aypDurumSor();
+  _aypOnbellek = {};
+  await aypYukle();
+  if (_gcalNowInterval) clearInterval(_gcalNowInterval);
+  // Dakikada bir: "şu an" çizgisi kayar, gece yarısı geçince bugün işareti taşınır.
+  _gcalNowInterval = setInterval(() => { if (_currentMode === 'cal') aypCiz(); }, 60000);
+}
+
+async function aypYukle(yon) {
+  const y = _aypYil, m = _aypAyNo, k = _aypAnahtar(y, m);
+  if (_aypDurum !== 'bilinmiyor') _aypHata = false;
+  if (_aypDurum === 'bagli' && !_aypOnbellek[k]) {
+    const bas = encodeURIComponent(_aypYerelIso(_aypIzgaraBas(y, m)));
+    const r = await fetch(`/api/planner/google/events?baslangic=${bas}&days=42`, { headers: authHeaders() }).catch(() => null);
+    const g = r && r.headers && r.headers.get('X-Google-Durum');
+    if (r && r.ok) _aypOnbellek[k] = _aypGrupla((await r.json().catch(() => null))?.events);
+    else if (g === 'kopuk' || g === 'bagli-degil') {
+      // Google bağlantıyı reddetti (401 DEĞİL — 401 bizim oturum kilidimiz) → hâli yeniden sor.
+      await _aypDurumSor();
+      if (_aypDurum === 'bagli') _aypDurum = 'kopuk';
+    } else _aypHata = _aypRet(r);
+  }
+  // Hızlı ay değişiminde geç gelen cevap başka ayı çizmesin.
+  if (k !== _aypAnahtar(_aypYil, _aypAyNo)) return;
+  aypCiz(yon);
+}
+
+function _aypSeritCiz() {
+  const serit = document.getElementById('ayp-serit');
+  const metin = document.getElementById('ayp-serit-metin');
+  const dugme = document.getElementById('ayp-serit-dugme');
+  if (!serit) return;
+  const hata = !!_aypHata || _aypDurum === 'bilinmiyor' || _aypDurum === 'kopuk';
+  serit.hidden = _aypDurum === 'bagli' && !_aypHata;
+  serit.classList.toggle('hata', hata);
+  // Hata metni KAYNAĞINA göre: "Google cevap vermedi" yalnız Google gerçekten cevap vermediyse.
+  const HATA = {
+    kilitli: ['gtakvim.hata-baslik', 'gtakvim.kilitli-alt', 'gtakvim.yenile'],
+    cok: ['gtakvim.hata-baslik', 'gtakvim.cok-alt', 'gtakvim.yenile'],
+    ulasilamadi: ['gtakvim.hata-baslik', 'gtakvim.ulasilamadi-alt', 'gtakvim.yenile'],
+    izin: ['gtakvim.izin-baslik', 'gtakvim.izin-alt', 'gtakvim.ayarlar'],
+    google: ['gtakvim.hata-baslik', 'gtakvim.hata-alt', 'gtakvim.yenile'],
+    bilinmeyen: ['gtakvim.hata-baslik', 'gtakvim.bilinmeyen-alt', 'gtakvim.yenile'],
+  };
+  const [bas, alt, dug] = _aypDurum === 'kopuk' ? ['gtakvim.kopuk-baslik', 'gtakvim.kopuk-alt', 'gtakvim.ayarlar']
+    : hata ? (HATA[_aypHata] || HATA.bilinmeyen)
+    : _aypDurum === 'kimliksiz' ? ['gtakvim.yok-baslik', 'gtakvim.kimliksiz-alt', 'gtakvim.ayarlar']
+    : ['gtakvim.yok-baslik', 'gtakvim.yok-alt', 'gtakvim.baglan'];
+  metin.innerHTML = `<b>${esc(_t(bas))}</b>${esc(_t(alt))}`;
+  dugme.textContent = _t(dug);
+}
+
+function aypCiz(yon) {
+  if (!document.getElementById('ayp-izgara')) return;
+  const bugun = _yerelGun(new Date());
+  const y = _aypYil, m = _aypAyNo, k = _aypAnahtar(y, m);
+  const harita = _aypOnbellek[k] || {};
+
+  document.getElementById('ayp-ay').textContent = `${_aypAyAdi(m)} ${y}`;
+  document.getElementById('ayp-bugun').disabled = (_aypSecili === bugun && k === bugun.slice(0, 7));
+  document.getElementById('ayp-dow').innerHTML = _GUN_ANAHTAR_PZT
+    .map(g => `<span>${esc(_t('tarih.gun-harf-' + g).toLocaleUpperCase(_yerel()))}</span>`).join('');
+  _aypSeritCiz();
+
+  // Izgara — 5 ya da 6 hafta, ayın son gününü kapsayacak kadar.
+  const bas = _aypIzgaraBas(y, m);
+  const hucreSay = _gFark(_yerelGun(new Date(y, m + 1, 0)), bas) + 1 > 35 ? 42 : 35;
+  const simdi = new Date();
+  let h = '';
+  for (let i = 0; i < hucreSay; i++) {
+    const g = _gGunEkle(bas, i), gn = +g.slice(8), dis = g.slice(0, 7) !== k;
+    const ol = harita[g] || [];
+    const cls = ['ayp-g', dis && 'dis', !dis && g < bugun && 'gecti', g === bugun && 'bugun', g === _aypSecili && 'secili'].filter(Boolean).join(' ');
+    const cubuk = ol.slice(0, 3).map(o => {
+      const gecti = g < bugun || (g === bugun && o.tur !== 'tum' && (o.bit || o.bas) < simdi);
+      return `<i class="${o.tur}${gecti ? ' gecti' : ''}"><span>${o.tur === 'tum' ? '' : `<time>${_aypSaat(o.bas)}</time> `}${esc(o.title || '—')}</span></i>`;
+    }).join('');
+    // Yalnız "+N": hücre dar, tam sayı aria-label'da
+    const fazla = ol.length > 3 ? `<small>+${ol.length - 3}</small>` : '';
+    const etiket = _gKisa(g) + (ol.length ? ', ' + _tc('gtakvim.etkinlik-aria', ol.length) : '');
+    h += `<button type="button" class="${cls}" data-g="${g}" role="gridcell" aria-selected="${g === _aypSecili}" aria-label="${esc(etiket)}"><b>${gn}</b>${cubuk}${fazla}</button>`;
+  }
+  const iz = document.getElementById('ayp-izgara');
+  iz.innerHTML = h;
+  if (yon) { iz.classList.remove('kay-ileri', 'kay-geri'); void iz.offsetWidth; iz.classList.add(yon > 0 ? 'kay-ileri' : 'kay-geri'); }
+
+  _aypGunCiz(harita, bugun);
+}
+
+function _aypGunCiz(harita, bugun) {
+  const g = _aypSecili, d = new Date(g + 'T12:00:00');
+  const bagli = _aypDurum === 'bagli' && !_aypHata;
+  const ol = harita[g] || [];
+  document.getElementById('ayp-gun-ad').textContent =
+    `${_t('tarih.gun-ay', { g: d.getDate(), ay: _aypAyAdi(d.getMonth()) })} · ${_gGunTam(g).toLocaleUpperCase(_yerel())}`;
+  document.getElementById('ayp-gun-say').textContent =
+    ol.length ? _tc('gtakvim.etkinlik', ol.length) : '';
+
+  const simdi = new Date();
+  let html = '', i = 0, cizgi = g === bugun && bagli;
+  const cizgiHtml = `<div class="ayp-simdi" role="img" aria-label="${esc(_t('gtakvim.su-an'))}"><span>${_aypSaat(simdi)}</span><i></i></div>`;
+  ol.forEach(o => {
+    if (cizgi && o.tur !== 'tum' && o.bas > simdi) { html += cizgiHtml; cizgi = false; }
+    const gecti = g < bugun || (g === bugun && o.tur !== 'tum' && (o.bit || o.bas) < simdi);
+    const saat = o.tur === 'tum' ? `${esc(_t('gtakvim.tum-ust'))}<small>${esc(_t('gtakvim.tum-alt'))}</small>`
+      : `${_aypSaat(o.bas)}${o.tur === 'sure' ? `<small>${_aypSaat(o.bit)}</small>` : ''}`;
+    const alt = [o.tur === 'sure' ? esc(_aypSure(o.dk)) : (o.tur === 'an' ? esc(_t('gtakvim.hatirlatma')) : ''),
+      o.location ? esc(o.location) : ''].filter(Boolean).join(' · ');
+    // Yalnız Google'ın kendi adresi bağlanır — başka şema/alan adı düz kutu kalır.
+    const link = /^https:\/\/(www\.)?google\.com\/calendar\//.test(o.html_link || '') ? o.html_link : '';
+    const et = link ? 'a' : 'div';
+    const bag = link ? ` href="${esc(link)}" target="_blank" rel="noopener"` : '';
+    html += `<${et} class="ayp-olay ${o.tur}${gecti ? ' gecti' : ''}"${bag} style="--i:${i++}"><div class="saat">${saat}</div><div class="kutu"><p>${esc(o.title || '—')}</p>${alt ? `<small>${alt}</small>` : ''}</div></${et}>`;
+  });
+  if (cizgi) html += cizgiHtml;
+  // Boş gün cümlesi de teşhise uyar: durum okunamadıysa "bağlı değil" DENMEZ (bilmiyoruz).
+  const bos = _aypDurum === 'kopuk' ? 'gtakvim.bos-kopuk'
+    : (_aypHata || _aypDurum === 'bilinmiyor') ? 'gtakvim.bos-hata'
+    : !bagli ? 'gtakvim.bos-bagli-degil' : 'gtakvim.bos-gun';
+  if (!ol.length) html += `<div class="ayp-bos">${esc(_t(bos))}</div>`;
+  document.getElementById('ayp-liste').innerHTML = html;
+
+  const inp = document.getElementById('ayp-yeni-input');
+  /* Takvim izni yokken giriş davetkâr durmaz: başarısız olacak eylem pasif (tur 5 #12) */
+  const izinYok = _aypHata === 'izin';
+  inp.disabled = _aypDurum !== 'bagli' || izinYok;
+  document.querySelector('#ayp-yeni button').disabled = inp.disabled;
+  inp.placeholder = izinYok ? _t('gtakvim.ekle-ph-izin')
+    : _aypDurum === 'bagli'
+    ? _t('gtakvim.ekle-ph', { gun: _t('tarih.gun-ay', { g: d.getDate(), ay: _t('tarih.ay-' + _AY_ANAHTAR[d.getMonth()]) }) })
+    : _t('gtakvim.ekle-ph-kapali');
+}
+
+function aypSec(g) {
+  const ayDegisti = g.slice(0, 7) !== _aypAnahtar(_aypYil, _aypAyNo);
+  const yon = g < _aypSecili ? -1 : 1;
+  _aypSecili = g;
+  if (ayDegisti) { _aypYil = +g.slice(0, 4); _aypAyNo = +g.slice(5, 7) - 1; aypYukle(yon); }
+  else aypCiz();
+}
+
+function aypAy(delta) {
+  const d = new Date(_aypYil, _aypAyNo + delta, 1);
+  _aypYil = d.getFullYear(); _aypAyNo = d.getMonth();
+  // Seçim yeni ayın içine taşınır: bugünün ayıysa bugün, değilse 1'i.
+  const bugun = _yerelGun(new Date());
+  _aypSecili = bugun.slice(0, 7) === _aypAnahtar(_aypYil, _aypAyNo) ? bugun : _yerelGun(d);
+  aypYukle(delta);
+}
+
+function aypBugun() {
+  const bugun = _yerelGun(new Date());
+  const yon = bugun < _aypSecili ? -1 : 1;
+  const ayDegisti = bugun.slice(0, 7) !== _aypAnahtar(_aypYil, _aypAyNo);
+  _aypSecili = bugun; _aypYil = +bugun.slice(0, 4); _aypAyNo = +bugun.slice(5, 7) - 1;
+  aypYukle(ayDegisti ? yon : 0);
+}
+
+/* "19:00 spor" · "19:00-20:30 spor" · "spor" (tüm gün). Gün = seçili gün; doğal dil tarih yok.
+   Saatler YEREL gider, dilim ayrı alan (`saat_dilimi`) — sunucu sabit İstanbul varsaymasın. */
+async function aypEkle(e) {
+  e.preventDefault();
+  const form = document.getElementById('ayp-yeni'), inp = document.getElementById('ayp-yeni-input');
+  const durum = document.getElementById('ayp-yeni-durum');
+  const metin = inp.value.trim();
+  if (!metin || _aypDurum !== 'bagli') return;
+  const m = metin.match(/^(\d{1,2})[:.](\d{2})(?:\s*[-–]\s*(\d{1,2})[:.](\d{2}))?\s+(.+)$/);
+  const g = _aypSecili;
+  let govde;
+  if (m && +m[1] < 24 && +m[2] < 60 && (!m[3] || (+m[3] < 24 && +m[4] < 60))) {
+    const iki = n => String(n).padStart(2, '0');
+    const bas = new Date(`${g}T${iki(m[1])}:${m[2]}:00`);
+    let bit = m[3] ? new Date(`${g}T${iki(m[3])}:${m[4]}:00`) : new Date(bas.getTime() + 3600000);
+    if (bit <= bas) bit = new Date(bas.getTime() + 3600000);
+    const yerel = x => `${_yerelGun(x)}T${_aypSaat(x)}:00`;
+    govde = { title: m[5], start: yerel(bas), end: yerel(bit), all_day: false };
+  } else {
+    govde = { title: metin, start: g, end: _gGunEkle(g, 1), all_day: true };
+  }
+  try { govde.saat_dilimi = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch (_) { /* eski motor: sunucu varsayılanı */ }
+  inp.disabled = true;
+  const r = await fetch('/api/planner/google/events', {
+    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(govde),
+  }).catch(() => null);
+  inp.disabled = false;
+  if (r && r.ok) {
+    inp.value = ''; durum.textContent = ''; form.classList.remove('hata');
+    delete _aypOnbellek[g.slice(0, 7)];
+    await aypYukle();
+    inp.focus();
+  } else {
+    form.classList.remove('hata'); void form.offsetWidth; form.classList.add('hata');
+    const g = r && r.headers && r.headers.get('X-Google-Durum');
+    const tur = g === 'kopuk' || g === 'bagli-degil' ? 'koptu' : _aypRet(r);
+    durum.textContent = _t({ koptu: 'gtakvim.ekle-koptu', kilitli: 'gtakvim.ekle-kilitli', cok: 'gtakvim.ekle-cok',
+      ulasilamadi: 'gtakvim.ekle-ulasilamadi', izin: 'gtakvim.ekle-izin', google: 'gtakvim.ekle-google' }[tur] || 'gtakvim.ekle-hata');
+    if (tur === 'koptu') loadCalStatus();
+    /* Ekleme izin yüzünden reddedildiyse şerit de söylesin (tur 5 #1: yalnız alt satır kalıyor,
+       üstte "BU GÜN BOŞ" yanıltıyordu) */
+    else if (tur === 'izin') { _aypHata = 'izin'; aypCiz(); }
+  }
+}
+document.addEventListener('input', e => {
+  if (e.target && e.target.id === 'ayp-yeni-input') { document.getElementById('ayp-yeni').classList.remove('hata'); document.getElementById('ayp-yeni-durum').textContent = ''; }
+});
+
+document.addEventListener('click', e => {
+  const h = e.target.closest && e.target.closest('#ayp-izgara .ayp-g');
+  if (h) aypSec(h.dataset.g);
+});
+
+// Kaydırma: panoda sola/sağa sürükle → ay değişir (dikey kaydırma sayfaya kalır).
+(() => {
+  let x0 = null, y0 = 0;
+  document.addEventListener('touchstart', e => {
+    if (!e.target.closest || !e.target.closest('#ayp-pano')) { x0 = null; return; }
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) > 50 && Math.abs(dy) < 40) aypAy(dx < 0 ? 1 : -1);
+  }, { passive: true });
+})();
+
+/* Şerit düğmesi durumun bir sonraki adımıdır: kimlik yoksa AYARLAR'ın Google paneli
+   (yedekleme.js ile aynı yol — PLAN aynı kökenli iframe, kabuğa doğrudan uzanır),
+   kimlik varsa BAĞLAN, hata varsa YENİLE. */
+function aypSeritDugme() {
+  if (_aypDurum === 'kimliksiz' || _aypDurum === 'kopuk' || _aypHata === 'izin') {
+    try { parent._hqHedefPanel = 'google'; parent.switchTab('hq'); } catch (_) { /* tek başına açılmış sayfa */ }
+  } else if (_aypDurum === 'yok') gcalConnect();
+  else loadCalStatus();
+}
+
+function gcalConnect() {
+  fetch('/api/planner/google/auth-url', { headers: authHeaders() }).then(r => r.json()).then(data => {
+    if (!data?.url) return;
+    const win = window.open(data.url, '_blank', 'width=520,height=640');
+    window.addEventListener('message', async e => {
+      if (e.data === 'google_ok') { win?.close(); await loadCalStatus(); }
+    }, { once: true });
+  }).catch(() => {});
+}
+
+// ── LIST MODAL ────────────────────────────────────────────────────────────────
+function openAddList() {
+  document.getElementById('new-list-name').value = '';
+  document.getElementById('new-list-icon').value = '';
+  selectColor('cyan');
+  document.getElementById('add-list-modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('new-list-name').focus(), 50);
+}
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function selectColor(color) {
+  _newListColor = color;
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.toggle('active', s.dataset.color === color));
+}
+async function createList() {
+  const name = document.getElementById('new-list-name').value.trim();
+  const icon = document.getElementById('new-list-icon').value.trim() || '';
+  if (!name) return;
+  const list = await api('POST', '/lists', { name, icon, color: _newListColor });
+  closeModal('add-list-modal');
+  await loadLists();
+  selectList(list.id);
+}
+
+// ── COMPLETED TOGGLE ──────────────────────────────────────────────────────────
+function toggleCompleted() {
+  _completedOpen = !_completedOpen;
+  document.getElementById('completed-list').style.display = _completedOpen ? '' : 'none';
+  document.getElementById('completed-arrow').textContent = _completedOpen ? '▼' : '▶';
+}
+
+// ── SORTABLE ──────────────────────────────────────────────────────────────────
+function initSortable() {
+  const list = document.getElementById('tasks-list');
+  if (_sortable) _sortable.destroy();
+  _sortable = Sortable.create(list, {
+    handle: '.drag-handle',
+    ghostClass: 'sortable-ghost',
+    animation: 150,
+    onEnd: () => {
+      const ids = [...list.querySelectorAll('.task-row')].map(r => r.dataset.id);
+      api('POST', '/tasks/reorder', { ids }).catch(() => {});
+    }
+  });
+}
+
+// ── KEYBOARD ──────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  const editing = ['input','textarea','select'].includes(document.activeElement.tagName.toLowerCase())
+    || document.activeElement.contentEditable === 'true';
+
+  if (e.key === '?') { document.getElementById('shortcut-hint').classList.toggle('show'); return; }
+
+  // Escape, `editing` kapısının ÜSTÜNDE ele alınır. Modal açıldığında odak
+  // içindeki input'a geçer, `editing` true olur ve aşağıdaki erken dönüş
+  // Escape'i yutardı: kullanıcı modalı klavyeyle kapatamıyordu (klavye tuzağı).
+  // Ölçüldü 2026-08-27, canlı tarayıcıda: modal açıldı=true, Escape sonrası
+  // hâlâ açık=true. Kapatma yolu yalnız fareyle dış tıklama kalıyordu.
+  if (e.key === 'Escape') {
+    clearDetail();
+    document.querySelectorAll('.fis-s.acik').forEach(x => x.classList.remove('acik'));
+    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
+    const si = document.getElementById('search-input');
+    if (si && si.value) { si.value = ''; loadTasksForActiveList(); }
+    return;
+  }
+
+  if (editing) return;
+
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); document.getElementById(document.body.classList.contains('defter') ? 'defter-yeni-input' : 'quick-add-input').focus(); }
+  else if (e.key === 'l' || e.key === 'L') { e.preventDefault(); openAddList(); }
+  else if (e.key === '/') { e.preventDefault(); if (document.body.classList.contains('defter')) defterSuz(true); document.getElementById('search-input').focus(); }
+  else if (e.key === ' ') { e.preventDefault(); toggleTaskComplete(); }
+  else if ((e.key === 'Delete' || e.key === 'Backspace') && _selectedTaskId) { e.preventDefault(); deleteCurrentTask(); }
+});
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.add('hidden'); });
+});
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+/* 🔴 GÜVENLİK — 2026-09-20, çeviri turunda bulundu. İki kusur vardı:
+
+   ① TEK TIRNAK kaçırılmıyordu. Bu dosya `innerHTML`'i şablon diziyle kuruyor
+      ve kaçırılan değerlerin bir kısmı `onclick="f('…')"` gibi TEK tırnaklı
+      bağlamlara giriyor; orada `&quot;` yetmez. Blok 10'da `_esc` birebir aynı
+      deliği taşıyordu (`textContent`→`innerHTML` geçişi).
+   ② Çağrı yerlerinin çoğu `esc`'i HİÇ kullanmıyordu — en ağırı üçüncü taraf
+      verisi: yemek arama sonucu `world.openfoodfacts.org` **public** API'sinden
+      geliyor (`product_name` / `brands`) ve ham basılıyordu. Kaynak kullanıcının
+      kendi verisiyle sınırlı değil: o veritabanını herkes düzenleyebilir.
+
+   `String(s || '')` bilerek duruyor: `0` için boş string üretir ama bu yardımcı
+   yalnız metin alanlarında kullanılıyor ve değiştirmek çağrı yerlerini
+   ölçmeden dokunmak olurdu. */
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function formatDate(d) {
+  if (!d) return '';
+  const today    = _yerelGun(new Date());
+  const tomorrow = _yerelGun(new Date(Date.now() + 86400000));
+  if (d === today) return _t('gtakvim.bugun');
+  if (d === tomorrow) return _t('plan.yarin');
+  /* 🔴 GÜN/AY SIRASI çeviriye ait: "15/09" İngilizce okunduğunda 9 Mart'tır.
+     Sıra kodda sabitlenseydi metin çevrilse bile tarih YANLIŞ okunurdu. */
+  const p = d.split('-'); return _t('tarih.gun-ay-sayi', { g: p[2], a: p[1] });
+}
+function formatTime(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString(_yerel(), { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── POMODORO (#7) ─────────────────────────────────────────────────────────────
+let _pomoTimer = null, _pomoSeconds = 25 * 60, _pomoType = 'work', _pomoSessions = 0, _pomoRunning = false;
+
+function _pomoSetRunUI(running) {
+  const startBtns = ['pomo-start-btn','focus-start-btn'];
+  const pauseBtns = ['pomo-pause-btn'];
+  startBtns.forEach(id => { const el=document.getElementById(id); if(el) el.style.display = running ? 'none' : ''; });
+  pauseBtns.forEach(id => { const el=document.getElementById(id); if(el) el.style.display = running ? '' : 'none'; });
+}
+
+function pomoAction(action) {
+  if (action === 'start') {
+    if (_pomoRunning) return;
+    _pomoRunning = true;
+    _pomoSetRunUI(true);
+    _pomoTimer = setInterval(() => {
+      _pomoSeconds--;
+      if (_pomoSeconds <= 0) {
+        clearInterval(_pomoTimer); _pomoTimer = null; _pomoRunning = false;
+        _pomoPlayBell();
+        if (_pomoType === 'work') { _pomoSessions++; _pomoType = 'break'; _pomoSeconds = 5 * 60; }
+        else { _pomoType = 'work'; _pomoSeconds = 25 * 60; }
+        _pomoSetRunUI(false);
+      }
+      updatePomoUI();
+    }, 1000);
+  } else if (action === 'pause') {
+    clearInterval(_pomoTimer); _pomoTimer = null; _pomoRunning = false;
+    _pomoSetRunUI(false);
+  } else if (action === 'reset') {
+    clearInterval(_pomoTimer); _pomoTimer = null; _pomoRunning = false;
+    _pomoType = 'work'; _pomoSeconds = 25 * 60;
+    _pomoSetRunUI(false);
+    updatePomoUI();
+  } else if (action === 'focus') {
+    enterFocus(_selectedTaskId);
+  }
+}
+
+function updatePomoUI() {
+  const m = String(Math.floor(_pomoSeconds / 60)).padStart(2, '0');
+  const s = String(_pomoSeconds % 60).padStart(2, '0');
+  const timeStr = `${m}:${s}`;
+  const typeStr = _pomoType === 'work' ? _t('plan.pomo-calisma') : _t('plan.pomo-mola');
+  const total = _pomoType === 'work' ? 25 * 60 : 5 * 60;
+  const pct = (1 - _pomoSeconds / total) * 100;
+  const rem = _pomoSessions % 4 || (_pomoSessions > 0 ? 4 : 0);
+  const sessions = '●'.repeat(rem) + '○'.repeat(4 - rem);
+  ['pomo-time','focus-pomo-time'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=timeStr; });
+  ['pomo-type','focus-pomo-type'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=typeStr; });
+  ['pomo-bar','focus-bar'].forEach(id => { const el=document.getElementById(id); if(el) el.style.width=pct+'%'; });
+  const sessEl = document.getElementById('pomo-sessions'); if (sessEl) sessEl.textContent = sessions;
+}
+
+function _pomoPlayBell() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 1);
+  } catch(e) {}
+}
+
+// ── FOCUS MODE (#9) ───────────────────────────────────────────────────────────
+function enterFocus(taskId) {
+  const t = [..._tasks, ..._completedTasks].find(x => x.id === taskId);
+  const overlay = document.getElementById('focus-overlay');
+  if (!overlay) return;
+  const titleEl = document.getElementById('focus-task-title');
+  if (titleEl) titleEl.textContent = t ? t.title : '';
+  overlay.classList.add('active');
+  updatePomoUI();
+}
+
+function exitFocus() {
+  const overlay = document.getElementById('focus-overlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+document.addEventListener('keydown', e => {
+  const overlay = document.getElementById('focus-overlay');
+  if (e.key === 'Escape' && overlay && overlay.classList.contains('active')) {
+    exitFocus(); e.stopImmediatePropagation();
+  }
+}, true);
+
+// ── NL PARSER (#10) ───────────────────────────────────────────────────────────
+// Türkçe-duyarlı küçük harf. JS'in `toLowerCase()`'i Unicode (İngilizce) haritasıdır:
+// "SALI" → "sali", "ACİL" → "aci̇l". `toLocaleLowerCase('tr')` I↔ı / i↔İ çiftini bilir.
+// ⚠️ Uzunluk korunur (ölçüldü) → aşağıdaki indeks tabanlı silme güvenli.
+const _trKucuk = (s) => String(s).toLocaleLowerCase('tr');
+
+// Eşleşen parçayı ORİJİNAL başlıktan indeksle sil (küçültülmüş kopyada eşleştik).
+const _parcaSil = (metin, indeks, uzunluk) =>
+  (metin.slice(0, indeks) + ' ' + metin.slice(indeks + uzunluk)).replace(/\s+/g, ' ').trim();
+
+function parseNL(text) {
+  let title = text.trim();
+  let due_date = null, reminder_at = null, priority = 'mid';
+  const todayBase = new Date(); todayBase.setHours(0,0,0,0);
+
+  // 🔴 2026-09-18 (FAZ 0): eşleştirme `/…/i` ile yapılıyordu ve `i` bayrağı Türkçe
+  // büyük harfi KATLAYAMIYOR — JS'in case-folding'i `ı↔I` ve `i↔İ` çiftlerini
+  // bilmez. Ölçüldü: 9 anahtar kelimenin 6'sı büyük harfli girdide eşleşmiyordu
+  // (SALI · ÖNEMLİ · YARIN · **ACİL** · CUMARTESİ · PAZARTESİ). "ACİL fatura"
+  // yazan kullanıcı yüksek öncelik alamıyordu. Artık başlığın Türkçe-küçültülmüş
+  // kopyasında eşleşiyoruz; `i` bayrağına gerek kalmadı.
+  const lc = () => _trKucuk(title);
+
+  const oncelikM = lc().match(/(?<![\wçğıöşüÇĞİÖŞÜ])(acil|urgent|önemli)(?![\wçğıöşüÇĞİÖŞÜ])/);
+  if (oncelikM) {
+    priority = 'high';
+    title = _parcaSil(title, oncelikM.index, oncelikM[0].length);
+  }
+
+  const dayMap = {pazartesi:1,salı:2,çarşamba:3,perşembe:4,cuma:5,cumartesi:6,pazar:0};
+  const dayMatch = lc().match(/(?<![\wçğıöşüÇĞİÖŞÜ])(pazartesi|salı|çarşamba|perşembe|cuma|cumartesi|pazar)(?![\wçğıöşüÇĞİÖŞÜ])/);
+  if (dayMatch) {
+    // 🔴 2026-09-18 (FAZ 0) — burada ÜST ÜSTE iki kusur vardı:
+    // ① `.toLowerCase()` Unicode (İngilizce) haritasıdır: "SALI" → "sali" (doğrusu
+    //    "salı"). `toLocaleLowerCase('tr')` Türkçe I→ı çiftini bilir.
+    // ② Sonuç `dayMap`'te bulunmayınca `target` **undefined** → `diff` NaN →
+    //    `d.setDate(NaN)` → Invalid Date → eski `toISOString()` çağrısı
+    //    **`RangeError: Invalid time value` FIRLATIYORDU** ve parseNL'in tamamı
+    //    çöküyordu (görev hiç eklenmiyordu). Artık gün atanmaz, başlık korunur.
+    // 🔴 Eskiden burada `dayMap[dayMatch[1].toLowerCase()]` vardı ve `target`
+    // undefined olunca `diff` NaN → `d.setDate(NaN)` → Invalid Date →
+    // `toISOString()` **`RangeError: Invalid time value` FIRLATIYORDU**; parseNL'in
+    // tamamı çöküyor, görev hiç eklenmiyordu. Koruma bilerek duruyor.
+    const target = dayMap[dayMatch[1]];
+    if (target !== undefined) {
+      const d = new Date(todayBase); let diff = target - d.getDay(); if (diff <= 0) diff += 7;
+      d.setDate(d.getDate() + diff); due_date = _yerelGun(d);
+      title = _parcaSil(title, dayMatch.index, dayMatch[0].length);
+    }
+  }
+
+  const gorecelM = lc().match(/(?<![\wçğıöşüÇĞİÖŞÜ])(bugün|yarın|öbür\s*gün)(?![\wçğıöşüÇĞİÖŞÜ])/);
+  if (gorecelM) {
+    const kelime = gorecelM[1].replace(/\s+/g, ' ');
+    const d = new Date(todayBase);
+    if (kelime === 'yarın') d.setDate(d.getDate() + 1);
+    else if (kelime !== 'bugün') d.setDate(d.getDate() + 2);   // "öbür gün"
+    due_date = _yerelGun(d);
+    title = _parcaSil(title, gorecelM.index, gorecelM[0].length);
+  }
+
+  const lcSaat = lc();
+  const timeMatch = lcSaat.match(/(?<![\wçğıöşüÇĞİÖŞÜ])saat\s+(\d{1,2})(?::(\d{2}))?(?![\wçğıöşüÇĞİÖŞÜ])/)
+                 || lcSaat.match(/(?<![\wçğıöşüÇĞİÖŞÜ])(\d{1,2}):(\d{2})(?![\wçğıöşüÇĞİÖŞÜ])/);
+  if (timeMatch) {
+    const h = parseInt(timeMatch[1]); const m = parseInt(timeMatch[2] || '0');
+    const base = due_date ? new Date(due_date + 'T00:00:00') : new Date(todayBase);
+    base.setHours(h, m, 0, 0); reminder_at = _yerelDakika(base);
+    if (!due_date) due_date = _yerelGun(base);
+    title = _parcaSil(title, timeMatch.index, timeMatch[0].length);
+  }
+
+  return { title: title || text.trim(), due_date, reminder_at, priority };
+}
+
+// ── DEPENDENCIES (#11) ────────────────────────────────────────────────────────
+async function loadDeps(taskId) {
+  if (!taskId) return;
+  try {
+    const data = await api('GET', `/tasks/${taskId}/dependencies`);
+    const bbEl = document.getElementById('dep-blocked-by');
+    const blEl = document.getElementById('dep-blocks');
+    if (bbEl) bbEl.innerHTML = (data.blocked_by || []).map(d =>
+      `<span class="dep-chip">${esc(d.title.slice(0,22))} <span onclick="removeDep('${taskId}','${d.id}')" style="cursor:pointer;opacity:.6;margin-left:2px">×</span></span>`
+    ).join('');
+    if (blEl) blEl.innerHTML = (data.blocks || []).map(d =>
+      `<span class="dep-chip blocks">${esc(d.title.slice(0,22))}</span>`
+    ).join('');
+  } catch(e) {
+    //  · C4: sessizce boş kalan bağımlılık paneli "bu görevin bağımlılığı
+    // yok" gibi okunur — yanlış bilgi, yokluktan kötüdür.
+    console.error('[yuki] bağımlılıklar yüklenemedi:', e);
+    plHata(_t('plan.bagimli-yuklenemedi'));
+  }
+}
+
+async function depSearch(q) {
+  const box = document.getElementById('dep-suggestions');
+  if (!box) return;
+  if (!q || q.length < 2) { box.innerHTML = ''; return; }
+  try {
+    const data = await api('GET', `/search?q=${encodeURIComponent(q)}`);
+    const tasks = (data.tasks || []).filter(t => t.id !== _selectedTaskId).slice(0, 6);
+    box.innerHTML = tasks.map(t =>
+      `<div class="dep-sug-item" onclick="addDep('${_selectedTaskId}','${t.id}')">${esc(t.title)}</div>`
+    ).join('') || `<div class="dep-sug-item" style="opacity:.5">${_t('plan.sonuc-yok')}</div>`;
+  } catch(e) { box.innerHTML = ''; }
+}
+
+async function addDep(taskId, depId) {
+  try {
+    await api('POST', `/tasks/${taskId}/dependencies`, { depends_on: depId });
+    const srch = document.getElementById('dep-search'); if (srch) srch.value = '';
+    const sug = document.getElementById('dep-suggestions'); if (sug) sug.innerHTML = '';
+    await loadDeps(taskId);
+  } catch(e) {
+    console.error('[yuki] bağımlılık eklenemedi:', e);
+    plHata(_t('plan.bagimli-eklenemedi'));
+  }
+}
+
+async function removeDep(taskId, depId) {
+  try { await api('DELETE', `/tasks/${taskId}/dependencies/${depId}`); await loadDeps(taskId); }
+  catch(e) {
+    console.error('[yuki] bağımlılık kaldırılamadı:', e);
+    plHata(_t('plan.bagimli-kaldirilamadi'));
+  }
+}
+
+// ── SECTIONS (#12) ────────────────────────────────────────────────────────────
+function renderTasksWithSections(tasks, container) {
+  container.innerHTML = '';
+  const sections = {};
+  tasks.forEach(t => { const k = t.section_name || ''; if (!sections[k]) sections[k] = []; sections[k].push(t); });
+  const keys = Object.keys(sections).sort((a,b) => a === '' ? -1 : b === '' ? 1 : a.localeCompare(b,'tr'));
+  keys.forEach(sec => {
+    if (sec) {
+      const hdr = document.createElement('div');
+      hdr.className = 'section-header';
+      hdr.innerHTML = `<span>${esc(sec)}</span><button class="section-add-btn" onclick="addTaskToSection('${sec.replace(/'/g,"\\'")}')">+</button>`;
+      container.appendChild(hdr);
+    }
+    sections[sec].forEach(t => container.appendChild(makeTaskRow(t)));
+  });
+}
+
+async function setSection(taskId, name) {
+  if (!taskId) return;
+  try {
+    await api('PATCH', `/tasks/${taskId}`, { section_name: name || null });
+    const t = [..._tasks, ..._completedTasks].find(x => x.id === taskId);
+    if (t) t.section_name = name || null;
+    renderTasks();
+  } catch(e) {
+    console.error('[yuki] bölüm değiştirilemedi:', e);
+    plHata(_t('plan.bolum-degistirilemedi'));
+  }
+}
+
+function addTaskToSection(sectionName) {
+  const inp = document.getElementById('quick-add-input');
+  if (inp) { inp.focus(); inp.placeholder = `${sectionName} bölümüne ekle...`; inp.dataset.section = sectionName; }
+}
+
+// ── TRASH (#13) ───────────────────────────────────────────────────────────────
+async function loadTrash() {
+  const list = document.getElementById('tasks-list');
+  const compSec = document.getElementById('completed-section');
+  if (compSec) compSec.style.display = 'none';
+  list.innerHTML = `<div style="text-align:center;color:var(--muted);padding:30px;font-size:11px;letter-spacing:.05em">${_t('plan.yukleniyor')}</div>`;
+  try {
+    const data = await api('GET', '/trash');
+    list.innerHTML = '';
+    if (!data.tasks || !data.tasks.length) {
+      list.innerHTML = `<div style="text-align:center;color:var(--muted);padding:40px;font-size:12px;">${_t('plan.cop-bos')}</div>`;
+      return;
+    }
+    (data?.tasks ?? []).forEach(t => {
+      const div = document.createElement('div');
+      div.className = 'task-row trashed';
+      div.innerHTML = `
+        <span class="task-title" style="flex:1;text-decoration:line-through;opacity:.45">${esc(t.title)}</span>
+        <div class="task-meta" style="gap:6px;flex-shrink:0">
+          <button class="trash-restore" onclick="restoreTask('${t.id}')">${_t('plan.geri-al')}</button>
+          <button class="trash-restore" style="color:var(--red);border-color:var(--red)" onclick="permanentDelete('${t.id}')">${_t('plan.d-sil')}</button>
+        </div>`;
+      list.appendChild(div);
+    });
+  } catch(e) { list.innerHTML = `<div style="color:var(--red);padding:20px">${e.message}</div>`; }
+}
+
+async function restoreTask(id) {
+  try {
+    await api('POST', `/tasks/${id}/restore`);
+    await loadTrash();
+    loadStats(); loadLists();
+  } catch(e) {
+    console.error('[yuki] görev geri alınamadı:', e);
+    plHata(_t('plan.geri-alinamadi'));
+  }
+}
+
+async function permanentDelete(id) {
+  if (!confirm(_t('plan.kalici-sil-onay'))) return;
+  try { await api('DELETE', `/tasks/${id}/permanent`); await loadTrash(); }
+  catch(e) {
+    // 'nın en keskin vakası: kullanıcı "geri alınamaz" uyarısını okuyup
+    // ONAY VERDİ. İstek düşerse görev hâlâ çöp kutusunda — sessizlik burada
+    // kullanıcıya sildiğini sandırır.
+    console.error('[yuki] kalıcı silme başarısız:', e);
+    plHata(_t('plan.silinemedi'));
+  }
+}
+
+// ── MOBILE TAB NAV ────────────────────────────────────────────────────────────
+function isMobile() { return window.innerWidth <= 768; }
+
+function mobileTab(tab) {
+  if (!isMobile()) return;
+  if (tab === 'fitness' && !(window.YukiOzellik && window.YukiOzellik.acik('fitnes'))) tab = 'tasks';  // ilk sürümde yok
+  const left = document.getElementById('left-panel');
+  const right = document.getElementById('right-panel');
+  const mid = document.getElementById('mid-panel');
+  document.querySelectorAll('.mnav-btn').forEach(b => b.classList.remove('active'));
+  left.classList.remove('mobile-active');
+  right.classList.remove('mobile-active');
+  // Reset all top-level view states before switching tabs
+  const _app = document.getElementById('app');
+  const _calV = document.getElementById('gcal-view');
+  const _budV = document.getElementById('budget-view');
+  const _fitV = document.getElementById('fitness-view');
+  _app.style.display = '';
+  if (_calV) _calV.style.display = 'none';
+  if (_budV) _budV.style.display = 'none';
+  if (_fitV) _fitV.style.display = 'none';
+  if (tab === 'lists') {
+    left.classList.add('mobile-active');
+    document.getElementById('mnav-lists').classList.add('active');
+  } else if (tab === 'detail') {
+    right.classList.add('mobile-active');
+  } else if (tab === 'cal') {
+    setMode('cal');
+    document.getElementById('mnav-cal').classList.add('active');
+  } else if (tab === 'budget') {
+    setMode('budget');
+    document.getElementById('mnav-budget').classList.add('active');
+  } else if (tab === 'fitness') {
+    setMode('fitness');
+    document.getElementById('mnav-fitness').classList.add('active');
+  } else if (tab === 'tasks') {
+    setMode('todo');
+    // Gündemdeyken GÜNDEM, bir liste açıkken LİSTELER yanar — hangi görünümde olduğun belli olsun
+    document.getElementById(_gundem ? 'mnav-tasks' : 'mnav-lists').classList.add('active');
+    if (!_gundem && !_activeListId) {
+      if (_lists.length > 0) gundemAc(); else renderTasks();
+    }
+  } else {
+    setMode('todo');
+    document.getElementById('mnav-tasks').classList.add('active');
+  }
+
+}
+
+// Patch selectTask: auto-switch to detail tab on mobile
+const _origSelectTask = selectTask;
+selectTask = function(id) {
+  _origSelectTask(id);
+  if (isMobile()) mobileTab('detail');
+};
+
+// Patch clearDetail: go back to tasks tab on mobile
+const _origClearDetail = clearDetail;
+clearDetail = function() {
+  _origClearDetail();
+  if (isMobile()) mobileTab('tasks');
+};
+
+// Patch selectList: auto-switch to tasks tab on mobile
+const _origSelectList = selectList;
+selectList = function(id, loadTasks = true) {
+  _origSelectList(id, loadTasks);
+  if (isMobile()) mobileTab('tasks');
+};
+
+window.addEventListener('resize', () => {
+  if (!isMobile()) {
+    document.getElementById('left-panel').classList.remove('mobile-active');
+    document.getElementById('right-panel').classList.remove('mobile-active');
+  }
+});
+
+// ── START ─────────────────────────────────────────────────────────────────────
+init().catch(err => {
+  console.error('[PLANNER] init failed:', err.message, err.stack);
+  // Stil planner.css'te (.plan-hata) — burada sabit renk YOK: bu ekran da tema
+  // anahtarını görmek zorunda. Eski hâli #1a0000/#ff4e6a sabitleriyle yazılmıştı
+  // ve açık tema seçmiş kullanıcıya da kan kırmızısı siyah ekran gösteriyordu.
+  document.body.replaceChildren();
+  document.body.className = 'plan-hata-govde';
+  document.body.innerHTML = `
+    <div class="plan-hata" role="alert">
+      <svg class="plan-hata-ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <h1 class="plan-hata-baslik">${_t('plan.acilamadi-baslik')}</h1>
+      <p class="plan-hata-metin">
+        ${_t('plan.acilamadi-metin')}
+      </p>
+      <button type="button" class="dg dg-birincil" id="plan-hata-yenile">${_t('plan.yeniden-dene')}</button>
+      <details class="plan-hata-ayrinti">
+        <summary>${_t('plan.teknik-ayrinti')}</summary>
+        <code></code>
+      </details>
+    </div>`;
+  // Hata metni VERİDİR, işaretleme değil: textContent ile yazılır.
+  // Eskiden `${err.message}` doğrudan innerHTML'e gömülüyordu — mesaj sunucudan
+  // geldiği için bu bir enjeksiyon yoluydu.
+  const kod = document.querySelector('.plan-hata-ayrinti code');
+  if (kod) kod.textContent = err.message;
+  const dg = document.getElementById('plan-hata-yenile');
+  if (dg) dg.addEventListener('click', () => location.reload());
+});
+
+// ── Widget Nav ─────────────────────────────────────────────────────────────
+function wnavSet(btn, key) {
+  document.querySelectorAll('.wnav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (key === 'todo') {
+    setMode('todo');
+  } else if (key === 'budget') {
+    setMode('budget');
+  } else if (key === 'antrenman') {
+    setMode('fitness');
+    setTimeout(() => fstripTab('wkt'), 60);
+  } else if (key === 'beslenme') {
+    setMode('fitness');
+    setTimeout(() => fstripTab('nutr'), 60);
+  }
+}
+
+/* ── Chip çubuğu katlama (FAZ 5 Adım 4) ────────────────────────────────────
+   İlk N chip görünür, `data-ikincil` işaretliler gizli. "N daha" hepsini açar.
+   Tek yön: açılan çubuk kapanmaz — kullanıcı bir filtre aramaya gelmiştir,
+   listeyi altından çekmek onu ikinci kez aramaya zorlar. */
+/* Düğmenin "N daha" metnini GERÇEK gizli chip sayısından kurar.
+
+   🔴 Sayı markup'ta sabitti ("4 daha" / "9 daha") ve iki yerde birden elle
+   tutuluyordu — bir chip eklendiği gün ikisi de yalan söylerdi. Üstelik sabit
+   sayı `data-i18n` ile çevrilemezdi (çizici parametre almaz), o yüzden bu iki
+   düğme çeviri kapsamının DIŞINDA kalmıştı. Artık sayı sayılıyor, metin
+   anahtardan geliyor. */
+function chipDahaEtiketle() {
+  [['filter-bar', 'filter-daha']].forEach(function (p) {
+    var cubuk = document.getElementById(p[0]), dugme = document.getElementById(p[1]);
+    if (!cubuk || !dugme) return;
+    var n = cubuk.querySelectorAll('[data-ikincil]').length;
+    dugme.textContent = _t('plan.chip-daha', { n: n });
+  });
+}
+window.chipDahaEtiketle = chipDahaEtiketle;
+
+function chipCubuguAc(cubukId, dugme) {
+  var cubuk = document.getElementById(cubukId);
+  if (!cubuk) return;
+  cubuk.classList.add('chip-acik');
+  if (dugme) {
+    dugme.setAttribute('aria-expanded', 'true');
+    /* Odak kaybolmasın: düğme gizleniyor, odağı ilk açılan chip'e ver.
+       Yoksa klavye kullanıcısı sayfa başına düşer. */
+    var ilk = cubuk.querySelector('[data-ikincil]');
+    if (ilk && typeof ilk.focus === 'function') ilk.focus();
+  }
+}
+window.chipCubuguAc = chipCubuguAc;
+</script>
+
+<!-- Mobile bottom tab nav (visible only on ≤768px) -->
+<div id="mobile-nav">
+  <!-- 09-26: GÖREVLER yerine GÜNDEM (açılış) — bir listenin görevleri LİSTELER'den açılır.
+       id `mnav-tasks` bilerek korundu: setMode/mobileTab ona bağlı. -->
+  <button class="mnav-btn active" id="mnav-tasks" onclick="if(!_gundem) gundemAc(); mobileTab('tasks')">
+    <span class="mnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="1"/></svg></span>
+    <span data-i18n="plan.sekme-gundem">GÜNDEM</span>
+  </button>
+  <button class="mnav-btn" id="mnav-lists" onclick="defterAc()">
+    <span class="mnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span>
+    <span data-i18n="plan.sekme-listeler">LİSTELER</span>
+  </button>
+  <button class="mnav-btn" id="mnav-cal" onclick="mobileTab('cal')">
+    <span class="mnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+    <span data-i18n="plan.sekme-takvim">TAKVİM</span>
+  </button>
+  <button class="mnav-btn" id="mnav-budget" onclick="mobileTab('budget')">
+    <span class="mnav-icon">₺</span>
+    <span data-i18n="plan.sekme-butce">BÜTÇE</span>
+  </button>
+  <button class="mnav-btn" id="mnav-fitness" data-ozellik="fitnes" onclick="mobileTab('fitness')">
+    <span class="mnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg></span>
+    <span data-i18n="plan.sekme-fitnes">FİTNES</span>
+  </button>
+</div>
+<!-- Gövde sonu: mobil alt şerit büyük betikten SONRA geliyor, erken çağrı onu görmez. -->
+<script>window.YukiDil && window.YukiDil.ciz(document);</script>
+</body>
+</html>

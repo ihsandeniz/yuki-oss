@@ -1,0 +1,229 @@
+/* ============================================================
+   AliceAI — Blue/Dark Theme  (v3)
+   Ana renk: siyah + mavi  |  Mor: sadece aksan, araya serpiştirilmiş
+   Metin: parlak beyaz, okunabilirlik birinci
+   ============================================================ */
+
+:root {
+  /* ── Mavi Palette — ANA RENK ────────────────────────────── */
+  --p-blue-600:   #1d4ed8;
+  --p-blue-500:   #3b82f6;   /* ana aksant mavi */
+  --p-blue-400:   #60a5fa;   /* hover mavi */
+  --p-blue-300:   #93c5fd;   /* soft mavi vurgu */
+  --p-sky-400:    #38bdf8;   /* parlak gökyüzü */
+  --p-sky-300:    #7dd3fc;   /* açık sky */
+  --p-indigo-500: #6366f1;   /* mavi→mor köprü */
+  --p-indigo-400: #818cf8;   /* soft indigo */
+  --p-indigo-300: #a5b4fc;   /* periwinkle */
+
+  /* ── Mor Palette — SADECE AKSAN ────────────────────────── */
+  --p-violet-500: #7c3aed;
+  --p-violet-400: #a78bfa;   /* mor aksan hover */
+  --p-violet-300: #c4b5fd;   /* mor aksan soft */
+  --p-mauve:      #ddd6fe;
+
+  /* ── Eski cyan token'ları → mavi ────────────────────────── */
+  --p-cyan-600:  var(--p-indigo-500);
+  --p-cyan-500:  var(--p-blue-400);
+  --p-cyan-400:  var(--p-blue-300);
+  --p-cyan-glow: rgba(96, 165, 250, 0.18);
+
+  /* ── drive.html uyumluluğu ───────────────────────────────── */
+  --cyan:        var(--p-blue-400);
+  --cyan-mid:    var(--p-blue-500);
+  --cyan-dim:    rgba(96, 165, 250, 0.12);
+
+  /* ── Semantic accent — mavi birincil, mor ikincil ────────── */
+  --accent:       var(--p-blue-400);      /* ana aksant: açık mavi */
+  --accent-blue:  var(--p-sky-400);       /* parlak mavi */
+  --accent-sky:   var(--p-indigo-300);    /* periwinkle köprü */
+  --accent-alt:   var(--p-violet-400);    /* mor aksan — serpiştirilmiş */
+  --accent-dim:   var(--p-blue-600);      /* koyu mavi */
+
+  /* ── Arka plan — saf siyah, mikro mavi tonu ─────────────── */
+  --bg-base:      #050608;                         /* near-black */
+  --bg-panel:     rgba(8, 10, 18, 0.88);           /* koyu mavi-siyah panel */
+  --bg-panel-alt: rgba(6, 8, 16, 0.92);            /* daha koyu */
+
+  /* ── Border — mavi tonlu ─────────────────────────────────── */
+  --border-hud:   rgba(148, 163, 200, 0.20);       /* serin gri-mavi */
+  --border-dim:   rgba(96, 165, 250, 0.14);         /* hafif mavi */
+  --border-glow:  rgba(96, 165, 250, 0.30);         /* hover mavi */
+
+  /* ── Metin — parlak beyaz, net okunabilirlik ─────────────── */
+  --text:         #f0f4ff;                          /* parlak beyaz, hafif mavi ton */
+  --text-bright:  #ffffff;                          /* tam beyaz */
+  --text-dim:     rgba(240, 244, 255, 0.60);        /* dim beyaz */
+  --text-muted:   rgba(147, 197, 253, 0.65);        /* muted mavi-beyaz */
+
+  /* ── Glassmorphism — siyah bazlı ────────────────────────── */
+  --glass-light:  rgba(8, 10, 24, 0.30);
+  --glass-medium: rgba(6, 8, 18, 0.60);
+  --glass-heavy:  rgba(4, 5, 12, 0.85);
+
+  /* ── Glow — mavi birincil, mor aksan ─────────────────────── */
+  --glow-sm:   0 0 12px rgba(96,  165, 250, 0.20);   /* mavi */
+  --glow-md:   0 0 24px rgba(96,  165, 250, 0.15);   /* mavi diffuse */
+  --glow-lg:   0 0 48px rgba(59,  130, 246, 0.10);   /* uzak mavi */
+  --glow-xl:   0 0 80px rgba(167, 139, 250, 0.06);   /* mor aksan glow */
+  --glow-blue: 0 0 18px rgba(96,  165, 250, 0.28);   /* güçlü mavi */
+
+  /* ── Runic / neural — mavi ───────────────────────────────── */
+  --runic-glow:  drop-shadow(0 0 7px rgba(96, 165, 250, 0.40));
+  --neural-line: rgba(96, 165, 250, 0.16);
+  --neural-node: #60a5fa;
+
+  /* ── Radius ──────────────────────────────────────────────── */
+  --r-xs:   4px;
+  --r-sm:   8px;
+  --r-md:   12px;
+  --r-lg:   16px;
+  --r-xl:   20px;
+  --r-2xl:  24px;
+  --r-pill: 9999px;
+
+  /* ── Typography ─────────────────────────────────────────── */
+  --font-color-primary: #f0f4ff;
+  --font-color-accent:  var(--p-blue-300);
+  --font-color-muted:   rgba(147, 197, 253, 0.65);
+
+  /* ── Transition ──────────────────────────────────────────── */
+  --transition-soft: 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-fade: 0.20s var(--e-out,cubic-bezier(.25,1,.4,1));
+
+  /* ── Scrollbar ───────────────────────────────────────────── */
+  --scrollbar-w:     3px;
+  --scrollbar-color: var(--p-blue-500);
+  --scrollbar-track: transparent;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: var(--scrollbar-w); height: var(--scrollbar-w); }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-color); border-radius: var(--r-pill); }
+::-webkit-scrollbar-thumb:hover { background: var(--p-blue-400); }
+
+/* ── App shell & panels ──────────────────────────────────────── */
+.app-shell,
+.sidebar,
+.main-panel {
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+}
+
+/* ── HUD panel ──────────────────────────────────────────────── */
+.hud-panel {
+  border-color: rgba(96, 165, 250, 0.18);
+  box-shadow: var(--glow-sm);
+}
+
+/* ── Tab bar active — pill + mavi glow ──────────────────────── */
+.tab-btn.active,
+.tab-item.active,
+[role="tab"][aria-selected="true"] {
+  border-radius: var(--r-pill);
+  box-shadow: var(--glow-sm);
+}
+
+/* ── Chat bubble ─────────────────────────────────────────────── */
+.message-bubble,
+.chat-bubble,
+.msg-user .bubble,
+.msg-ai .bubble {
+  border-radius: var(--r-xl) var(--r-xl) var(--r-xl) var(--r-sm);
+}
+
+.msg-user .bubble,
+.message.user .bubble {
+  border-radius: var(--r-xl) var(--r-xl) var(--r-sm) var(--r-xl);
+}
+
+/* ── Input — frosted glass ───────────────────────────────────── */
+input,
+textarea,
+.chat-input,
+.input-area textarea {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--r-md);
+  transition: border-color var(--transition-fade), box-shadow var(--transition-fade);
+}
+
+input:focus,
+textarea:focus,
+.chat-input:focus,
+.input-area textarea:focus {
+  border-color: var(--p-blue-400);
+  box-shadow: var(--glow-sm);
+  outline: none;
+}
+
+/* ── Button ─────────────────────────────────────────────────── */
+button,
+.btn {
+  border-radius: var(--r-md);
+  transition: box-shadow var(--transition-fade), background var(--transition-fade);
+}
+
+button:hover,
+.btn:hover {
+  box-shadow: var(--glow-sm);
+}
+
+/* ── Card / panel ─────────────────────────────────────────── */
+.card,
+.panel,
+.modal,
+.dropdown {
+  background: var(--bg-panel);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--r-lg);
+  box-shadow: var(--glow-md);
+}
+
+/* ── Soft entry animation ─────────────────────────────────── */
+@keyframes softEntry {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.soft-entry,
+.message-bubble,
+.chat-bubble,
+.msg-user .bubble,
+.msg-ai .bubble,
+.card,
+.panel,
+.modal {
+  animation: softEntry 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ── Background — siyah, mavi aurora + ince mor aksan ────────── */
+html.web-mode body,
+body {
+  background-color: var(--bg-base);
+  background-image:
+    radial-gradient(ellipse 60% 35% at 50% -5%,  rgba(59,  130, 246, 0.07), transparent),
+    radial-gradient(ellipse 40% 30% at 90% 80%,  rgba(96,  165, 250, 0.05), transparent),
+    radial-gradient(ellipse 30% 20% at 5%  60%,  rgba(167, 139, 250, 0.04), transparent);
+}
+
+/* ── Mor aksan — metin vurgulama, özel elementler ─────────────── */
+.accent-violet,
+.tag-violet,
+mark,
+.highlight {
+  color: var(--p-violet-400);
+}
+
+/* ── Light theme ─────────────────────────────────────────── */
+[data-theme="light"] {
+  --accent:       var(--p-blue-500);
+  --border-hud:   rgba(59, 130, 246, 0.30);
+  --border-dim:   rgba(59, 130, 246, 0.20);
+  --neural-node:  var(--p-blue-500);
+  --neural-line:  rgba(59, 130, 246, 0.14);
+}

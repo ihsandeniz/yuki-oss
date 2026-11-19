@@ -1,0 +1,142 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   FİTNES · TABAN (G3) — kap, başlık, 4 sekme, yemek arama perdesi, ortak sözlük.
+   Renkler yalnız yuki-oss token'larından (tokens.css); fitnes içi adlar --f-* ile
+   tek yerde eşlenir, modül dosyaları (beslenme/antrenman/oyun/gecmis/ayar) bunları kullanır.
+   Telefon tek sütun; ≥1000 px'de DURUM sağ sütunda hep açık, düğmesi gizli.
+   ════════════════════════════════════════════════════════════════════════════ */
+#fitness-view, #fa-cekmece, #fitnes-perde {
+  --f-zemin: var(--bg);
+  --f-yuzey: var(--yuzey-1);
+  --f-yuzey-2: var(--yuzey-2);
+  --f-yuzey-3: var(--yuzey-3);
+  --f-metin: var(--ink-1);
+  --f-metin-2: var(--ink-2);
+  --f-metin-3: var(--ink-3);
+  --f-cizgi: var(--kenar);
+  --f-cizgi-2: var(--kenar-guclu);
+  --f-mor: var(--mor-ink);
+  --f-altin: var(--altin-ink);
+  --f-yesil: var(--yesil-ink);
+  --f-kirmizi: var(--kirmizi-ink);
+  --f-protein: var(--mor-ink);
+  --f-karb: var(--ink-2);
+  --f-yag: var(--yesil-ink);
+  --f-sayi: 'Outfit', system-ui, sans-serif;
+  --f-mono: var(--font-mono);
+  --f-govde: var(--font);
+}
+#fitness-view {
+  display: none; flex-direction: column;
+  height: calc(100vh - 37px); background: var(--f-zemin); color: var(--f-metin);
+  overflow-y: auto;
+}
+#fitness-view-inner {
+  inline-size: 100%; max-inline-size: 640px; margin-inline: auto;
+  padding: 14px 16px 32px; display: flex; flex-direction: column; gap: 12px;
+}
+#fitness-view button { font: inherit; }
+
+/* Başlık: ad · seviye çipi · ⚙ */
+#fitness-view-title { display: flex; align-items: center; gap: 12px; min-block-size: 44px; }
+#fitness-view-title .fit-bas { margin: 0; font: 600 var(--yazi-19)/1 var(--f-sayi); letter-spacing: .01em; color: var(--f-metin); }
+#fitnes-ust-sv { margin-inline-start: auto; min-inline-size: 0; display: flex; align-items: center; gap: 8px; }
+#fitnes-ust-sv:empty + #fitnes-ayar-ac { margin-inline-start: auto; }
+#fitnes-ayar-ac {
+  min-block-size: 44px; padding: 0 14px; border: 1px solid var(--f-cizgi-2); border-radius: var(--r-tam);
+  background: none; color: var(--f-metin-2); font: 600 var(--yazi-11)/1 var(--f-mono); letter-spacing: .12em;
+  white-space: nowrap; cursor: pointer;
+}
+#fitnes-ayar-ac:hover { color: var(--f-metin); border-color: var(--f-metin-3); }
+
+/* Sekmeler */
+#fstrip-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-block-end: 1px solid var(--f-cizgi); }
+#fstrip-tabs .fstrip-tab {
+  min-block-size: 44px; padding: 0 4px; border: 0; border-block-end: 2px solid transparent; margin-block-end: -1px;
+  background: none; color: var(--f-metin-3); font: 500 var(--yazi-11)/1 var(--f-mono); letter-spacing: .12em;
+  white-space: nowrap; cursor: pointer; transition: color var(--sure-2) var(--egri), border-color var(--sure-2) var(--egri);
+}
+#fstrip-tabs .fstrip-tab:hover { color: var(--f-metin-2); }
+#fstrip-tabs .fstrip-tab.active { color: var(--f-metin); border-block-end-color: var(--f-mor); }
+#fitnes-govde { display: contents; }
+.fstrip-pane { display: none; flex-direction: column; gap: 12px; min-inline-size: 0; }
+.fstrip-pane.fstrip-pane-active { display: flex; }
+
+/* Ortak odak halkası */
+#fitness-view :is(button, a, input, select, summary):focus-visible,
+.fa-perde :is(button, a, input, select):focus-visible,
+#fs-search-overlay :is(button, input):focus-visible {
+  outline: var(--odak-kalinlik, 2px) solid var(--f-mor, var(--mor-ink)); outline-offset: var(--odak-offset, 2px);
+}
+
+/* Küçük etiket (versal mono) — bütün modüllerin ortak dili */
+.f-etiket { font: 500 var(--yazi-11)/1.2 var(--f-mono, var(--font-mono)); letter-spacing: .14em; text-transform: uppercase; color: var(--f-metin-3, var(--ink-3)); }
+
+/* Yemek arama perdesi (Open Food Facts) */
+#fs-search-overlay {
+  position: fixed; inset: 0; z-index: var(--z-p-modal, 1000); display: none;
+  align-items: center; justify-content: center; padding: 16px; background: var(--perde);
+}
+#fs-search-overlay.open { display: flex; }
+#fs-search-card {
+  inline-size: min(360px, 100%); max-block-size: 82vh; display: flex; flex-direction: column; gap: 10px;
+  padding: 16px; border-radius: var(--r-4); background: var(--yuzey-1); box-shadow: var(--golge-3), inset 0 0 0 1px var(--kenar);
+  color: var(--ink-1); font-family: var(--font);
+}
+.fss-title { font: 600 var(--yazi-14)/1.2 var(--font); }
+.fss-meal-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.fss-meal-btn {
+  min-block-size: 36px; padding: 0 4px; border: 1px solid var(--kenar); border-radius: var(--r-2);
+  background: var(--yuzey-2); color: var(--ink-2); font: 500 var(--yazi-11)/1.1 var(--font); cursor: pointer;
+}
+.fss-meal-btn.active { background: var(--mor-zemin); border-color: var(--mor-ink); color: var(--mor-ink); }
+.fss-inp, .fss-qty-inp {
+  min-block-size: 40px; padding: 0 10px; border: 1px solid var(--kenar-guclu); border-radius: var(--r-2);
+  background: var(--bg); color: var(--ink-1); font: 400 var(--yazi-14) var(--font); outline: none;
+}
+.fss-inp { inline-size: 100%; box-sizing: border-box; }
+.fss-inp:focus, .fss-qty-inp:focus { border-color: var(--mor-ink); }
+.fss-qty-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fss-qty-lbl { font: 500 var(--yazi-11)/1.3 var(--font-mono); letter-spacing: .06em; color: var(--ink-3); }
+.fss-qty-inp { inline-size: 72px; text-align: center; font-family: var(--font-mono); }
+.fss-status { min-block-size: 1.3em; font: 400 var(--yazi-12)/1.3 var(--font); color: var(--ink-3); text-align: center; }
+.fss-results { flex: 1; min-block-size: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.fss-item {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; flex-shrink: 0; padding: 9px 10px;
+  border: 1px solid var(--kenar); border-radius: var(--r-2); background: var(--yuzey-2); color: var(--ink-1);
+  text-align: start; cursor: pointer;
+}
+.fss-item:hover { border-color: var(--mor-ink); }
+.fss-ad { font: 600 var(--yazi-13)/1.3 var(--font); }
+.fss-marka { font: 400 var(--yazi-11)/1.3 var(--font); color: var(--ink-3); }
+.fss-makro { font: 400 var(--yazi-11)/1.3 var(--font-mono); color: var(--ink-2); }
+.fss-close {
+  min-block-size: 40px; flex-shrink: 0; border: 1px solid var(--kenar-guclu); border-radius: var(--r-2);
+  background: none; color: var(--ink-2); font: 600 var(--yazi-11)/1 var(--font-mono); letter-spacing: .12em; cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  #fitness-view { height: calc(100vh - 37px - 52px); }
+  #fitness-view-inner { padding: 10px 12px 24px; }
+}
+@media (max-width: 420px) {
+  #fstrip-tabs .fstrip-tab { letter-spacing: .04em; }
+}
+body.widget-mode #fitness-view { height: auto; min-height: 480px; overflow: visible; }
+body.widget-mode #fstrip-tabs { display: none; }
+
+/* Geniş ekran: solda sekmeli içerik, sağda DURUM sütunu */
+@media (min-width: 1000px) {
+  #fitness-view-inner {
+    max-inline-size: 1180px; padding: 16px 32px 48px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 360px; column-gap: 28px; align-items: start;
+  }
+  #fitness-view-inner > * { grid-column: 1; }
+  #fitness-view-inner > #fitness-view-title { grid-column: 1 / -1; }
+  #fitnes-govde > * { grid-column: 1; }
+  #fstrip-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #fstrip-tabs .fstrip-tab[data-tab="durum"] { display: none; }
+  #fitness-view-inner #fstrip-pane-durum { display: flex; grid-column: 2; grid-row: 2 / span 40; position: sticky; top: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #fstrip-tabs .fstrip-tab { transition: none; }
+}

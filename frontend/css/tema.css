@@ -1,0 +1,93 @@
+/* ═══ TEMA KATMANI — seçmeli (2026-10-15) ═══════════════════
+ *
+ * Tek yer: sayfa CSS'i ham renk/yazı yazmaz, yalnız --t-* değişkenlerini okur.
+ * Tema `<html data-tema="…">` ile seçilir (localStorage `aliceTema_v1`):
+ *   grimoire — Ajan Komuta'nın büyü kitabı dili (projects/ajan-komuta/ofis.css):
+ *              koyu gökyüzü, altın = "neredesin", cyan = canlı veri, serif başlık
+ *   klasik   — AliceAi'nin bugünkü görünümü (tokens.css rolleri) — kalır, silinmez
+ * İleride AliceAi'nin diğer sekmeleri aynı dosyayı yükleyip --t-* okuyacak;
+ * yeni tema = yeni blok, sayfa CSS'ine dokunmadan.
+ * 🔑 Rol sözlüğü iki temada aynı: --t-vurgu yalnız seçili/bulunduğun yer,
+ *    --t-veri yalnız sayı/boyut, durum renkleri dekorasyon değil.
+ */
+
+:root, :root[data-tema="grimoire"] {
+  --t-zemin:        #05060b;
+  --t-gok:          radial-gradient(1100px 680px at 8% -12%, rgba(0,212,255,.10), transparent 62%),
+                    radial-gradient(900px 620px at 104% 108%, rgba(240,180,41,.075), transparent 60%),
+                    radial-gradient(circle at 46% 40%, #0b0e1a 0%, #05060b 72%);
+  --t-ust-bg:       linear-gradient(180deg, rgba(16,20,34,.92), rgba(8,10,18,.78));
+  --t-ust-iz:       linear-gradient(90deg, transparent, rgba(0,212,255,.55) 30%, rgba(240,180,41,.55) 70%, transparent);
+  --t-panel-bg:     linear-gradient(180deg, rgba(0,212,255,.055), rgba(0,212,255,.012) 60%), #090d18;
+  --t-panel-kenar:  rgba(0,212,255,.2);
+  --t-kitap-bg:     linear-gradient(90deg, rgba(0,0,0,.45), transparent 26px),
+                    radial-gradient(120% 50% at 70% 0%, rgba(240,180,41,.07), transparent 60%),
+                    linear-gradient(180deg, #15120d, #0f0d10 38%, #0c0d14);
+  --t-kitap-kenar:  rgba(240,180,41,.32);
+  --t-kitap-golge:  inset 0 0 0 5px #0d0b0e, inset 0 0 0 6px rgba(240,180,41,.16), 0 22px 50px rgba(0,0,0,.6);
+  --t-cekmece-bg:   linear-gradient(180deg, #0b0f1d, #07080f);
+  --t-yuzey:        rgba(255,255,255,.03);
+  --t-yuzey-2:      rgba(255,255,255,.06);
+  --t-cizgi:        rgba(240,180,41,.16);
+  --t-cizgi-notr:   rgba(255,255,255,.10);
+  --t-cizgi-guclu:  rgba(255,255,255,.22);
+  --t-metin:        #ece8de;
+  --t-metin-2:      #b9bdc8;
+  --t-metin-3:      #9097a8;
+  --t-vurgu:        #f0b429;
+  --t-vurgu-rgb:    240,180,41;
+  --t-veri:         #00d4ff;
+  --t-veri-rgb:     0,212,255;
+  --t-hata:         #ff4d5e;
+  --t-hata-zemin:   rgba(40,10,16,.95);
+  --t-secili-bg:    linear-gradient(90deg, rgba(240,180,41,.16), rgba(240,180,41,.04) 70%, transparent);
+  --t-vurgu-isik:   0 0 18px rgba(240,180,41,.32);
+  --t-veri-isik:    0 0 12px rgba(0,212,255,.45);
+  --t-baslik-font:  "Palatino Linotype", Palatino, "P052", "URW Palladio L", "Book Antiqua", Georgia, "Noto Serif", "DejaVu Serif", serif;
+  --t-govde-font:   "Inter", "Segoe UI", "Noto Sans", "DejaVu Sans", system-ui, sans-serif;
+  --t-mono-font:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  --t-baslik-ara:   .2em;      /* serif başlık harf aralığı */
+  --t-r-panel:      14px;
+  --t-r:            8px;
+  --t-hiz:          240ms;
+  --t-egri:         cubic-bezier(.2,.75,.25,1);
+  --t-sigil:        1;         /* başlıktaki mühür görünür */
+}
+
+/* Klasik — bugünkü AliceAi (tokens.css'in değerleri; tokens.css yüklü değilse yedekler) */
+:root[data-tema="klasik"] {
+  --t-zemin:        var(--surface-0, #000);
+  --t-gok:          none;
+  --t-ust-bg:       var(--surface-1, rgba(255,255,255,.03));
+  --t-ust-iz:       none;
+  --t-panel-bg:     transparent;
+  --t-panel-kenar:  transparent;
+  --t-kitap-bg:     var(--surface-1, rgba(255,255,255,.03));
+  --t-kitap-kenar:  var(--border-quiet, rgba(255,255,255,.08));
+  --t-kitap-golge:  none;
+  --t-cekmece-bg:   var(--surface-1, rgba(255,255,255,.03));
+  --t-yuzey:        var(--surface-2, rgba(255,255,255,.06));
+  --t-yuzey-2:      var(--surface-3, rgba(255,255,255,.09));
+  --t-cizgi:        var(--border-quiet, rgba(255,255,255,.08));
+  --t-cizgi-notr:   var(--border-quiet, rgba(255,255,255,.08));
+  --t-cizgi-guclu:  var(--border-strong, rgba(255,255,255,.22));
+  --t-metin:        var(--c-ink, #f2f3f5);
+  --t-metin-2:      var(--c-ink-2, #b8bcc4);
+  --t-metin-3:      var(--c-ink-3, #7a7f88);
+  --t-vurgu:        var(--c-gold, #f0b429);
+  --t-vurgu-rgb:    240,180,41;
+  --t-veri:         var(--c-data-soft, #7fe4ff);
+  --t-veri-rgb:     0,212,255;
+  --t-hata:         #ff4d5e;
+  --t-hata-zemin:   var(--scrim-3, rgba(0,0,0,.85));
+  --t-secili-bg:    var(--c-gold-ghost, rgba(240,180,41,.12));
+  --t-vurgu-isik:   none;
+  --t-veri-isik:    none;
+  --t-baslik-font:  var(--font-ui, "Inter", system-ui, sans-serif);
+  --t-govde-font:   var(--font-ui, "Inter", system-ui, sans-serif);
+  --t-mono-font:    var(--font-hud, "Space Mono", ui-monospace, monospace);
+  --t-baslik-ara:   .08em;
+  --t-r-panel:      0px;
+  --t-r:            4px;
+  --t-sigil:        0;
+}

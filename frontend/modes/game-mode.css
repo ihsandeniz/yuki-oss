@@ -1,0 +1,817 @@
+/* ════════════════════════════════════════════════════════════════════
+   game-mode.css — Mod 02: "UNIT DOSSIER" Oyun Görünümü (v2 — 2026-07-09)
+
+   Sıfırdan redesign. Referans DNA (10 gacha ekranı sentezi):
+     · Karakter = kahraman: sahneye MASKEYLE erir, kutu kenarı yok
+     · Katmanlı sahne: grid → dev soluk isim tipografisi → halka/glow →
+       karakter → zemin elipsi → UI plakaları
+     · Tek accent (characters.css --gm-* tokenları), ince hairline çizgiler
+     · Büyük rakam (Space Mono) + küçük tracked etiket (Chakra Petch)
+     · Sağ kolon = modüler widget kartları (collapse + sürükle-sırala)
+
+   characters.css sözleşmesi KORUNUR: .gm-box · .gm-char-btn ·
+   #gm-char-title b · .gm-stat b · .gm-item · #gm-root::before/::after
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Chakra Petch (self-host; skill-card.css ile aynı dosyalar) ── */
+@font-face{font-family:'Chakra Petch';font-style:normal;font-weight:600;font-display:swap;
+  src:url('../assets/fonts/ChakraPetch-600-latinext.woff2') format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
+@font-face{font-family:'Chakra Petch';font-style:normal;font-weight:600;font-display:swap;
+  src:url('../assets/fonts/ChakraPetch-600-latin.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Chakra Petch';font-style:normal;font-weight:700;font-display:swap;
+  src:url('../assets/fonts/ChakraPetch-700-latinext.woff2') format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
+@font-face{font-family:'Chakra Petch';font-style:normal;font-weight:700;font-display:swap;
+  src:url('../assets/fonts/ChakraPetch-700-latin.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+
+/* ════════════════════════════════════════════════════════════════════
+   1) TABAN TOKENLAR
+   --gm-accent/--gm-accent-soft/--gm-bg-deep/--gm-line → characters.css
+   ════════════════════════════════════════════════════════════════════ */
+body.game-mode {
+  /* OYUN modunun KENDİ z-index ölçeği (B2 kararı 2026-08-27, geliştirici):
+     ana ölçekle (tokens.css --z-*) bilinçli AYRI — bu mod kendi sahnesinde
+     katmanlanır. Değerler birebir korunarak adlandırıldı; ana ölçeğe
+     çekilecekse ölçüm turuyla yapılır, elle sayı değiştirilmez. */
+  --z-gm-yuzey: 0; --z-gm-taban: 1; --z-gm-kat2: 2; --z-gm-panel: 4;
+  --z-gm-dock: 5; --z-gm-widget: 6; --z-gm-ust: 7;
+
+  --gm-accent: var(--accent, #a0d8ff);
+  --gm-accent-soft: rgba(160, 216, 255, 0.14);
+  --gm-bg-deep: #07101a;
+  --gm-line: rgba(232, 244, 250, 0.30);
+
+  --gm-ink: #edf3f9;                        /* birincil metin */
+  --gm-ink-dim: rgba(214, 228, 240, 0.52);  /* ikincil metin */
+  --gm-hair: rgba(255, 255, 255, 0.09);     /* hairline çerçeve */
+  --gm-plate: rgba(7, 12, 20, 0.58);        /* plaka/kart zemini */
+  --gm-plate-deep: rgba(4, 8, 14, 0.78);
+  --gm-disp: 'Chakra Petch', var(--font-hud, monospace);
+  --gm-data: 'Space Mono', 'JetBrains Mono', monospace;
+  --gm-body: var(--font-main, 'Inter', sans-serif);
+  --gm-cut: 10px;                            /* imza köşe kesimi */
+}
+
+body.game-mode #avatar-pane { display: none !important; }
+/* Avatar-pane gizlenince #mode-toggle-fab da kaybolur → mobilde header'daki
+   #mode-toggle'ı geri göster ki moddan çıkış erişilebilir kalsın. */
+@media (max-width: 700px) {
+  body.game-mode #mode-toggle { display: inline-flex !important; }
+}
+body.game-mode #chat-pane { position: relative; background: var(--gm-bg-deep); }
+body.game-mode #chat-empty-state { display: none !important; }
+
+/* ════════════════════════════════════════════════════════════════════
+   2) SAHNE KABUĞU — katman sırası:
+   ::before grid → ::after motif (characters.css) → bigname/halo/floor(1)
+   → karakter(2) → plakalar(4) → ray/modüller(5) → mesaj/composer(6)
+   ════════════════════════════════════════════════════════════════════ */
+#gm-root {
+  position: absolute;
+  inset: 58px 0 0 0;
+  display: none;
+  z-index: var(--z-gm-taban);
+  overflow: hidden;
+  background: var(--gm-bg-deep); /* characters.css sahneleri bunu ezer */
+}
+body.game-mode #gm-root { display: block; }
+
+/* doku: seyrek hairline grid (karakter sahnesi ::before'u ezebilir) */
+#gm-root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-gm-yuzey);
+  background-image:
+    linear-gradient(var(--gm-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--gm-line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  opacity: 0.05;
+  pointer-events: none;
+}
+/* animasyonlu motif katmanı — içerik characters.css'te */
+#gm-root::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-gm-yuzey);
+  pointer-events: none;
+}
+
+/* ── Dev arka isim tipografisi (kontur, dolgusuz) ── */
+#gm-bigname {
+  position: absolute;
+  left: 46%;
+  bottom: -0.06em;
+  transform: translateX(-50%);
+  z-index: var(--z-gm-taban);
+  font-family: var(--gm-disp);
+  font-weight: 700;
+  font-size: clamp(120px, 21vw, 330px);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--gm-line);
+  opacity: 0.16;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Halka: karakter arkası eşmerkezli çember + dönen kesik halka ── */
+#gm-halo {
+  position: absolute;
+  left: 46%;
+  top: 45%;
+  width: min(56vmin, 540px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  z-index: var(--z-gm-taban);
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, var(--gm-accent-soft), transparent 62%);
+}
+#gm-halo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid var(--gm-line);
+  opacity: 0.35;
+}
+#gm-halo::after {
+  content: '';
+  position: absolute;
+  inset: 6.5%;
+  border-radius: 50%;
+  border: 1px dashed var(--gm-line);
+  opacity: 0.45;
+  animation: gm-halo-spin 90s linear infinite;
+}
+@keyframes gm-halo-spin { to { transform: rotate(360deg); } }
+
+/* ── Zemin: karakter altı ışık elipsi + hairline halka ── */
+#gm-floor {
+  position: absolute;
+  left: 46%;
+  bottom: 4.5%;
+  width: min(50vmin, 520px);
+  height: 84px;
+  transform: translateX(-50%);
+  z-index: var(--z-gm-taban);
+  pointer-events: none;
+  background: radial-gradient(ellipse 50% 44% at 50% 50%, var(--gm-accent-soft), transparent 72%);
+}
+#gm-floor::before {
+  content: '';
+  position: absolute;
+  inset: 26% 4%;
+  border-radius: 50%;
+  border: 1px solid var(--gm-line);
+  opacity: 0.4;
+}
+
+/* ── Dikey sistem imzası (sağ kenar) ── */
+#gm-vertag {
+  position: absolute;
+  right: 372px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: var(--z-gm-taban);
+  writing-mode: vertical-rl;
+  font-family: var(--gm-data);
+  font-size: 9px;
+  letter-spacing: 5px;
+  color: var(--gm-ink-dim);
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   2.5) SAHNE KATMANI (#gm-scene) — karakter başına canlı "oda"
+   Saf CSS animasyon; içerik game-mode.js SCENES üretir. Karakterin
+   ARKASINDA (z1 < karakter z2), düşük opaklık — kahramanı boğmaz.
+   ════════════════════════════════════════════════════════════════════ */
+#gm-scene {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-gm-taban);
+  pointer-events: none;
+}
+#gm-scene i, #gm-scene em { font-style: normal; }
+
+/* ── YUKI · süzülen kar/buz parçacıkları ── */
+.gm-snow {
+  position: absolute;
+  top: -4%;
+  left: calc(4% + var(--i) * 8.5%);
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #fff;
+  filter: blur(1px);
+  opacity: 0;
+  animation: gm-snowfall 12s linear infinite;
+  animation-delay: calc(var(--i) * -1.35s);
+}
+.gm-snow:nth-child(even) { width: 3px; height: 3px; filter: blur(0.5px); }
+@keyframes gm-snowfall {
+  0%   { transform: translateY(0) translateX(0); opacity: 0; }
+  8%   { opacity: 0.55; }
+  55%  { transform: translateY(52vh) translateX(26px); }
+  88%  { opacity: 0.3; }
+  100% { transform: translateY(104vh) translateX(-10px); opacity: 0; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   3) KARAKTER — video çifti + PNG fallback; radyal maskeyle sahneye erir
+   ════════════════════════════════════════════════════════════════════ */
+#gm-vid-a, #gm-vid-b, #gm-character {
+  position: absolute;
+  left: 46%;
+  bottom: 0;
+  height: 96%;
+  max-width: 60vw;
+  transform: translateX(-50%);
+  z-index: var(--z-gm-kat2);
+  object-fit: contain;
+  pointer-events: none;
+  /* güçlü kenar eritme: videoların KENDİ arka planı parlaksa kutu
+     kenarı görünmesin — köşeler tam transparan, geçiş geniş */
+  -webkit-mask-image: radial-gradient(ellipse 54% 62% at 50% 44%, #000 46%, transparent 80%);
+          mask-image: radial-gradient(ellipse 54% 62% at 50% 44%, #000 46%, transparent 80%);
+  filter: drop-shadow(0 22px 44px rgba(0, 0, 0, 0.55));
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   4) İSİM PLAKASI + STAT SATIRLARI (sol üst blok)
+   ════════════════════════════════════════════════════════════════════ */
+#gm-char-title {
+  position: absolute;
+  top: 30px;
+  left: 118px;
+  z-index: var(--z-gm-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+  user-select: none;
+}
+#gm-char-title .gm-serial {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--gm-data);
+  font-size: 9.5px;
+  letter-spacing: 3px;
+  color: var(--gm-accent);
+  opacity: 0.9;
+}
+#gm-char-title .gm-serial i {
+  width: 6px; height: 6px;
+  background: var(--gm-accent);
+  box-shadow: 0 0 8px var(--gm-accent);
+  animation: gm-dot-pulse 2.6s ease-in-out infinite;
+}
+@keyframes gm-dot-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+#gm-char-title b {
+  font-family: var(--gm-disp);
+  font-weight: 700;
+  font-size: 46px;
+  line-height: 1.04;
+  letter-spacing: 10px;
+  color: var(--gm-ink);
+  text-shadow: 0 0 26px var(--gm-accent-soft);
+}
+#gm-char-title small {
+  font-family: var(--gm-disp);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 5px;
+  color: var(--gm-ink-dim);
+}
+#gm-char-title .gm-title-rule {
+  position: relative;
+  width: 188px;
+  height: 1px;
+  margin-top: 8px;
+  background: linear-gradient(90deg, var(--gm-accent), var(--gm-accent-soft) 60%, transparent);
+}
+#gm-char-title .gm-title-rule::after {
+  content: '';
+  position: absolute;
+  right: -2px; top: -3px;
+  width: 5px; height: 5px;
+  border: 1px solid var(--gm-accent);
+  transform: rotate(45deg);
+  opacity: 0.8;
+}
+
+/* stat plakası: DURUM · BELLEK · UPTIME — etiket sol, büyük değer sağ */
+#gm-status {
+  position: absolute;
+  top: 156px;
+  left: 118px;
+  z-index: var(--z-gm-panel);
+  width: 216px;
+  pointer-events: none;
+  user-select: none;
+}
+.gm-stat {
+  display: flex;
+  align-items: baseline;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--gm-hair);
+}
+.gm-stat:first-child { border-top: 1px solid var(--gm-hair); }
+.gm-stat small {
+  order: 1;
+  font-family: var(--gm-disp);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 4px;
+  color: var(--gm-ink-dim);
+}
+.gm-stat b {
+  order: 2;
+  margin-left: auto;
+  font-family: var(--gm-data);
+  font-weight: 700;
+  font-size: 19px;
+  color: var(--gm-ink);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   5) SOL RAY — karakter portreleri (sahte LV yok; rol title'da)
+   ════════════════════════════════════════════════════════════════════ */
+#gm-left {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 96px;
+  z-index: var(--z-gm-dock);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 12px 0;
+  background: linear-gradient(90deg, var(--gm-plate-deep), transparent);
+}
+.gm-char-btn {
+  position: relative;
+  width: 58px;
+  padding: 0;
+  background: var(--gm-plate);
+  border: 1px solid var(--gm-hair);
+  cursor: pointer;
+  clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+  transition: border-color 0.18s, filter 0.18s;
+}
+.gm-char-btn img {
+  display: block;
+  width: 100%;
+  height: 72px;
+  object-fit: cover;
+  object-position: top;
+  filter: grayscale(0.9) brightness(0.72) contrast(0.95);
+  transition: filter 0.22s;
+}
+.gm-char-btn span {
+  display: block;
+  padding: 4px 0 5px;
+  font-family: var(--gm-disp);
+  font-weight: 600;
+  font-size: 8.5px;
+  letter-spacing: 2.5px;
+  text-align: center;
+  color: var(--gm-ink-dim);
+  transition: color 0.18s;
+}
+/* evrim sistemi rozeti (intro-sequences.js enjekte eder — GERÇEK XP verisi):
+   yeni dile entegre — portrenin sağ üst köşesinde mono chip */
+.gm-char-btn .char-level-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  padding: 1px 4px;
+  font-family: var(--gm-data);
+  font-size: 7.5px;
+  letter-spacing: 1px;
+  line-height: 1.4;
+  color: var(--gm-ink-dim);
+  background: var(--gm-plate-deep);
+  border: 1px solid var(--gm-hair);
+  border-radius: 0;
+  pointer-events: none;
+}
+.gm-char-btn.active .char-level-badge {
+  color: var(--gm-accent);
+  border-color: var(--gm-line);
+}
+.gm-char-btn:hover { border-color: var(--gm-line); }
+.gm-char-btn:hover img { filter: grayscale(0.35) brightness(0.9); }
+.gm-char-btn.active {
+  border-color: var(--gm-accent);
+  box-shadow: 0 0 16px var(--gm-accent-soft), inset 0 0 10px var(--gm-accent-soft);
+}
+.gm-char-btn.active img { filter: none; }
+.gm-char-btn.active span { color: var(--gm-accent); }
+/* aktif işaret çizgisi — rayın soluna yaslanır */
+.gm-char-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: var(--gm-accent);
+  box-shadow: 0 0 8px var(--gm-accent);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   6) SKILL DOCK — 7 animasyon tetikleyici (chamfered slot + tooltip)
+   ════════════════════════════════════════════════════════════════════ */
+#gm-anim-btns {
+  position: absolute;
+  left: 46%;
+  bottom: 150px; /* input-area (~90px) + mesaj payı — dock her zaman görünür */
+  transform: translateX(-50%);
+  z-index: var(--z-gm-widget); /* > #gm-right (5): dar/tiled pencerede widget kolonu dock'u örtmesin */
+  display: flex;
+  gap: 9px;
+  padding: 8px 12px;
+  background: var(--gm-plate);
+  border: 1px solid var(--gm-hair);
+  backdrop-filter: blur(10px);
+  clip-path: polygon(var(--gm-cut) 0, 100% 0, 100% calc(100% - var(--gm-cut)), calc(100% - var(--gm-cut)) 100%, 0 100%, 0 var(--gm-cut));
+}
+.gm-anim-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--gm-hair);
+  color: var(--gm-ink-dim);
+  cursor: pointer;
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  transition: color 0.16s, border-color 0.16s, background 0.16s, transform 0.16s;
+}
+.gm-anim-btn svg { width: 18px; height: 18px; }
+.gm-anim-btn:hover {
+  color: var(--gm-accent);
+  border-color: var(--gm-accent);
+  transform: translateY(-2px);
+}
+.gm-anim-btn.active {
+  color: var(--gm-accent);
+  border-color: var(--gm-accent);
+  background: var(--gm-accent-soft);
+  box-shadow: 0 0 12px var(--gm-accent-soft);
+}
+/* tooltip — data-label */
+.gm-anim-btn::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 8px;
+  font-family: var(--gm-disp);
+  font-weight: 600;
+  font-size: 9px;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  color: var(--gm-ink);
+  background: var(--gm-plate-deep);
+  border: 1px solid var(--gm-hair);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.gm-anim-btn:hover::after { opacity: 1; }
+
+/* ════════════════════════════════════════════════════════════════════
+   7) SAĞ MODÜLLER — widget kartları (collapse + sürükle-sırala)
+   Durum localStorage: gmModulesV1 (sıra + kapalı). HALKA deseni.
+   NOT: collapse yüksekliği SADECE CSS yönetir — inline height YASAK
+   (ledger: hr-w-collapsed dersi).
+   ════════════════════════════════════════════════════════════════════ */
+#gm-right {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  bottom: 78px;
+  width: 348px;
+  z-index: var(--z-gm-dock);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px;
+}
+.gm-box {
+  flex: 0 0 auto;
+  background: var(--gm-plate);
+  border: 1px solid var(--gm-hair);
+  backdrop-filter: blur(14px);
+  clip-path: polygon(var(--gm-cut) 0, 100% 0, 100% calc(100% - var(--gm-cut)), calc(100% - var(--gm-cut)) 100%, 0 100%, 0 var(--gm-cut));
+}
+.gm-box.gm-drag {
+  border-color: var(--gm-accent);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5), 0 0 14px var(--gm-accent-soft);
+  opacity: 0.92;
+}
+.gm-box-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  font-family: var(--gm-disp);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 3.5px;
+  color: var(--gm-ink);
+}
+.gm-box-head:active { cursor: grabbing; }
+.gm-box-head svg {
+  width: 14px; height: 14px;
+  color: var(--gm-accent);
+  flex: 0 0 auto;
+}
+.gm-box-head .gm-box-label { flex: 1; }
+.gm-count {
+  font-family: var(--gm-data);
+  font-style: normal;
+  font-size: 10px;
+  min-width: 18px;
+  text-align: center;
+  padding: 1px 7px;
+  color: var(--gm-accent);
+  border: 1px solid var(--gm-line);
+  background: var(--gm-accent-soft);
+}
+.gm-fold {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--gm-ink-dim);
+  padding: 2px 4px;
+  transition: transform 0.2s;
+}
+.gm-box.closed .gm-fold { transform: rotate(-90deg); }
+.gm-box.closed .gm-box-body { display: none; }
+.gm-box-body {
+  padding: 0 12px 10px;
+  max-height: 236px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.gm-item {
+  padding: 8px 0 7px;
+  border-top: 1px solid var(--gm-hair);
+  font-family: var(--gm-body);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--gm-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.gm-item:first-child { border-top: none; }
+.gm-item small {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--gm-data);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: var(--gm-ink-dim);
+}
+.gm-item.done {
+  opacity: 0.42;
+  text-decoration: line-through;
+  text-decoration-color: var(--gm-line);
+  text-decoration-thickness: 1px;
+}
+.gm-empty {
+  padding: 14px 0;
+  text-align: center;
+  font-family: var(--gm-data);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--gm-ink-dim);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   8) MESAJ AKIŞI + COMPOSER — sahne diliyle uyumlu overlay
+   ════════════════════════════════════════════════════════════════════ */
+body.game-mode #messages {
+  position: absolute;
+  left: 108px;
+  bottom: 66px;
+  width: min(430px, 33vw);
+  max-height: 30vh;
+  overflow-y: auto;
+  z-index: var(--z-gm-widget);
+  background: transparent;
+  padding: 10px 14px 4px;
+  -webkit-mask-image: linear-gradient(transparent 0, #000 16%);
+          mask-image: linear-gradient(transparent 0, #000 16%);
+}
+body.game-mode #messages .msg-bubble {
+  backdrop-filter: blur(8px);
+  background: var(--gm-plate-deep);
+  border: 1px solid var(--gm-hair);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+}
+body.game-mode #input-area {
+  position: absolute;
+  left: 108px;
+  right: 376px;
+  bottom: 8px;
+  z-index: var(--z-gm-widget);
+  background: var(--gm-plate-deep);
+  border: 1px solid var(--gm-hair);
+  backdrop-filter: blur(12px);
+  clip-path: polygon(var(--gm-cut) 0, 100% 0, 100% calc(100% - var(--gm-cut)), calc(100% - var(--gm-cut)) 100%, 0 100%, 0 var(--gm-cut));
+  transition: border-color 0.2s;
+}
+body.game-mode #input-area:focus-within {
+  border-color: var(--gm-line);
+  box-shadow: 0 0 18px var(--gm-accent-soft);
+}
+body.game-mode #scroll-btn { right: 384px; z-index: var(--z-gm-widget); }
+
+/* ════════════════════════════════════════════════════════════════════
+   9) AÇILIŞ SIRALAMASI — moda her girişte display:none→block tetikler.
+   Etkileşimli öğelerde SADECE opacity animasyonu (hover transform'u
+   fill-mode ezmesin — ledger: animation-fill-mode dersi).
+   ════════════════════════════════════════════════════════════════════ */
+@keyframes gm-fade    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gm-fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+body.game-mode #gm-bigname    { animation: gm-fade 1.1s 0.10s var(--e-out,cubic-bezier(.25,1,.4,1)) both; }
+body.game-mode #gm-halo       { animation: gm-fade 0.9s 0.18s var(--e-out,cubic-bezier(.25,1,.4,1)) both; }
+body.game-mode #gm-floor      { animation: gm-fade 0.9s 0.22s var(--e-out,cubic-bezier(.25,1,.4,1)) both; }
+body.game-mode #gm-char-title { animation: gm-fade-up 0.55s 0.05s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+body.game-mode #gm-status     { animation: gm-fade-up 0.55s 0.14s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+body.game-mode #gm-vertag     { animation: gm-fade 0.8s 0.3s var(--e-out,cubic-bezier(.25,1,.4,1)) both; }
+body.game-mode .gm-char-btn   { animation: gm-fade 0.4s var(--e-out,cubic-bezier(.25,1,.4,1)) both; }
+body.game-mode .gm-char-btn:nth-child(1) { animation-delay: 0.06s; }
+body.game-mode .gm-char-btn:nth-child(2) { animation-delay: 0.12s; }
+body.game-mode .gm-char-btn:nth-child(3) { animation-delay: 0.18s; }
+body.game-mode .gm-char-btn:nth-child(4) { animation-delay: 0.24s; }
+body.game-mode .gm-char-btn:nth-child(5) { animation-delay: 0.30s; }
+body.game-mode .gm-box        { animation: gm-fade 0.5s var(--e-out,cubic-bezier(.25,1,.4,1)) both; }
+body.game-mode .gm-box:nth-child(1) { animation-delay: 0.10s; }
+body.game-mode .gm-box:nth-child(2) { animation-delay: 0.18s; }
+body.game-mode .gm-box:nth-child(3) { animation-delay: 0.26s; }
+body.game-mode #gm-anim-btns  { animation: gm-fade 0.5s 0.34s var(--e-out,cubic-bezier(.25,1,.4,1)) both; }
+
+/* ── ince scrollbar ── */
+#gm-right::-webkit-scrollbar,
+.gm-box-body::-webkit-scrollbar,
+body.game-mode #messages::-webkit-scrollbar { width: 3px; }
+#gm-right::-webkit-scrollbar-thumb,
+.gm-box-body::-webkit-scrollbar-thumb,
+body.game-mode #messages::-webkit-scrollbar-thumb {
+  background: var(--gm-line);
+}
+#gm-right::-webkit-scrollbar-track,
+.gm-box-body::-webkit-scrollbar-track,
+body.game-mode #messages::-webkit-scrollbar-track { background: transparent; }
+
+/* ════════════════════════════════════════════════════════════════════
+   10) MOBİL (≤700px) — dikey akış:
+   üst portre şeridi → karakter sahnesi → skill şeridi → modüller →
+   composer. Karakter mutlak konumlu kalır (flex'e girmez).
+   ════════════════════════════════════════════════════════════════════ */
+@media (max-width: 700px) {
+  body.game-mode #gm-root {
+    inset: 58px 0 56px 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* 1) portre şeridi — üst yatay bar */
+  #gm-left {
+    position: static;
+    order: 1;
+    flex: 0 0 auto;
+    flex-direction: row;
+    width: auto;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 10px 12px 8px;
+    overflow-x: auto;
+    background: linear-gradient(180deg, var(--gm-plate-deep), transparent);
+  }
+  .gm-char-btn { width: 46px; flex: 0 0 auto; }
+  .gm-char-btn img { height: 54px; }
+  .gm-char-btn span { font-size: 7.5px; letter-spacing: 1.5px; padding: 3px 0 4px; }
+  .gm-char-btn.active::before { left: -6px; top: 8px; bottom: 8px; }
+
+  /* 2) karakter sahnesi — akışta yer tutucu; görseller mutlak */
+  #gm-stage-spacer { order: 2; flex: 0 0 38vh; }
+  #gm-vid-a, #gm-vid-b, #gm-character {
+    left: 50%;
+    top: 128px;
+    bottom: auto;
+    height: 38vh;
+    max-width: 92vw;
+  }
+  #gm-halo { left: 50%; top: calc(128px + 19vh); width: 62vw; }
+  #gm-floor { display: none; }
+  #gm-bigname {
+    left: 50%;
+    bottom: auto;
+    top: calc(128px + 38vh - 0.9em);
+    font-size: clamp(64px, 24vw, 120px);
+  }
+  #gm-vertag { display: none; }
+
+  /* isim plakası: portre şeridinin ALTINA bindirilir (çakışma yok) */
+  #gm-char-title { top: 148px; left: 14px; gap: 3px; z-index: var(--z-gm-panel); }
+  #gm-char-title b { font-size: 26px; letter-spacing: 6px; }
+  #gm-char-title small { font-size: 9px; letter-spacing: 3px; }
+  #gm-char-title .gm-title-rule { width: 120px; margin-top: 4px; }
+
+  /* stat plakası: sahnenin sağ üstü — kompakt */
+  #gm-status {
+    top: 150px;
+    left: auto;
+    right: 14px;
+    width: 128px;
+  }
+  .gm-stat { padding: 5px 2px; }
+  .gm-stat b { font-size: 13px; }
+  .gm-stat small { font-size: 8px; letter-spacing: 2.5px; }
+
+  /* 3) skill şeridi — sahne altı yatay */
+  #gm-anim-btns {
+    position: static;
+    order: 3;
+    transform: none;
+    align-self: center;
+    margin: 4px 0 6px;
+    padding: 6px 10px;
+    gap: 7px;
+  }
+  .gm-anim-btn { width: 36px; height: 36px; }
+  .gm-anim-btn::after { display: none; } /* mobilde tooltip yok */
+
+  /* 4) modüller — kalan alanı kaydırarak doldurur */
+  #gm-right {
+    position: static;
+    order: 4;
+    flex: 1 1 auto;
+    width: auto;
+    padding: 4px 12px 10px;
+  }
+  .gm-box-body { max-height: 200px; }
+
+  /* mesaj + composer */
+  body.game-mode #messages {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    bottom: 64px;
+    max-height: 26vh;
+    z-index: var(--z-gm-ust);
+  }
+  body.game-mode #input-area {
+    left: 8px;
+    right: 8px;
+    bottom: 4px;
+  }
+  body.game-mode #scroll-btn { right: 16px; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   11) ERİŞİLEBİLİRLİK — hareket azaltma
+   ════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  #gm-halo::after,
+  #gm-scene *,
+  #gm-char-title .gm-serial i { animation: none !important; }
+  /* animasyonsuz parçacıklar opacity:0'da kalır — sahne sessizce statikleşir */
+  body.game-mode #gm-bigname,
+  body.game-mode #gm-halo,
+  body.game-mode #gm-floor,
+  body.game-mode #gm-char-title,
+  body.game-mode #gm-status,
+  body.game-mode #gm-vertag,
+  body.game-mode .gm-char-btn,
+  body.game-mode .gm-box,
+  body.game-mode #gm-anim-btns { animation: none !important; }
+}

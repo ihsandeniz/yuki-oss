@@ -1,0 +1,98 @@
+/* Güvenli dosya işlemleri — ORTAK onay penceresi (js/guvenli-onay.js). DOSYA ve GALERİ sayfalarında.
+   Renkler sayfanın belirteçlerinden (DOSYA: --t-*, GALERİ: --c-*), yoksa sabit yedek. */
+
+.gd-perde[hidden] { display: none; }
+/* `html body >`: dosya.css'teki `body.dy > :where(*) { position: relative }` kuralını yener (fixed kalsın) */
+html body > .gd-perde {
+  position: fixed; inset: 0; z-index: 650;   /* galeri fişi (--z-modal 600) üstü, giriş ekranı (--z-auth 900) altı */ display: grid; place-items: center; padding: 16px;
+  background: rgba(0, 0, 0, .74);
+}
+.gd-pencere {
+  width: min(460px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
+  padding: 20px; border-radius: var(--t-r-panel, 14px);
+  background: var(--t-zemin, #0d0c13); color: var(--t-metin, var(--c-ink, #f2f3f5));
+  border: 1px solid rgba(var(--t-vurgu-rgb, 240, 180, 41), .45); box-shadow: 0 18px 44px rgba(0, 0, 0, .6);
+  font-family: var(--t-govde-font, inherit);
+}
+.gd-pencere h2 {
+  margin: 0 0 12px; font-family: var(--t-baslik-font, inherit); font-size: 18px; font-weight: 600; letter-spacing: .02em;
+  overflow-wrap: anywhere;
+}
+.gd-not { margin: 10px 0 0; font-size: 14px; line-height: 1.5; color: var(--t-metin, var(--c-ink, #f2f3f5)); opacity: .86; }
+.gd-uyari { color: var(--t-vurgu, var(--c-gold, #f0b429)); opacity: 1; }
+.gd-yol {
+  margin: 4px 0 0; padding: 8px 10px; border-radius: 8px; font-family: var(--t-mono-font, ui-monospace, monospace); font-size: 13px;
+  background: rgba(var(--t-veri-rgb, 0, 212, 255), .08); border: 1px solid rgba(var(--t-veri-rgb, 0, 212, 255), .25); overflow-wrap: anywhere;
+}
+.gd-adlar { margin: 0; padding: 0; list-style: none; max-height: 180px; overflow: auto; }
+.gd-adlar li {
+  padding: 6px 10px; font-family: var(--t-mono-font, ui-monospace, monospace); font-size: 13px; overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--t-cizgi-notr, rgba(255, 255, 255, .12));
+}
+.gd-adlar li:last-child { border-bottom: 0; }
+.gd-soluk { opacity: .7; }
+
+.gd-etiket { display: block; margin: 16px 0 6px; font-size: 13px; letter-spacing: .06em; }
+.gd-girdi {
+  width: 100%; box-sizing: border-box; height: 44px; padding: 0 12px; border-radius: var(--t-r, 10px);
+  background: var(--t-yuzey, rgba(255, 255, 255, .04)); color: var(--t-metin, var(--c-ink, #f2f3f5)); border: 1px solid var(--t-cizgi-notr, rgba(255, 255, 255, .12));
+  font: 15px var(--t-mono-font, ui-monospace, monospace);
+}
+.gd-girdi:focus-visible { outline: 2px solid var(--t-veri, var(--c-data, #00d4ff)); outline-offset: 1px; }
+
+.gd-eylem { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.gd-dugme { padding: 0 16px; font-size: 14px; }
+.gd-dugme.gd-ana, .gd-ana { color: var(--t-veri, var(--c-data, #00d4ff)); border-color: rgba(var(--t-veri-rgb, 0, 212, 255), .6); }
+.gd-dugme.gd-tehlike { background: #a51f1e; color: #fff4f2; border-color: #d0453b; }
+.gd-dugme.gd-tehlike:hover:not(:disabled) { background: #b8302a; }
+.gd-dugme:disabled, .gd-ana:disabled { opacity: .55; cursor: progress; }
+
+.gd-gunluk { margin: 0; padding: 0; list-style: none; }
+.gd-gunluk li {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--t-cizgi-notr, rgba(255, 255, 255, .12));
+}
+.gd-g-ad { min-width: 0; font-size: 14px; }
+.gd-g-dosya { margin-top: 2px; font-family: var(--t-mono-font, ui-monospace, monospace); font-size: 12px; opacity: .8; overflow-wrap: anywhere; }
+.gd-rozet {
+  flex: none; padding: 3px 8px; border-radius: 999px; font-size: 12px;
+  color: var(--t-veri, var(--c-data, #00d4ff)); border: 1px solid rgba(var(--t-veri-rgb, 0, 212, 255), .4);
+}
+
+/* Düğmeler: sayfanın kendi düğme sınıfı yoksa (galeri) aynı biçim burada */
+.gd-dugme {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px;
+  padding: 0 16px; border-radius: var(--t-r, 10px); cursor: pointer; font: inherit; font-size: 14px;
+  background: var(--t-yuzey, rgba(255, 255, 255, .04)); color: var(--t-metin, var(--c-ink, #f2f3f5));
+  border: 1px solid var(--t-cizgi-notr, rgba(255, 255, 255, .14));
+}
+.gd-dugme:hover:not(:disabled) { border-color: rgba(var(--t-veri-rgb, 0, 212, 255), .6); }
+.gd-dugme:focus-visible { outline: 2px solid var(--t-veri, var(--c-data, #00d4ff)); outline-offset: 2px; }
+.gd-sec { display: grid; gap: 6px; max-height: 260px; overflow: auto; margin-top: 8px; }
+.gd-sec button { justify-content: flex-start; text-align: start; overflow-wrap: anywhere; }
+.gd-sec button[aria-pressed="true"] { border-color: rgba(var(--t-veri-rgb, 0, 212, 255), .8); color: var(--t-veri, var(--c-data, #00d4ff)); }
+html body > .gd-duyuru {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 720;
+  display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px); padding: 8px 8px 8px 16px;
+  border-radius: 12px; font-size: 14px; background: var(--t-zemin, #0d0c13); color: var(--t-metin, var(--c-ink, #f2f3f5));
+  border: 1px solid rgba(var(--t-veri-rgb, 0, 212, 255), .5); box-shadow: 0 12px 30px rgba(0, 0, 0, .5);
+}
+.gd-duyuru[hidden] { display: none; }
+.gd-duyuru.gd-hata { border-color: rgba(255, 90, 110, .7); }
+/* GALERİ fişi düğmeleri (js/galeri-guvenli.js): fişin kendi .gl-eylem biçimini kullanır */
+.gg-dugme[hidden] { display: none !important; }
+/* düzenleme açıkken masaüstünde fiş düğmeleri iki satıra sarılabilir (taşmasın) */
+@media (min-width: 769px) { body.gg-acik .gl-fis-eylem { flex-wrap: wrap; } }
+.gg-cop-dugme { color: #ff8a96; border-color: rgba(255, 90, 110, .45); }
+.gg-cop-dugme:hover { color: #ffb3bb; border-color: rgba(255, 90, 110, .8); }
+
+@media (max-width: 760px) {
+  .gd-eylem .gd-dugme { flex: 1 1 auto; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .gd-pencere { animation: gd-gir .16s ease-out; }
+  @keyframes gd-gir { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+}
+
+.gd-duyuru .gd-dugme { flex: none; white-space: nowrap; }
+.gd-duyuru span { min-width: 0; }

@@ -1,0 +1,124 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADAPTİF PERFORMANS KATMANI  ·  perf-adaptive.css
+   ───────────────────────────────────────────────────────────────────────────
+   YALNIZ  html[data-perf="low"]  (zayıf/eski laptop) kuralları burada toplanır.
+   YÜKSEK/ORTA cihaz: bu dosyadaki HİÇBİR kural tetiklenmez → tasarım BİREBİR korunur.
+   Tespit: js/perf-tier.js · <html data-perf> index.html erken snippet ile set edilir.
+   style.css'ten SONRA yüklenir; ayrıca yüksek specificity (html[...]) ile lazy HALKA
+   css'ini de güvenle geçersiz kılar.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1) Merkezi token — backdrop-filter kullanan TÜM A-tier panel tek noktadan düz ──
+   (header, .hud-panel, #ambient-panel, HALKA .hr-panel vb. hepsi var(--glass-blur) okur) */
+html[data-perf="low"] {
+  --glass-blur: none;
+}
+
+/* ── 2) Token kullanmayan hardcoded blur'lar (genel arayüz) ── */
+html[data-perf="low"] #tab-nav,
+html[data-perf="low"] #input-container,
+html[data-perf="low"] #tab-dropdown,
+html[data-perf="low"] #ambient-panel,
+html[data-perf="low"] #more-sheet,
+html[data-perf="low"] .lightbox-backdrop {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ── 3) Genel sürekli dönen glow/puls animasyonları — low'da sabitlenir ── */
+html[data-perf="low"] .tab-icon.active,
+html[data-perf="low"] #state-dot.listening,
+html[data-perf="low"] #state-dot.thinking,
+html[data-perf="low"] #state-dot.talking,
+html[data-perf="low"] .wv-bar {
+  animation: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HALKA (HUD Ring) modu — low tier
+
+   🔴 2026-08-13 — YENİDEN YAZILDI. Eski hâli `gfx.css`'in 2026-08-12'de
+   ÖLÇÜLEREK terk ettiği mantığın aynısıydı ve buraya uygulanmamıştı.
+
+   Eski niyet şuydu: *"Kimlik (dönen halka, spektrum, wireframe küre) KORUNUR;
+   yalnız pahalı backdrop-filter + 16× drop-shadow sadeleştirilir."* Yani
+   **hareket korunuyor, filtre kapatılıyor** — bu, `gfx.css`'te belgelenen
+   ölçümün ④ numaralı senaryosudur ve ölçülen sonucu **+%18 (DAHA PAHALI)**:
+   filtreli eleman kendi kompozit katmanındadır, `filter:none` o katmanı
+   KALDIRIR ve hâlâ dönen animasyonlar ana iş parçacığına düşer.
+
+   Saha kanıtı (geliştirici, Win10 · 3 iş parçacığı · `data-perf=low` ETKİNKEN
+   ölçüldü — yani aşağıdaki kurallar çalışıyordu, 2026-08-13 Windows CPU ölçümü):
+     HALKA + gfx NORMAL (hareket sürüyor) → CPU **%68**
+     HALKA + gfx HAFİF  (hareket durdu)   → CPU **%27**
+   ⇒ Bu makinede maliyeti üreten şey filtre değil **hareket**. Koruma doğru
+   makineye uygulanıyordu, yanlış şeyi kısıyordu.
+
+   Yeni kural `gfx.css` ile aynı tek cümle: **halka içinde hiçbir şey hareket
+   etmesin, görünüm aynı kalsın** (ölçülen ③ senaryosu, −%15).
+   ⚠️ Filtre kapatan kural buraya bir daha EKLENMEZ — `test_gfx_kademesi.py`
+   bunu iki kademe için de mekanik olarak korur.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 3a) Halkadaki TÜM hareket dursun.
+   Seçici listesi `gfx.css` § ① ile BİREBİR aynı tutulur — iki kademe aynı
+   yüzeyi hedefler; ayrışırlarsa biri diğerinin kaçırdığını dönerken bırakır.
+   ("listeyi say" yaklaşımının sessizce eksik kaldığı 2026-08-12'de ölçüldü:
+   .hr-bar · .hr-hq-dot · .hr-rays 14 seçicilik listenin dışında kalmıştı.) */
+html[data-perf="low"] body.hud-ring-mode #hr-ring *,
+html[data-perf="low"] body.hud-ring-mode #hr-ring,
+html[data-perf="low"] body.hud-ring-mode #hr-time *,
+html[data-perf="low"] body.hud-ring-mode .hr-time-band,
+html[data-perf="low"] body.hud-ring-mode #hr-particles,
+html[data-perf="low"] body.hud-ring-mode #hr-ring-wrap::after,
+html[data-perf="low"] body.hud-ring-mode .hr-spectrum,
+html[data-perf="low"] body.hud-ring-mode .hr-anchor-nodes,
+html[data-perf="low"] body.hud-ring-mode #hr-poly,
+/* 2026-08-13: komuta çarkının aktif düğmesi — `#hr-ring` DIŞINDA (bkz. gfx.css § ①
+   aynı satır). İki kademenin listesi birebir aynı tutulur. */
+html[data-perf="low"] body.hud-ring-mode .hr-cw-active {
+  animation: none !important;
+}
+
+/* 3b) Panel/kart/widget/rail blur → düz yarı-saydam.
+   ⚠️ Bu blok `backdrop-filter` kapatır, `filter` DEĞİL — ölçümdeki ④ senaryosu
+   `filter` (drop-shadow glow) üzerineydi, backdrop-filter ayrı bir maliyet
+   sınıfıdır (arkasındaki sahneyi yeniden örnekler). Bilerek DOKUNULMADI:
+   kaldırmak da bırakmak da ölçüm ister; hareket durduğuna göre bu blok artık
+   sabit bir yüzeyi bulanıklaştırıyor ve kare başına maliyeti kalmadı.
+   Değiştirmeden önce ölç. */
+html[data-perf="low"] body.hud-ring-mode .hr-panel,
+html[data-perf="low"] body.hud-ring-mode .hr-widget,
+html[data-perf="low"] body.hud-ring-mode .hr-gauge,
+html[data-perf="low"] body.hud-ring-mode .hr-wcard,
+html[data-perf="low"] body.hud-ring-mode .hr-od-anahtar,
+html[data-perf="low"] body.hud-ring-mode #hr-leftrail {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: rgba(5, 8, 18, 0.92);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FAZ 2 — Erişilebilirlik + Responsive tutarlılık
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── prefers-reduced-motion (WCAG 2.3.3) — YALNIZ kullanıcı OS'de "hareketi azalt"
+   açtıysa aktif. Normal kullanıcı ETKİLENMEZ → varsayılan tasarım birebir korunur.
+   Evrensel reset: tüm sürekli/dekoratif hareket anında sabitlenir (kapsam eksiği kalmaz). ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Not: Masaüstü büyük/4K ekranda avatar zaten `clamp(…, 42%, 460px)` tavanıyla sınırlı
+   (chat geniş kalır) → ek bir "4K daraltma" kuralı GEREKSİZ, hatta avatarı büyütürdü. */
+
+/* ── 801–900px landscape boşluğu: bu aralıkta yatay dar cihazlar için tanım yoktu
+   (901px+ landscape kuralı 500px'ten kısa cihaza bakıyor). Rahat bir avatar oranı ver. ── */
+@media (min-width: 801px) and (max-width: 900px) and (orientation: landscape) and (min-height: 500px) {
+  #avatar-pane { flex: 0 0 clamp(240px, 40%, 460px); }
+}

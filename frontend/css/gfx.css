@@ -1,0 +1,144 @@
+/* ════════════════════════════════════════════════════════════════════
+   gfx.css — Grafik Kalitesi Kademeleri (kullanıcı seçimi)
+
+   Kademeyi modes/gfx.js <html data-gfx="..."> olarak basar:
+     normal → bu dosyada HİÇBİR kural yok; mevcut görünüm birebir korunur
+     hafif  → aşağıdaki kurallar devreye girer
+
+   ⚠️ perf-adaptive.css ile KARIŞTIRMA — ikisi ayrı eksen:
+     · perf-adaptive.css → html[data-perf="low"] · DONANIMA GÖRE OTOMATİK
+     · gfx.css           → html[data-gfx="hafif"] · KULLANICI SEÇİMİ
+   Farklı öznitelikler oldukları için çakışmazlar, üst üste binerler.
+
+   Bu dosya <head>'de erken yüklenir. hud-ring.css tembel yüklense de
+   buradaki seçiciler (öznitelik + id + sınıf) daha yüksek özgüllükte
+   olduğu için yükleme sırasından bağımsız kazanır.
+
+   ── NEDEN BU SEÇİCİLER? (ölçüm, kişisel Alice 2026-08-01) ──────────
+   Gerçek Electron penceresinde sohbet sekmesi ~%92 çekirdek yakıyordu.
+   Ölçülen 89 çalışan animasyonun dağılımı:
+     · 77 dönen SVG katmanı — GPU katmanına alınamaz, her kare yeniden
+       rasterize edilir; toplam alan ekranın %157'si
+     ·  6 drop-shadow filtreli dönen halka — kare başına en pahalı iş
+     ·  1 tam ekran background-position animasyonu (#hr-particles)
+   JS MASUM: tüm rAF döngüleri toplam %0,8, LayoutDuration 0. Yani maliyet
+   JS'te değil BOYAMA/KOMPOZİSYONDA — "JS'i optimize edelim" zaman kaybı
+   olurdu, ölçüm bunu baştan eledi.
+
+   Aşağıdaki kurallar tam olarak bu üç grubu hedefler. Ucuz olanlar
+   (saf transform/opacity: ticker, dots, wheel) HAFİF'te de açık kalır —
+   arayüz ölü görünmesin.
+
+   Not: halka glow'ları SVG presentation attribute (filter="...") olarak
+   gömülü; CSS presentation attribute'u ezdiği için `filter:none` çalışır.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════════════
+   🔴 2026-08-12 — HAFİF YENİDEN YAZILDI, ÇÜNKÜ TERS ÇALIŞIYORDU
+
+   Saha ölçümü (geliştirici, Win10 / i5-4210U 2 çekirdek / GeForce 820M):
+     HALKA normal  → CPU %38,6  GPU %27,8
+     HALKA + HAFİF → CPU %37-41 GPU %18-23     ← CPU HİÇ DÜŞMEDİ
+   Yani HAFİF işi GPU'dan alıp CPU'ya taşıyordu; o makinenin darboğazı
+   zaten CPU olduğu için kullanıcı hiçbir fayda görmüyordu.
+
+   Ayırt edici deney (CDP, 10× CPU kısıtlı, 8 sn pencere, sürüklenme %3,5):
+     ① HALKA normal                       5,57 s   ← taban
+     ② HALKA + ESKİ HAFİF                 7,82 s   🔴 +%43 (DAHA PAHALI)
+     ③ yalnız animasyon dur, FİLTRE KALSIN 4,67 s   ✅ −%15
+     ④ yalnız filtre kapa                 6,46 s   🔴 +%18
+     ⑤ animasyon dur + filtre kapa        5,93 s   🔴  +%8
+
+   🔑 KÖK NEDEN: filtreli eleman kendi kompozit katmanına alınır.
+   `filter:none` o katmanı KALDIRIR; geriye kalan (hâlâ dönen) animasyonlar
+   ana iş parçacığında rasterize edilmeye başlar. Eski HAFİF iki iş birden
+   yapıyordu ve ikincisi birincisini yiyordu.
+
+   ⚠️ Yukarıdaki 2026-08-01 tarihli "filtreli halka kare başına en pahalı iş"
+   ölçümü YANLIŞ DEĞİL — ama eksik: filtre yalnız o eleman HER KARE yeniden
+   çiziliyorsa pahalıdır. Animasyon durunca filtre bir kez rasterize edilip
+   önbelleğe girer ve bedava olur. Doğru sıra: ÖNCE hareketi durdur, filtreye
+   DOKUNMA.
+
+   Yeni kural tek cümle: **halka içinde hiçbir şey hareket etmesin, görünüm
+   aynı kalsın.** Ölçülen ③ senaryosu ile birebir aynı CSS.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── ① Halkadaki TÜM hareket dursun (eski sürüm 14 seçici sayıyordu ve
+      .hr-bar spektrumu · .hr-anc-card · .hr-hq-dot · .hr-persona-orb ·
+      .hr-rays · hr-breathe bu listenin DIŞINDA kalıp dönmeye devam
+      ediyordu — "listeyi say" yaklaşımı sessizce eksik kalır) ────────── */
+html[data-gfx="hafif"] #hr-ring *,
+html[data-gfx="hafif"] #hr-ring,
+html[data-gfx="hafif"] #hr-time *,
+html[data-gfx="hafif"] .hr-time-band,
+html[data-gfx="hafif"] #hr-particles,
+html[data-gfx="hafif"] #hr-ring-wrap::after,
+html[data-gfx="hafif"] .hr-spectrum,
+html[data-gfx="hafif"] .hr-anchor-nodes,
+html[data-gfx="hafif"] #hr-poly,
+/* 2026-08-13: komuta çarkının AKTİF düğmesi (`hrCwPulse`, 2,4 sn sonsuz box-shadow
+   nabzı). `#hr-ring-wrap` içinde ama `#hr-ring` DIŞINDA olduğu için yukarıdaki
+   `#hr-ring *` onu KAPSAMIYORDU — canlı ölçümde 82 animasyon dururken ayakta kalan
+   tek animasyon buydu (`scratchpad/halka-kademe-canli-test.py`).
+   🔑 "#hr-ring *" gibi geniş bir seçici bile kapsam garantisi vermez: kapsadığı şey
+   AĞACIN O DALI. Halka moduna yeni bir hareket eklenirken kabın hangisi olduğuna bak. */
+html[data-gfx="hafif"] .hr-cw-active {
+  animation: none !important;
+}
+
+/* ── ② FİLTRELERE DOKUNULMUYOR ────────────────────────────────────────
+   Eski sürümdeki `filter:none` bloğu ÖLÇÜMLE KALDIRILDI (yukarı bak).
+   Buraya bir daha filtre kapatan kural eklenecekse önce ölçülmeli:
+   `scratchpad/halka-profil.py` senaryolarını koştur, ③'ün altına inmiyorsa
+   ekleme. ── */
+
+/* ══════════════════════════════════════════════════════════════════════
+   Otomatik geçiş bildirimi (D11 = A + B, 2026-08-12)
+   Zayıf makinede HAFİF'e geçildiğinde gösterilir. Kendiliğinden KAYBOLMAZ —
+   kullanıcı görmeden kapanan bildirim hiç gösterilmemiş sayılır.
+   ⚠️ `data-gfx="hafif"` seçicisiyle YAZILMAZ: bildirim halkanın parçası değil,
+   HAFİF kapatılıp geri alındığında da ekranda kalmalı (kullanıcı kapatana kadar).
+   ══════════════════════════════════════════════════════════════════════ */
+.gfx-oto-bildirim {
+  position: fixed;
+  left: 50%;
+  /* 🔴 ÜSTTE duruyor, altta DEĞİL: canlı turda alta konunca yazı kutusunun
+     (composer) üzerine biniyordu — bildirim, kullanıcının yapmak istediği işi
+     engellememeli. Üst şerit y≈25px'te bittiği için 60px güvenli. */
+  top: 60px;
+  transform: translateX(-50%);
+  z-index: var(--z-bildirim);   /* 600 — tokens.css:145. Eskiden çıplak 9999'du. */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(92vw, 620px);
+  padding: 10px 14px;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  border-radius: 10px;
+  background: rgba(6, 10, 22, 0.96);
+  color: #cfe2f0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+.gfx-oto-bildirim b { color: #f0b429; }
+.gfx-oto-metin { flex: 1 1 auto; }
+.gfx-oto-btn {
+  flex: 0 0 auto;
+  padding: 5px 11px;
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  border-radius: 6px;
+  background: transparent;
+  color: #9fc0d0;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.gfx-oto-btn:hover { border-color: #60a5fa; color: #dff0ff; }
+.gfx-oto-kapat { color: #7f95a5; }
+
+@media (max-width: 560px) {
+  .gfx-oto-bildirim { flex-wrap: wrap; top: 52px; }
+  .gfx-oto-metin { flex: 1 0 100%; }
+}

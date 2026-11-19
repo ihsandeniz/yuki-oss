@@ -1,0 +1,208 @@
+name: Testler (pytest + electron)
+
+# Neden var (CI FAZ 1, 2026-10-10):
+# Satılan ürünün testleri yalnız elle ve geliştirici makinesinde koşuyordu. O makinede
+# `.env` ve gömme modeli yerinde olduğu için 27 ortam kırmızısı hiç görünmüyordu
+# (temiz kopyada 27 failed). FAZ 0 bunları testin kendisine sabitledi; bu iş akışı
+# `.env`'siz, torch'suz, temiz bir runner'da tam takımı koşar.
+#
+# BİLEREK OLMAYANLAR:
+# - `paths:` filtresi YOK. Kişisel Yuki'de `paths: backend/**` yüzünden pytest 10-05'ten
+#   sonra 6 push boyunca hiç tetiklenmedi. Ön yüz değişikliği de electron testlerini etkiler.
+# - `continue-on-error` / `|| true` YOK. Yeşil görünen ama hiçbir şeyi durdurmayan bir
+#   kapı, hiç kapı olmamasından kötüdür.
+# - torch / sentence-transformers YOK. Ürün paketi de torch'suz; gömme ONNX ile koşar.
+#   Model yoksa 25 hafıza testi tek tip "GÖMME MODELİ YOK: <yol>" mesajıyla KIRMIZI düşer
+#   (conftest `gomme_modeli_yoksa_acik_hata`), atlanmaz.
+#
+# Yerel aynası: `scripts/ci-yerel.sh` (aynı adımlar, `git archive` kopyasında, `.env`'siz).
+# Ağaç değişirse ikisini birlikte güncelle.
+
+on:
+  push:
+    branches: [main, ci-temel]   # ci-temel: workflow main'de yokken dalda CI koşsun diye (dispatch main'de dosya ister)
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: testler-${{ github.ref }}
+  cancel-in-progress: true
+
+# Model paketi bu deponun kendi sürümünden `gh release download` ile iner; depo gizliyken
+# anonim indirme 404 verir, bu yüzden GITHUB_TOKEN'a sürüm okuma izni gerekir.
+permissions:
+  contents: read
+
+env:
+  # Gömme modelinin adresi ve sha256'sı TEK yerde: electron/models-manifest.json
+  # (scripts/model-getir.py okur). sha256 tutmazsa iş kırmızı düşer; sessizce başka model test edilmez.
+  ONNX_KOK: ${{ github.workspace }}/.ci-model
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # Ürünün kendi venv'i 3.14 (bkz. dependency-scan.yml'deki 3.11 dersi).
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-product.txt
+            backend/requirements-dev.txt
+
+      - name: Bağımlılıklar
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+
+      # 11-02 koşu 41523183945: 7 Atölye testi "chromium_headless_shell … doesn't exist" ile
+      # düştü — paket kuruluydu, tarayıcı ikilisi değil. Yerelde tarayıcısız makinede bu testler
+      # atlanır (conftest `tarayici_gerekli`); burada YUKI_TARAYICI_ZORUNLU=1 → atlanmaz, düşer.
+      - name: Playwright chromium
+        run: python -m playwright install --with-deps chromium
+
+      - name: Gömme modelinin sha256'sı (manifestten)
+        id: model-sha
+        run: echo "sha=$(python scripts/model-getir.py embedding-onnx --sha)" >> "$GITHUB_OUTPUT"
+
+      - name: Gömme modeli önbelleği
+        id: model-onbellek
+        uses: actions/cache@v4
+        with:
+          path: .ci-model
+          key: embedding-onnx-${{ steps.model-sha.outputs.sha }}
+
+      - name: Gömme modelini indir + sha256 denetle
+        if: steps.model-onbellek.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/model-getir.py embedding-onnx "$ONNX_KOK"
+
+      - name: Model dosyaları yerinde mi
+        run: ls -l "$ONNX_KOK/embedding-onnx/model_int8.onnx" "$ONNX_KOK/embedding-onnx/tokenizer.json"
+
+      - name: pytest (tam takım)
+        working-directory: backend
+        env:
+          EMBED_ONNX_DIR: ${{ env.ONNX_KOK }}/embedding-onnx
+          YUKI_TARAYICI_ZORUNLU: '1'
+        # xvfb: ekran görüntüsü testi (mss) gerçek bir X ekranı ister; runner'da DISPLAY yok.
+        # ripgrep: search_file aracı rg çağırır (test_arac_kapilari A1); ubuntu koşucusunda kurulu gelmez.
+        run: |
+          command -v xvfb-run >/dev/null && command -v rg >/dev/null || { sudo apt-get update && sudo apt-get install -y xvfb ripgrep; }
+          xvfb-run -a python -m pytest -q -p no:cacheprovider
+
+      - name: compileall (sözdizimi)
+        working-directory: backend
+        run: python -m compileall -q app
+
+  electron:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # `npm ci` gerekmiyor: *.test.js yalnız node yerleşik modüllerini kullanıyor
+      # (10-10 ölçüldü: node_modules'süz arşivde 252 pass / 0 fail).
+      - name: node --test
+        working-directory: electron
+        run: node --test *.test.js
+
+  # CI FAZ 2 (2026-10-10) — Windows'ta "motor açılıyor mu" duman testi.
+  # Tam takım Windows'ta KOŞMAZ (süre + 2 kat dakika). Kurulum, olcum-bl548-windows.yml'deki
+  # (olcum/bl548 dalı, CI'da 7 koşu 2-5 dk) adımın AYNISI: müşteri kutusunun kilitli listesi
+  # `pybundle-win-kilit.txt`. Motor ortamı Electron'un verdiği ortamın taklidi
+  # (windows-motor.ps1::OrtamKur): YUKI_RELOAD=false, PYTHONUTF8, oturum anahtarı, EMBED_BACKEND=onnx,
+  # geçici YUKI_DATA_DIR. Port 8001 (ürün motoru), /health 200 en çok 120 sn.
+  windows-duman:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"   # pybundle-win = python314.dll
+          cache: pip
+          cache-dependency-path: backend/pybundle-win-kilit.txt
+      - name: motor bağımlılıkları (pybundle-win-kilit.txt — müşteri kutusunun tam listesi)
+        shell: pwsh
+        run: |
+          Get-Content backend/pybundle-win-kilit.txt | Where-Object { $_ -notmatch '^\s*(#|$)' } | Set-Content $env:RUNNER_TEMP/kilit.txt
+          python -m pip install --disable-pip-version-check -r $env:RUNNER_TEMP/kilit.txt
+      - name: motor açılıyor mu (GET /health 200, en çok 120 sn)
+        shell: pwsh
+        working-directory: backend
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $is = Join-Path $env:RUNNER_TEMP 'duman'
+          New-Item -ItemType Directory -Force -Path $is | Out-Null
+          $env:YUKI_RELOAD = 'false'; $env:PORT = '8001'; $env:PYTHONUTF8 = '1'; $env:PYTHONIOENCODING = 'utf-8'
+          $env:PYTHONNOUSERSITE = '1'; $env:YUKI_OTURUM_ANAHTARI = [guid]::NewGuid().ToString('N'); $env:EMBED_BACKEND = 'onnx'
+          $env:YUKI_DATA_DIR = (New-Item -ItemType Directory -Force -Path (Join-Path $is 'veri')).FullName
+          $p = Start-Process -FilePath (Get-Command python).Source -ArgumentList 'run.py' -PassThru -NoNewWindow `
+            -RedirectStandardOutput (Join-Path $is 'motor.out') -RedirectStandardError (Join-Path $is 'motor.err')
+          $null = $p.Handle   # tanıtıcı tutulmazsa .NET çıkış kodunu kaybeder
+          $sw = [Diagnostics.Stopwatch]::StartNew(); $tamam = $false; $son = -10
+          while ($sw.Elapsed.TotalSeconds -lt 120) {
+            if ($p.HasExited) { Write-Host "::error::motor $([int]$sw.Elapsed.TotalSeconds) sn'de kapandı (çıkış $($p.ExitCode))"; break }
+            try { if ((Invoke-WebRequest 'http://127.0.0.1:8001/health' -UseBasicParsing -TimeoutSec 3).StatusCode -eq 200) { $tamam = $true; break } } catch { }
+            if ($sw.Elapsed.TotalSeconds - $son -ge 10) { $son = $sw.Elapsed.TotalSeconds; Write-Host ("… {0:N0} sn, /health henüz yok" -f $son) }
+            Start-Sleep -Milliseconds 500
+          }
+          if ($tamam) { Write-Host ("✓ /health 200: {0:N1} sn" -f $sw.Elapsed.TotalSeconds) }
+          if (-not $p.HasExited) { & taskkill /PID $p.Id /T /F | Out-Null }
+          if (-not $tamam) {
+            Write-Host '--- motor.err (son 60) ---'; Get-Content (Join-Path $is 'motor.err') -Tail 60 -ErrorAction SilentlyContinue
+            Write-Host '--- motor.out (son 30) ---'; Get-Content (Join-Path $is 'motor.out') -Tail 30 -ErrorAction SilentlyContinue
+            Write-Host '::error::motor 120 sn içinde /health 200 vermedi'; exit 1
+          }
+      # README "Windows steps (PowerShell)" bloğunun satırları AYNEN (README ↔ CI eşliği:
+      # backend/tests/test_readme_windows_ci.py). Kullanıcının izleyeceği yol: venv + pip + uvicorn.
+      # Yalıtım için yalnız geçici veri dizini eklenir; README kullanıcısı kendi dizinini kullanır.
+      - name: README Windows adımları (venv + kurulum + başlatma, GET /health 200)
+        shell: pwsh
+        working-directory: backend
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $is = Join-Path $env:RUNNER_TEMP 'readme'
+          New-Item -ItemType Directory -Force -Path $is | Out-Null
+          $env:YUKI_DATA_DIR = (New-Item -ItemType Directory -Force -Path (Join-Path $is 'veri')).FullName
+          python -m venv venv
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          venv\Scripts\python -m pip install -r pybundle-win-kilit.txt
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $env:MEMORY_BACKEND = "sqlite"
+          $j = Start-Job -ScriptBlock {
+            Set-Location $using:PWD
+            venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+          }
+          $sw = [Diagnostics.Stopwatch]::StartNew(); $tamam = $false
+          while ($sw.Elapsed.TotalSeconds -lt 180) {
+            if ($j.State -ne 'Running') { Write-Host "::error::README başlatma satırı $([int]$sw.Elapsed.TotalSeconds) sn'de bitti ($($j.State))"; break }
+            try { if ((Invoke-WebRequest 'http://127.0.0.1:8001/health' -UseBasicParsing -TimeoutSec 3).StatusCode -eq 200) { $tamam = $true; break } } catch { }
+            Start-Sleep -Milliseconds 500
+          }
+          if ($tamam) { Write-Host ("✓ README yolu /health 200: {0:N1} sn" -f $sw.Elapsed.TotalSeconds) }
+          Stop-Job $j -ErrorAction SilentlyContinue
+          Receive-Job $j -ErrorAction SilentlyContinue *> (Join-Path $is 'uvicorn.log')
+          Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" | Where-Object { $_.CommandLine -match 'uvicorn app.main:app' } |
+            ForEach-Object { & taskkill /PID $_.ProcessId /T /F | Out-Null }
+          if (-not $tamam) {
+            Write-Host '--- uvicorn.log (son 60) ---'; Get-Content (Join-Path $is 'uvicorn.log') -Tail 60 -ErrorAction SilentlyContinue
+            Write-Host '::error::README Windows yolu 180 sn içinde /health 200 vermedi'; exit 1
+          }
+      - name: motor günlüklerini sakla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-duman-motor
+          path: |
+            ${{ runner.temp }}/duman
+            ${{ runner.temp }}/readme/uvicorn.log

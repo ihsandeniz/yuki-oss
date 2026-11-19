@@ -1,0 +1,314 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   HARİTA › GÖZLEMEVİ — kişisel Yuki'deki harita görünümünün ürün karşılığı
+   (2026-11-13 — geliştirici seçimi "Harita kişiseldeki gibi")
+   ───────────────────────────────────────────────────────────────────────────
+   NE (kişiseldeki "Kubbe" taslağı):
+     · Yer kartı tek sıra 52 px: şehir serif italik, değer eşit genişlikli sayı,
+       canlı akan değer (Kp, ISS) mavi. Telefonda 2×2 (yer · hava / gün · gök).
+     · Boş durum (#map-bos): hiç katman açık değilken "Haritada açık katman yok"
+       + tek dokunuşla deprem + ISS.
+     · YAKINDA · DÜNYA · GÜNDEM: sol altta sekmeli kart (telefonda alt sayfa).
+     · Kontroller sade: sağ üst yalnız ⌕ + KATMANLAR; GÖRÜNÜM sağ altta zoom'un
+       yanında; EO/FLIR/NV/CRT + nişangâh + çizelge + koordinat çekmecenin
+       GÖRÜNÜM bölümünde.
+
+   İKİ KAT:
+     A · YERLEŞİM + BİLEŞEN — `#tab-map.gozlemevi`, HER temada. Yalnız ürün
+         token'larıyla yazılır (--ink-*, --kenar*, --yuzey-*, --mor-*, --font*).
+     B · GÖZLEMEVİ GECE GİYSİSİ — `:root:not([data-tema]) #tab-map.gozlemevi`,
+         yalnız KOYU tema (tema.js koyu temada data-tema'yı siler). Ürün
+         token'larını Gözlemevi değerlerine bağlar → A katının bileşenleri
+         kendiliğinden gece paletine döner. Açık/orta temada B eşleşmez.
+   map-hud.css / map-controls.css'e dokunulmadı: bu dosya onlardan SONRA yüklenir
+   ve +1 sınıf özgüllüğüyle ezer. GERİ ALMA: <link>'i ya da #tab-map'teki
+   "gozlemevi" sınıfını kaldırmak.
+
+   Yazı tipleri: ad kişiseldeki gibi ilk sırada, yoksa yedeğe düşer.
+   Kişisel kaynak: AliceAi `css/map-gozlemevi.css`. Kod kopyalanmadı — ürünün
+   token sözlüğüne çevrildi; kişiseldeki "üretilmiş" punto tabanı (map-controls
+   seçici listesi) yerine aşağıda tek bir 12 px tabanı var.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ══ A · YERLEŞİM + BİLEŞEN (her tema) ════════════════════════════════════ */
+#tab-map.gozlemevi {
+  --mh-serif:  "Fraunces", Georgia, serif;
+  --mh-govde:  "Figtree", "Inter", system-ui, sans-serif;
+  --mh-canli:  "Martian Mono", "JetBrains Mono", ui-monospace, monospace;
+  --mh-mavi:   var(--cyan);              /* akan veri — B katında Gözlemevi mavisi */
+  --mh-mavi-y: var(--cyan);
+  --mh-ayrac:  var(--kenar);             /* ince ayraç — B katında soluk altın */
+  --mh-hap:    999px;
+  --mh-ust:    68px;                     /* 8 + kart 52 + 8 */
+  font-family: var(--mh-govde);
+}
+
+/* Sayı = eşit genişlik (canlı değer, sayaç, koordinat) */
+#tab-map.gozlemevi :is(.mh-d, #map-coords, .mk-sayi, .mk-grup-sayi, #mlm-kp-val, #tl-window-label) {
+  font-family: var(--mh-canli); font-weight: 650; font-variant-numeric: tabular-nums lining-nums; letter-spacing: 0;
+  font-variation-settings: "wdth" 87.5;   /* Martian Mono dar kesim — kişiseldeki gibi; yer kartı 1280'de tek sıra */
+}
+/* Etiket: versal, seyrek */
+#tab-map.gozlemevi :is(.mh-etiket, .mh-etiket-ana, .mk-grup-bas, #map-katman-ac, .mh-seg-b, .mk-bas-b, #map-search-btn, #map-route-clear) {
+  font-family: var(--mh-govde); font-weight: 500; letter-spacing: .16em;
+}
+
+/* Okuma tabanı: harita yüzeylerinde en küçük yazı 12 px */
+#tab-map.gozlemevi :is(.leaflet-popup-content, .leaflet-control-attribution, .mlm-header, .mlm-section-title,
+  .mlm-layer-name, .mlm-layer-count, .mlm-filter-label, .mlm-filter-input, .mlm-poi-add-btn, .mlm-poi-input,
+  .mlm-poi-form-btn, .mlm-poi-item, #mlm-kp-level, .tl-title, #tl-window-label, .tl-ctrl-btn, #tl-hover-tip,
+  #map-confirm-loc, #map-confirm-query, .map-confirm-btn, #map-click-toast, #pdp-category, .pdp-detail-row,
+  #pdp-ask-yuki, #pdp-photos-label, .pdp-action-btn, #map-3d-hud, .h3d-title, #planet-hud-name, #planet-hud-stats) {
+  font-size: max(12px, 1em);
+}
+#tab-map.gozlemevi :is([style*="font-size:8px"], [style*="font-size: 8px"], [style*="font-size:9px"], [style*="font-size: 9px"],
+  [style*="font-size:10px"], [style*="font-size: 10px"], [style*="font-size:11px"], [style*="font-size: 11px"]) {
+  font-size: 12px !important;
+}
+
+/* Segment grubu = hap; düğmeler 44 px (dokunma tabanı) */
+#tab-map.gozlemevi .mh-seg { padding: 0; gap: 0; border-radius: var(--mh-hap); }
+#tab-map.gozlemevi .mh-seg-b { min-height: 44px; min-width: 44px; padding: 0 16px; border-radius: var(--mh-hap); }
+#tab-map.gozlemevi .mh-seg-b:hover { background: var(--yuzey-3); }
+/* Görsel mod seçimi mor DEĞİL (mor ≤ 2 yer: seçili görünüm + "sen") → ince hat */
+#tab-map.gozlemevi #map-view-bar .mh-seg-b.active { color: var(--ink-1); background: var(--yuzey-3); box-shadow: inset 0 0 0 1px var(--kenar-guclu); }
+#tab-map.gozlemevi .mh-araclar .mh-seg-b { width: 44px; }
+
+/* Sağ üst: ⌕ + KATMANLAR 44 px */
+#tab-map.gozlemevi #map-sag-ust { height: 44px; }
+#tab-map.gozlemevi .mh-ikon { width: 44px; height: 44px; border-radius: var(--mh-hap); }
+#tab-map.gozlemevi #map-katman-ac { min-height: 44px; padding: 0 16px; border-radius: var(--mh-hap); }
+#tab-map.gozlemevi #map-katman-ac .mh-d { letter-spacing: 0; }
+#tab-map.gozlemevi #map-search-bar { height: 52px; border-radius: var(--mh-hap); padding: 0 4px 0 16px; }
+#tab-map.gozlemevi #map-search-btn { height: 44px; padding: 0 16px; border-radius: var(--mh-hap); }
+
+/* Çekmece başı + katman satırı */
+#tab-map.gozlemevi .mk-bas { gap: 4px; }
+#tab-map.gozlemevi .mk-bas-b { min-height: 44px; padding: 0 8px; border-radius: var(--mh-hap); }
+#tab-map.gozlemevi .mk-grup-bas { border-top: 1px solid var(--mh-ayrac); margin-top: 8px; }
+#tab-map.gozlemevi .mk-grup:first-child .mk-grup-bas { border-top: 0; margin-top: 0; }
+#tab-map.gozlemevi #map-katman-cekmece { background: var(--yuzey-1); }   /* opak: harita etiketleri satır yazısının arkasından okunmasın */
+#tab-map.gozlemevi #map-route-clear { min-height: 44px; border-radius: var(--mh-hap); }
+
+/* Leaflet yakınlaştırma: 44 px hap sütun + ◎ konumuma dön */
+#tab-map.gozlemevi .leaflet-control-zoom { border-radius: 22px !important; overflow: hidden; border-color: var(--kenar-guclu) !important; }
+#tab-map.gozlemevi .leaflet-control-zoom a { width: 44px !important; height: 44px !important; line-height: 44px !important;
+  font-size: 18px !important; border: 0 !important; color: var(--ink-2) !important; }
+#tab-map.gozlemevi .leaflet-control-zoom a + a { border-top: .75px solid var(--kenar) !important; }
+#tab-map.gozlemevi .leaflet-control-zoom a.mh-konum { display: block; text-align: center; text-decoration: none; cursor: pointer; font-size: 16px !important; }
+#tab-map.gozlemevi .leaflet-control-zoom a.mh-konum:hover { color: var(--ink-1) !important; }
+#tab-map.gozlemevi :is(#pdp-close, .mlm-close) { min-width: 44px; min-height: 44px; }
+#tab-map.gozlemevi #pdp-name { font-family: var(--mh-serif); font-style: italic; font-weight: 400; }
+
+/* ── YER KARTI ── */
+#tab-map.gozlemevi #map-serit { min-height: 52px; padding: 0 4px; }
+/* Kart tek sırada kalsın: koordinat ve güneş yalnız çok geniş ekranda (kişiseldeki gibi ≥1760) */
+@media (max-width: 1759px) {
+  #tab-map.gozlemevi #map-serit :is(.mh-yer .mh-d, #map-solar-grup) { display: none; }
+}
+#tab-map.gozlemevi #map-serit .mh-bolum { padding: 0 12px; gap: 8px; font-size: 13px; align-items: baseline; }
+/* Yer hücresi kişisel Yuki'deki gibi: yalnız yer adı, serif italik, yatay (11-14; 11-13 "HARİTA" üst etiketi bu sekmede
+   geri alındı). Etiket index.html'de duruyor (ortak dosya, şerit a) — burada gizlenir; ekran okuyucu da okumaz. */
+#tab-map.gozlemevi #map-serit .mh-bolum.mh-yer { flex-direction: row; align-items: baseline; justify-content: flex-start; gap: 8px; }
+#map-serit .mh-yer > .sekme-baslik__etiket { display: none; }
+#tab-map.gozlemevi #map-serit .mh-sehir { font: italic 400 19px / 1 var(--mh-serif); letter-spacing: .01em; color: var(--ink-1); }
+#tab-map.gozlemevi #map-serit .mh-d { color: var(--ink-1); }
+#tab-map.gozlemevi #map-serit .mh-d.mh-canli { color: var(--mh-mavi); }
+#tab-map.gozlemevi #map-serit .mh-yer .mh-d { color: var(--ink-3); font-weight: 500; }
+#tab-map.gozlemevi #map-serit .mh-ikincil { color: var(--ink-2); font-family: var(--mh-govde); }   /* sayı değil → gövde yazısı (mono yalnız sayı) */
+
+/* ── BOŞ DURUM — yer kartının altında; ana eylem nötr hap (mor düğme yok) ── */
+#tab-map.gozlemevi #map-bos:not([hidden]) {
+  position: absolute; top: var(--mh-serit-alt, var(--mh-ust)); left: var(--nav-bosluk, 60px);   /* şerit sararsa gerçek altına (map-hud.js ölçer) */ z-index: var(--mz-bar);
+  width: 340px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px;
+  animation: mh-bos-gir var(--sure-3, 240ms) var(--egri, ease-out);
+}
+#tab-map.gozlemevi #map-bos p { margin: 0; }
+#tab-map.gozlemevi #map-bos .mb-bas { font: italic 400 19px / 1.2 var(--mh-serif); color: var(--ink-1); }
+#tab-map.gozlemevi #map-bos .mb-ne { font: 400 14px / 1.45 var(--mh-govde); color: var(--ink-2); }
+#tab-map.gozlemevi #map-bos-ac { margin-top: 4px; min-height: 44px; padding: 0 24px; border: 1px solid var(--kenar-guclu);
+  border-radius: var(--mh-hap); background: none; font: 600 14px / 1 var(--mh-govde); color: var(--ink-1); cursor: pointer;
+  transition: border-color var(--sure-2, 160ms) var(--egri, ease-out), background var(--sure-2, 160ms) var(--egri, ease-out); }
+#tab-map.gozlemevi #map-bos-ac:hover { border-color: var(--ink-2); background: var(--yuzey-3); }
+#tab-map.gozlemevi #map-bos-ac:focus-visible { outline: 2px solid var(--mor-ink); outline-offset: 2px; }
+#tab-map.gozlemevi.katman-acik #map-bos { display: none; }
+@keyframes mh-bos-gir { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* ── YAKINDA · DÜNYA · GÜNDEM ── seçili sekme = mor alt çizgi; seçili olay = mavi */
+#tab-map.gozlemevi #map-gundem { width: 400px; padding: 0 16px; }
+#tab-map.gozlemevi .mh-yk-bas { display: flex; align-items: stretch; gap: 8px; border-bottom: .75px solid var(--kenar); flex-shrink: 0; }
+#tab-map.gozlemevi .mh-yk-sekmeler { display: flex; gap: 24px; flex: 1; min-width: 0; }
+#tab-map.gozlemevi .mh-yk-sekme { min-height: 44px; padding: 16px 0 15px; border: 0; border-bottom: 1px solid transparent;
+  background: none; cursor: pointer; font: 500 12px/1 var(--mh-govde); letter-spacing: .24em; color: var(--ink-3); white-space: nowrap;
+  transition: color var(--sure-2, 160ms) var(--egri, ease-out), border-color var(--sure-2, 160ms) var(--egri, ease-out); }
+#tab-map.gozlemevi .mh-yk-sekme:hover { color: var(--ink-2); }
+#tab-map.gozlemevi .mh-yk-sekme:focus-visible { outline: 2px solid var(--mor-ink); outline-offset: -2px; }
+#tab-map.gozlemevi .mh-yk-sekme[aria-selected="true"] { color: var(--ink-1); border-bottom-color: var(--mor-ink); border-radius: 0; box-shadow: none; background: none; }
+#tab-map.gozlemevi #map-gundem:not(.acik) .mh-yk-sekme[aria-selected="true"] { border-bottom-color: transparent; }
+#tab-map.gozlemevi .mh-yk-sekme .mh-d { margin-left: 4px; letter-spacing: 0; color: var(--ink-3); }
+#tab-map.gozlemevi #map-gundem-bas { width: 44px; min-width: 44px; padding: 0; justify-content: center; margin-right: -8px; }
+#tab-map.gozlemevi #map-gundem:not(.acik) .mh-yk-bas { border-bottom: 0; }
+#tab-map.gozlemevi #map-gundem:not(.acik) #map-yk-govde { display: none; }
+#tab-map.gozlemevi #map-yk-govde { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+#tab-map.gozlemevi #map-yk-govde > ol { list-style: none; margin: 0; padding: 0; overflow-y: auto; min-height: 0; scrollbar-width: thin; }
+#tab-map.gozlemevi #map-yk-govde > ol[hidden] { display: none; }
+#tab-map.gozlemevi #map-news-list { padding: 4px 0; }
+#tab-map.gozlemevi .mh-olaylar li + li .mh-olay { border-top: .75px solid var(--kenar); }
+#tab-map.gozlemevi .mh-olay { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: baseline;
+  width: 100%; min-height: 44px; padding: 12px 0; border: 0; background: none; text-align: start; color: inherit; font: inherit; }
+#tab-map.gozlemevi button.mh-olay { cursor: pointer; border-radius: 0; transition: background var(--sure-2, 160ms) var(--egri, ease-out); }
+#tab-map.gozlemevi button.mh-olay:hover { background: linear-gradient(90deg, transparent, var(--yuzey-3) 12%, var(--yuzey-3) 88%, transparent); }
+#tab-map.gozlemevi button.mh-olay:focus-visible { outline: 2px solid var(--mor-ink); outline-offset: -2px; }
+#tab-map.gozlemevi button.mh-olay.secili .mh-o-ne { color: var(--mh-mavi-y); }
+#tab-map.gozlemevi .mh-o-tur { font-variation-settings: "wdth" 87.5; font: 650 14px/1 var(--mh-canli); color: var(--mh-mavi); white-space: nowrap; }
+#tab-map.gozlemevi .mh-o-tur.notr { color: var(--ink-2); }
+#tab-map.gozlemevi .mh-o-ne { min-width: 0; font: 400 14px/1.35 var(--mh-govde); color: var(--ink-1); overflow-wrap: anywhere; }
+#tab-map.gozlemevi .mh-o-ne small { display: block; margin-top: 2px; font-size: 13px; color: var(--ink-3); }
+#tab-map.gozlemevi .mh-olay time { font: 500 12px var(--mh-canli); color: var(--ink-3); white-space: nowrap; }
+#tab-map.gozlemevi .mh-olay.yeni time { color: var(--mh-mavi); }
+#tab-map.gozlemevi #map-yk-govde .mh-bos { padding: 12px 0; font-size: 13px; color: var(--ink-3); }
+#tab-map.gozlemevi .mh-bos-dugme { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+#tab-map.gozlemevi .mh-bos-dugme button,
+#tab-map.gozlemevi #map-yk-sor { min-height: 44px; padding: 0 16px; border: 1px solid var(--kenar-guclu); border-radius: var(--mh-hap); background: none;
+  cursor: pointer; font: 500 13px/1 var(--mh-govde); letter-spacing: .08em; color: var(--ink-2); white-space: nowrap;
+  transition: border-color var(--sure-2, 160ms) var(--egri, ease-out), color var(--sure-2, 160ms) var(--egri, ease-out); }
+#tab-map.gozlemevi .mh-bos-dugme button:hover,
+#tab-map.gozlemevi #map-yk-sor:hover { border-color: var(--ink-2); color: var(--ink-1); }
+#tab-map.gozlemevi .mh-yk-alt { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: .75px solid var(--kenar); flex-shrink: 0; }
+#tab-map.gozlemevi #map-gundem[data-sekme]:not([data-sekme="yakin"]) .mh-lejant { visibility: hidden; }
+#tab-map.gozlemevi .mh-lejant { flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; }
+#tab-map.gozlemevi .mh-lejant i { display: inline-block; flex-shrink: 0; border: 1px solid var(--mh-mavi); border-radius: 50%; opacity: .7; }
+#tab-map.gozlemevi .mh-lejant .l2 { width: 8px; height: 8px; }
+#tab-map.gozlemevi .mh-lejant .l4 { width: 14px; height: 14px; }
+#tab-map.gozlemevi .mh-lejant .l6 { width: 22px; height: 22px; margin-right: 4px; }
+#tab-map.gozlemevi .mh-tutamak { display: none; position: relative; height: 16px; margin: 0 -12px; cursor: pointer; flex-shrink: 0; }
+#tab-map.gozlemevi .mh-tutamak::before { content: ""; position: absolute; left: 50%; top: 8px; width: 36px; height: 4px; margin-left: -18px;
+  border-radius: 2px; background: var(--kenar-guclu); }
+#tab-map.gozlemevi .mh-haber { min-height: 44px; }
+
+/* Harita işaretleri: deprem halkası mavi (boy = büyüklük), yeni olayda tek dalga; "sen" mor nokta + etiket; ISS elmas */
+#tab-map.gozlemevi .map-pulse-dot.mh-dep { background: color-mix(in srgb, var(--mh-mavi) 12%, transparent) !important;
+  border-color: var(--mh-mavi) !important; color: var(--mh-mavi) !important; }
+#tab-map.gozlemevi .map-pulse-dot.mh-dep::before { animation: none; display: none; }
+#tab-map.gozlemevi .map-pulse-dot.mh-dep::after { display: none; }
+#tab-map.gozlemevi .map-pulse-dot.mh-dep.yeni::after { display: block; inset: -1px; border: 1px solid var(--mh-mavi); animation: map-pulse-ring 2.4s var(--egri, ease-out) infinite; }
+#tab-map.gozlemevi path.lf-marker-user { stroke: color-mix(in srgb, var(--mor-ink) 45%, transparent); fill: var(--mor-ink); fill-opacity: 1; stroke-width: 6; animation: none; }
+#tab-map.gozlemevi .mh-sen-et { background: none; border: 0; box-shadow: none; padding: 0; font: 500 12px/1 var(--mh-govde);
+  letter-spacing: .14em; text-transform: uppercase; color: var(--mor-ink); text-shadow: 0 0 4px var(--bg-base, #000); }
+#tab-map.gozlemevi .mh-sen-et::before { display: none; }
+#tab-map.gozlemevi path.mh-secili-halka { stroke: var(--mh-mavi-y); stroke-width: 2; fill: color-mix(in srgb, var(--mh-mavi) 10%, transparent); }
+#tab-map.gozlemevi .mh-iss { position: relative; width: 16px; height: 16px; display: grid; place-items: center; }
+#tab-map.gozlemevi .mh-iss i { width: 9px; height: 9px; border: 1.5px solid var(--mh-mavi); transform: rotate(45deg); background: var(--bg-base, #000); }
+#tab-map.gozlemevi .mh-iss span { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); white-space: nowrap;
+  font: 600 12px/1 var(--mh-canli); color: var(--mh-mavi-y); text-shadow: 0 0 4px var(--bg-base, #000); }
+
+/* ── KONTROL SADELEŞTİRME ── sağ altta GÖRÜNÜM + zoom sütunu */
+#tab-map.gozlemevi #map-alt-sag { right: calc(var(--mh-kenar) + 44px + 8px); bottom: var(--mh-kenar); align-items: flex-end; }
+#tab-map.gozlemevi.katman-acik #map-alt-sag { right: calc(var(--mh-cekmece) + 2 * var(--mh-kenar) + 44px + 8px); }
+#tab-map.gozlemevi .leaflet-bottom.leaflet-right { bottom: var(--mh-kenar); }
+#tab-map.gozlemevi:has(#map-timeline.tl-open) .leaflet-bottom.leaflet-right { bottom: var(--mh-tl); }
+#tab-map.gozlemevi #map-gorunum { height: auto; }
+
+/* Çekmecenin GÖRÜNÜM bölümü: cam kutular düz satıra döner */
+#tab-map.gozlemevi .mk-gorunum { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-bottom: 12px; }
+#tab-map.gozlemevi .mk-gorunum .mk-grup-bas { flex-basis: 100%; }
+#tab-map.gozlemevi .mk-gorunum .mh-cam { position: static; height: auto; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+  border: .75px solid var(--kenar-guclu); }
+#tab-map.gozlemevi .mk-gorunum .mh-araclar { flex-direction: row; }
+/* Çekmecede ikon tek başına okunmuyordu → görünür ad (aria-label'dan; dil değişince JS günceller) */
+#tab-map.gozlemevi .mk-gorunum .mh-araclar .mh-seg-b { width: auto; gap: 8px; padding: 0 16px 0 12px;
+  font: 500 13px/1 var(--mh-govde); letter-spacing: .04em; text-transform: none; }
+#tab-map.gozlemevi .mk-gorunum .mh-araclar .mh-seg-b::after { content: attr(aria-label); }
+#tab-map.gozlemevi .mk-gorunum #map-coords { flex-basis: 100%; min-width: 0; height: auto; padding: 4px 0 0; border: 0;
+  font-size: 12px; color: var(--ink-3); }
+
+@media (max-width: 768px) {
+  #tab-map.gozlemevi { --mh-ust: 84px; }   /* 8 + iki sıralı kart ~68 + 8 */
+  #tab-map.gozlemevi #map-serit { height: auto; display: grid; grid-template-columns: auto minmax(0, 1fr);
+    row-gap: 8px; padding: 8px 56px 8px 0; overflow: hidden; }
+  #tab-map.gozlemevi #map-serit .mh-bolum { padding: 0 12px; min-height: 24px; align-items: center; }
+  #tab-map.gozlemevi #map-serit .mh-bolum:nth-child(odd) { border-right: 1px solid var(--kenar); }
+  #tab-map.gozlemevi #map-serit .mh-bolum:nth-child(even) { border-right: 0; }
+  #tab-map.gozlemevi #map-serit-ac { display: none; }   /* 2×2 kart her şeyi gösteriyor; ⌕ aynı köşede */
+  #tab-map.gozlemevi #map-bos:not([hidden]) { left: var(--mh-kenar); right: var(--mh-kenar); width: auto; }
+
+  /* Telefon: alt sayfa — tutamak üstte, ilk 2 olay; tutamak listeyi genişletir */
+  #tab-map.gozlemevi #map-gundem { width: auto; left: var(--mh-kenar); right: var(--mh-kenar); flex-direction: column; padding: 0 12px; }
+  #tab-map.gozlemevi .mh-tutamak { display: block; }
+  #tab-map.gozlemevi #map-gundem:not(.acik) .mh-tutamak { display: none; }
+  #tab-map.gozlemevi .mh-yk-sekmeler { gap: 16px; }
+  #tab-map.gozlemevi .mh-yk-sekme { letter-spacing: .16em; }
+  #tab-map.gozlemevi #map-gundem:not(.genis) .mh-olaylar li:nth-child(n+3),
+  #tab-map.gozlemevi #map-gundem:not(.genis) .mh-haberler li:nth-child(n+3),
+  #tab-map.gozlemevi #map-gundem:not(.genis) .mh-yk-alt { display: none; }
+
+  /* Tek alt sıra: [DÜNYA TÜRKİYE 3D] … [KATMANLAR]; ⌕ yer kartının içinde; zoom gizli (iki parmak) */
+  #tab-map.gozlemevi #map-sag-ust { display: contents; }
+  #tab-map.gozlemevi #map-ara-ac { position: absolute; z-index: calc(var(--mz-bar) + 1); top: calc(var(--mh-kenar) + 8px); right: calc(var(--mh-kenar) + 8px);
+    background: none; }
+  #tab-map.gozlemevi.ara-acik #map-ara-ac { visibility: hidden; }
+  #tab-map.gozlemevi #map-katman-ac { position: absolute; z-index: var(--mz-bar); right: var(--mh-kenar); bottom: var(--mh-kenar); padding: 0 12px; letter-spacing: .06em; }
+  #tab-map.gozlemevi #map-alt-sag { left: var(--mh-kenar); right: auto; bottom: var(--mh-kenar); }
+  #tab-map.gozlemevi #map-gorunum { position: static; height: auto; }
+  #tab-map.gozlemevi .mh-seg-b { padding: 0 10px; letter-spacing: .06em; }
+  #tab-map.gozlemevi .leaflet-control-zoom { display: none; }
+  #tab-map.gozlemevi #map-gundem,
+  #tab-map.gozlemevi #map-gundem:not(.acik) { bottom: calc(var(--mh-kenar) + 44px + 8px); right: var(--mh-kenar); }
+  #tab-map.gozlemevi #map-katman-cekmece,
+  #tab-map.gozlemevi.katman-acik.ara-acik #map-katman-cekmece { bottom: calc(var(--mh-kenar) + 44px + 8px); }
+  #tab-map.gozlemevi.katman-acik #map-alt-sag,
+  #tab-map.gozlemevi.katman-acik #map-gorunum { visibility: visible; }
+  #tab-map.gozlemevi:has(#map-timeline.tl-open) #map-katman-ac { visibility: hidden; }
+}
+/* Dar telefon (<390): [DÜNYA TÜRKİYE 3D] + [KATMANLAR] sığsın — yalnız iç boşluk daralır, hedef 44 px kalır */
+@media (max-width: 389px) {
+  #tab-map.gozlemevi .mh-seg-b { padding: 0 6px; letter-spacing: .02em; }
+  #tab-map.gozlemevi #map-katman-ac { padding: 0 10px; letter-spacing: .02em; }
+}
+/* Telefon yatay: açık YAKINDA kartı (sol, 400 px) boş-durum kartını örtmesin */
+@media (min-width: 769px) and (max-height: 540px) and (orientation: landscape) {
+  #tab-map.gozlemevi #map-bos:not([hidden]) { left: calc(2 * var(--mh-kenar) + 400px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #tab-map.gozlemevi #map-bos:not([hidden]) { animation: none; }
+  #tab-map.gozlemevi .map-pulse-dot.mh-dep.yeni::after { animation: none; transform: scale(1.6); opacity: .5; }
+}
+
+/* ══ B · GÖZLEMEVİ GECE GİYSİSİ (yalnız koyu tema) ════════════════════════ */
+:root:not([data-tema]) #tab-map.gozlemevi {
+  /* Gözlemevi değerleri (kişisel kimlik.css ile aynı) */
+  --k-zemin:  #05060c;  --k-zemin-2: #090b16;  --k-yuzey: #0d1020;  --k-yuzey-3: #1a1f3c;
+  --k-metin:  #f4f5fa;  --k-metin-2: #c3c7d4;  --k-metin-3: #8e94a8;
+  --k-cizgi:  rgba(214, 217, 227, .10);  --k-cizgi-2: rgba(214, 217, 227, .20);  --k-cizgi-3: rgba(214, 217, 227, .40);
+  --k-mor:    #a993ff;  --k-mor-yumusak: #cdc1ff;  --k-mor-zemin: rgba(169, 147, 255, .13);
+  --k-mavi:   #8fb8ff;  --k-mavi-yumusak: #bcd4ff;
+  --k-altin-iz: rgba(205, 176, 113, .20);
+  --k-hata:   #e8808c;
+
+  /* Ürün token'ları → Gözlemevi rolleri (yalnız bu sekmede) */
+  --ink-1: var(--k-metin);  --ink-2: var(--k-metin-2);  --ink-3: var(--k-metin-3);
+  --text: var(--k-metin);   --text-dim: var(--k-metin-2);  --mh-soluk: var(--k-metin-3);  --mh-veri: var(--k-metin);
+  --kenar: var(--k-cizgi);  --kenar-guclu: var(--k-cizgi-2);
+  --border-dim: var(--k-cizgi);  --border-hud: var(--k-cizgi-2);  --border-glow: var(--k-cizgi-3);
+  --yuzey-1: var(--k-yuzey);  --yuzey-2: var(--k-zemin-2);  --yuzey-3: var(--k-yuzey-3);
+  --bg-base: var(--k-zemin);
+  --mor-ink: var(--k-mor);  --mor-zemin: var(--k-mor-zemin);
+  --cyan: var(--k-mavi);    --kirmizi-ink: var(--k-hata);
+  --mh-mavi: var(--k-mavi); --mh-mavi-y: var(--k-mavi-yumusak);
+  --mh-ayrac: var(--k-altin-iz);
+  /* Cam yerine neredeyse opak yüzey: Gözlemevi'nde buzlu cam yok */
+  --m-panel: color-mix(in srgb, var(--k-zemin-2) 92%, transparent);
+  --m-panel-solid: var(--k-yuzey);
+  --m-blur: none;
+  --font: var(--mh-govde);  --font-mono: var(--mh-canli);
+  color: var(--k-metin);
+}
+:root:not([data-tema]) #tab-map.gozlemevi .mh-cam { border-color: var(--k-cizgi-2); }
+:root:not([data-tema]) #tab-map.gozlemevi .leaflet-container { background: var(--k-zemin) !important; }
+/* Duvar kâğıdı açıkken harita zemini şeffaf kalır (yukarıdaki !important duvarı örtmesin) */
+:root:not([data-tema]) body.duvar-acik #tab-map.gozlemevi .leaflet-container { background: transparent !important; }
+:root:not([data-tema]) #tab-map.gozlemevi .leaflet-control-attribution { background: color-mix(in srgb, var(--k-zemin) 70%, transparent) !important; color: var(--k-metin-3) !important; }
+:root:not([data-tema]) #tab-map.gozlemevi .leaflet-control-attribution a { color: var(--k-metin-2) !important; }
+:root:not([data-tema]) #tab-map.gozlemevi :is(.leaflet-popup-content-wrapper, .leaflet-popup-tip) {
+  background: var(--k-yuzey) !important; border-color: var(--k-cizgi-2) !important; color: var(--k-metin) !important; }
+:root:not([data-tema]) #tab-map.gozlemevi :is(#place-detail-panel, #map-layer-mgr) { background: var(--k-yuzey); border-color: var(--k-cizgi-2); color: var(--k-metin); }
+:root:not([data-tema]) #tab-map.gozlemevi .mh-sen-et { color: var(--k-mor-yumusak); }

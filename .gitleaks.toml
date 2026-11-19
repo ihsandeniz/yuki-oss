@@ -1,0 +1,11 @@
+# gitleaks yapılandırması — varsayılan kurallar + bilinen yanlış pozitifler.
+# backend/tests/: sahte test anahtarları (düşük entropi, kelimeden kurulmuş).
+# *_KEY = 'yuki_…_v1': localStorage anahtar adları, sır değil.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "test fikstürleri ve localStorage anahtar adları"
+paths = ['''^backend/tests/''']
+regexTarget = "match"
+regexes = ["_KEY\\s*=\\s*'yuki_[a-z_]+_v\\d+'"]

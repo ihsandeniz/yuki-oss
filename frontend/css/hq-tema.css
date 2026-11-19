@@ -1,0 +1,138 @@
+/* ── TEMA · ORTAM SEÇ ( panel 14, 2026-10-01 — geliştirici taslak B'yi seçti) ──────────────────────
+ * Taslak B (2026-09-26 HQ taslakları).
+ * Tema ADI değil ORTAM seçtirir: gece odası · kapalı oda · pencere kenarı. Üç kart + "Bilgisayarım karar
+ * versin" anahtarı. Çizim + davranış: js/tema-panel.js. Tema değerleri tokens.css'te (burada DEĞİŞMEZ).
+ *
+ * 🔴 Sahne çizimi (gökyüzü/oda/dizüstü gövdesi) RESİMDİR, tema token'ı değil: üç oda hangi tema seçili
+ *    olursa olsun aynı kalır (gece odası açık temada da gece odasıdır). Hex yalnız orada ve `.tm-lap`ta.
+ * 🔴 Dizüstü ekranı (`.tm-mini`) kendi `data-tema` öznitelikli: tokens.css'in KAPSANMIŞ bloğu onun içinde
+ *    geçerli → gerçek renkler, elle boyanmış taklit değil. Yalnız DOĞRUDAN token okur (--bg, --yuzey-*,
+ *    --ink-*, --mor-*): kapsanmış blokta eski-ad köprüsü (--text, --accent…) çözülmez (ledger
+ *    css/kapsanmis-tema-token).
+ */
+
+/* ── ızgara + kartlar ── */
+.tm-izgara {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--b-6);
+  max-inline-size: 1280px;
+}
+.tm-oda {
+  display: flex; flex-direction: column; text-align: start; padding: 0; overflow: hidden; cursor: pointer;
+  border: 1px solid var(--kenar); border-radius: var(--r-4); background: var(--yuzey-1); color: var(--ink-1);
+  font: inherit; min-inline-size: 0;
+  transition: border-color var(--sure-2) var(--egri), box-shadow var(--sure-2) var(--egri), transform var(--sure-2) var(--egri);
+}
+.tm-oda:hover { border-color: var(--kenar-guclu); }
+@media (prefers-reduced-motion: no-preference) { .tm-oda:hover { transform: translateY(-2px); } }
+.tm-oda:focus-visible { outline: var(--odak-kalinlik) solid var(--mor-ink); outline-offset: var(--odak-offset); }
+/* Seçili = kenar + dış halka + onay işareti + ad ağırlığı (renk tek başına anlatmaz — PRODUCT.md) */
+.tm-oda[aria-checked="true"] {
+  border-color: var(--mor-ink);
+  box-shadow: 0 0 0 1px var(--mor-ink), 0 0 0 4px var(--mor-zemin);
+}
+/* "Bilgisayarım karar versin" açıkken şu an görünen oda: kesik çerçeve (seçili değil, izleniyor) */
+.tm-oda.takip { border-style: dashed; border-color: var(--mor-ink); }
+/* Anahtar açıkken izlenmeyen odalar geri çekilir (taslak): resim DOYGUNLUK + PARLAKLIK düşürür —
+   opacity DEĞİL (açık sayfada koyu sahneyi beyaza doğru yıkıyordu, goz tur1 #3); yazı bir kademe
+   söner ama token çiftleriyle kalır (ad --ink-2, ne --ink-2, neden --ink-3 → okunur, ölçüldü). */
+.tm-izgara.takipte .tm-oda:not(.takip) .tm-sahne { filter: saturate(.5) brightness(.8); }
+.tm-izgara.takipte .tm-oda:not(.takip) .tm-ad-metin,
+.tm-izgara.takipte .tm-oda:not(.takip) .tm-ne { color: var(--ink-2); }
+.tm-izgara.takipte .tm-oda:not(.takip) .tm-neden { color: var(--ink-3); }
+
+.tm-sahne { position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; }
+.tm-s-koyu { background: linear-gradient(180deg, #0c0b16, #1b1933); }
+.tm-s-orta { background: linear-gradient(180deg, #7a7983 0%, #5a5962 60%, #4a4953); }
+.tm-s-acik { background: linear-gradient(180deg, #cfe5ff 0%, #eef2f6 55%, #f4ead7); }
+.tm-isik { position: absolute; display: block; }
+.tm-s-koyu .tm-isik { right: 12%; top: 11%; inline-size: 11%; aspect-ratio: 1; border-radius: 50%;
+  background: #f1e9c8; box-shadow: 0 0 22px 6px rgba(241, 233, 200, .35); }
+.tm-yildiz { position: absolute; inline-size: 3px; block-size: 3px; border-radius: 50%; background: #cfd0ff; opacity: .7; }
+.tm-s-orta .tm-isik { left: 50%; top: -18%; inline-size: 70%; block-size: 70%; transform: translateX(-50%);
+  border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 255, 255, .42), transparent); }
+.tm-s-acik .tm-isik { left: 8%; top: 8%; inline-size: 30%; block-size: 44%; border-radius: 6px;
+  background: linear-gradient(180deg, #ffe9a8, #ffd36a); box-shadow: 0 0 40px 14px rgba(255, 220, 130, .55); opacity: .85; }
+.tm-lap { position: absolute; left: 50%; bottom: 9%; inline-size: 62%; transform: translateX(-50%); padding: 2.4% 2.4% 0;
+  background: #15151a; border-radius: 8px 8px 0 0; box-shadow: 0 10px 24px rgba(0, 0, 0, .4); }
+.tm-lap::after { content: ""; position: absolute; left: -7%; right: -7%; bottom: -5px; block-size: 6px;
+  background: #2b2b33; border-radius: 0 0 8px 8px; }
+
+/* ── dizüstü ekranı: gerçek Yuki ekranının çizgilerle küçültülmüşü (metin YOK → dilden bağımsız) ── */
+.tm-mini { container-type: inline-size; display: grid; grid-template-columns: 23% 1fr; aspect-ratio: 16 / 10;
+  background: var(--bg); color: var(--ink-1); border-radius: 4px; overflow: hidden; }
+.tm-mini * { box-sizing: border-box; }
+.tm-mini .y { background: var(--yuzey-1); border-inline-end: 1px solid var(--kenar); padding: 4cqw 2.4cqw;
+  display: flex; flex-direction: column; gap: 2cqw; }
+.tm-mini .m { display: flex; align-items: center; gap: 1.6cqw; margin-block-end: 2cqw; }
+.tm-mini .m i { inline-size: 4cqw; block-size: 4cqw; border-radius: 50%; background: var(--mor-yuzey); }
+.tm-mini .m b, .tm-mini .n b { display: block; block-size: 1.8cqw; border-radius: 1cqw; background: var(--ink-1); opacity: .8; }
+.tm-mini .m b { inline-size: 8cqw; }
+.tm-mini .n { display: flex; align-items: center; gap: 1.6cqw; padding: 1.5cqw 1.8cqw; border-radius: 1.6cqw; }
+.tm-mini .n i { inline-size: 2.4cqw; block-size: 2.4cqw; border-radius: .6cqw; background: var(--ink-3); flex: none; }
+.tm-mini .n b { inline-size: 9cqw; background: var(--ink-3); opacity: 1; }
+.tm-mini .n.ak { background: var(--mor-zemin); }
+.tm-mini .n.ak i, .tm-mini .n.ak b { background: var(--mor-ink); }
+.tm-mini .i { padding: 3.5cqw 4cqw; display: flex; flex-direction: column; gap: 2.4cqw; min-inline-size: 0; }
+.tm-mini .u { display: flex; justify-content: space-between; align-items: center; }
+.tm-mini .u b { display: block; inline-size: 12cqw; block-size: 2.2cqw; border-radius: 1cqw; background: var(--ink-1); opacity: .85; }
+.tm-mini .u span { display: flex; gap: 1.2cqw; }
+.tm-mini .u i { inline-size: 2cqw; block-size: 2cqw; border-radius: 50%; background: var(--yesil-ink); }
+.tm-mini .u i + i { background: var(--altin-ink); }
+.tm-mini .b { max-inline-size: 76%; padding: 2cqw 2.6cqw; border-radius: 2.4cqw; display: flex; flex-direction: column; gap: 1.2cqw; }
+.tm-mini .b b { display: block; block-size: 1.5cqw; border-radius: 1cqw; background: var(--ink-2); opacity: .75; }
+.tm-mini .b b + b { inline-size: 62%; }
+.tm-mini .b.k { background: var(--yuzey-2); border: 1px solid var(--kenar); align-self: flex-start; inline-size: 74%; }
+.tm-mini .b.s { background: var(--mor-zemin); align-self: flex-end; inline-size: 56%; }
+.tm-mini .b.s b { background: var(--mor-ink); opacity: 1; }
+.tm-mini .g { margin-block-start: auto; display: flex; gap: 2cqw; }
+.tm-mini .a { flex: 1; border: 1px solid var(--kenar-guclu); background: var(--yuzey-1); border-radius: 2cqw; block-size: 7cqw; }
+.tm-mini .d { background: var(--mor-yuzey); border-radius: 2cqw; inline-size: 12cqw; block-size: 7cqw; }
+
+/* ── kart gövdesi ── */
+.tm-govde { display: flex; flex-direction: column; gap: var(--b-2); padding: var(--b-6) var(--b-7) var(--b-7); }
+.tm-ad { display: flex; align-items: center; gap: var(--b-4); font-size: var(--yazi-16); font-weight: var(--ag-kalin); }
+.tm-et { font-size: var(--yazi-12); font-weight: var(--ag-orta); padding: 2px 8px; border-radius: var(--r-tam);
+  color: var(--mor-ink); background: var(--mor-zemin); white-space: nowrap; }
+.tm-et[hidden] { display: none; }
+.tm-tik { margin-inline-start: auto; inline-size: 22px; block-size: 22px; border-radius: 50%; flex: none;
+  border: 1.5px solid var(--kenar-guclu); display: grid; place-items: center; }
+.tm-oda[aria-checked="true"] .tm-tik { background: var(--mor-yuzey); border-color: transparent; }
+.tm-oda[aria-checked="true"] .tm-tik::after { content: ""; inline-size: 5px; block-size: 10px;
+  border: solid #fff; border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }   /* mor yüzeyde sabit beyaz: 6.74:1 (ogeler.css .dg-birincil ile aynı gerekçe) */
+.tm-ne { font-size: var(--yazi-14); color: var(--ink-1); }
+.tm-neden { font-size: var(--yazi-12); color: var(--ink-2); line-height: var(--satir-orta); min-block-size: 3em; }   /* 2 satır payı: EN'de 'Medium' 2 satıra kırılınca üç kart aynı boyda kalır */
+
+/* ── "Bilgisayarım karar versin" ── */
+.tm-sistem { margin-block-start: var(--b-6); max-inline-size: 1280px; display: flex; align-items: center; gap: var(--b-6);
+  flex-wrap: wrap; padding: var(--b-6) var(--b-8); border: 1px solid var(--kenar); border-radius: var(--r-3);
+  background: var(--yuzey-1); }
+.tm-sistem.acik { border-color: var(--mor-ink); background: var(--mor-zemin); }
+.tm-sw { position: relative; inline-size: 52px; block-size: 30px; border-radius: var(--r-tam); flex: none; padding: 0; cursor: pointer;
+  border: 1px solid var(--kenar-guclu); background: var(--yuzey-3); transition: background var(--sure-2) var(--egri); }
+.tm-sw::before { content: ""; position: absolute; inset: -9px -6px; }   /* vuruş alanı 48 x 64 (ölçüldü: 44 + pay) */
+.tm-sw::after { content: ""; position: absolute; top: 3px; left: 3px; inline-size: 22px; block-size: 22px; border-radius: 50%;
+  background: var(--ink-2); transition: transform var(--sure-2) var(--egri), background var(--sure-2) var(--egri); }
+.tm-sw[aria-checked="true"] { background: var(--mor-yuzey); border-color: transparent; }
+.tm-sw[aria-checked="true"]::after { transform: translateX(22px); background: #fff; }
+.tm-sw:focus-visible { outline: var(--odak-kalinlik) solid var(--mor-ink); outline-offset: var(--odak-offset); }
+.tm-sw-et { font-size: var(--yazi-12); font-weight: var(--ag-kalin); min-inline-size: 3.2em; color: var(--ink-1); }
+.tm-yay { flex: 1 1 320px; min-inline-size: 0; display: flex; flex-direction: column; gap: var(--b-2); }
+.tm-yay b { font-weight: var(--ag-kalin); }
+.tm-sis-ad { font-size: var(--yazi-14); font-weight: var(--ag-kalin); color: var(--ink-1); }
+.tm-sis-ne { font-size: var(--yazi-12); color: var(--ink-2); line-height: var(--satir-orta); text-wrap: pretty; }   /* dul 'off.' satırı olmasın */
+/* 10: ok glifi gövde yazısında tire gibi kalıyordu */
+.tm-ok { font-size: 1.35em; line-height: 1; vertical-align: -.1em; margin-inline: .15em; font-weight: var(--ag-normal); }
+.tm-sis-ne b { color: var(--ink-1); }
+
+/* ── telefon: kart yatay satır (sahne solda), anahtar kartın altında; ilk ekranda hepsi görünür ── */
+@media (max-width: 860px) {
+  .tm-izgara { grid-template-columns: minmax(0, 1fr); gap: var(--b-4); }
+  .tm-oda { flex-direction: row; align-items: stretch; }
+  .tm-sahne { flex: 0 0 42%; aspect-ratio: auto; min-block-size: 96px; }
+  .tm-lap { inline-size: 66%; bottom: 16%; }   /* taban (-7%) kartın köşe yuvarlağına ve alt kenara değmesin (goz tur1 #6) */
+  .tm-govde { padding: var(--b-5) var(--b-6); justify-content: center; flex: 1 1 auto; min-inline-size: 0; }
+  .tm-ad { font-size: var(--yazi-14); }
+  .tm-neden { display: none; }
+  .tm-sistem { padding: var(--b-5) var(--b-6); gap: var(--b-5); margin-block-start: var(--b-4); }
+  .tm-yay { flex-basis: 100%; }
+}

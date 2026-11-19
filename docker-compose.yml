@@ -1,0 +1,33 @@
+# Yuki — isteğe bağlı, geliştirme için izole Postgres (pgvector).
+#
+# Port tek kaynaktan gelir: `YUKI_PG_PORT` (varsayılan 5437).
+# Uygulama Postgres'siz de çalışır; `start.sh`/`stop.sh` bu dosyayı çağırmaz.
+# Yalnız veritabanı: backend konteyneri YOK (README `docker compose up -d postgres` diyor). Eski `backend`
+# servisi kişisel kopyadan kalmaydı — Python 3.11 imajı (README 3.12+ ister) ve frontend imaja girmiyordu
+# (denetim 2026-11-16). Backend'i `./start.sh` ya da README'deki uvicorn komutuyla çalıştır;
+# DATABASE_URL `.env`'de (`.env.example`, port YUKI_PG_PORT ile aynı).
+# Bekçisi: `backend/tests/test_pg_portu_izole.py`.
+#
+#   docker compose up -d                 # 5437
+#   YUKI_PG_PORT=5439 docker compose up  # çakışırsa
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: yuki-oss-pg
+    network_mode: host
+    environment:
+      POSTGRES_DB: alice_ai
+      POSTGRES_USER: yuki
+      POSTGRES_PASSWORD: yuki_secret
+      PGPORT: ${YUKI_PG_PORT:-5437}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yuki -d alice_ai -p ${YUKI_PG_PORT:-5437}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

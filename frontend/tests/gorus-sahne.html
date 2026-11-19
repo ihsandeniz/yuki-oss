@@ -1,0 +1,27 @@
+<!doctype html>
+<!-- Test sahnesi: kamera görüşü + ses kimliği paneli (frontend/tests/test_gorus_panel.py).
+     Gerçek uygulamada panel HQ içinde `[data-gorus-panel]` öğesine kurulur (G4 bağlar). -->
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Görüş paneli sahnesi</title>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/temel.css">
+<link rel="stylesheet" href="/css/gorus.css">
+<style>
+  body { margin: 0; background: var(--bg); color: var(--ink-1); font-family: var(--font); }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px; }
+  h1 { font-size: 22px; margin: 0 0 16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sistem › Kamera ve ses</h1>
+  <div data-gorus-panel></div>
+</main>
+<script src="/js/gorus.js"></script>
+<script src="/js/ses-kimlik.js"></script>
+<script src="/js/gorus-panel.js"></script>
+</body>
+</html>

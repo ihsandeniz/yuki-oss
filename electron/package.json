@@ -1,0 +1,27 @@
+{
+  "name": "yuki-oss",
+  "version": "1.0.0",
+  "description": "Yuki — AI Companion",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test *.test.js",
+    "prep": "bash ../scripts/appimage-statik-runtime.sh && python3 ../scripts/update_payload.py shell-id && python3 ../scripts/vendor-msvc-runtime.py",
+    "build": "npm run prep && electron-builder --linux --publish never --config electron-builder.yml",
+    "build:full": "npm run prep && electron-builder --linux AppImage --publish never --config electron-builder-full.yml",
+    "build:win": "npm run prep && electron-builder --win --publish never --config electron-builder-win.yml",
+    "build:win:full": "npm run prep && electron-builder --win --publish never --config electron-builder-win-full.yml",
+    "build:all": "npm run build && npm run build:full && npm run build:win && npm run build:win:full",
+    "update:payload": "python3 ../scripts/update_payload.py build",
+    "model:pack": "bash ../scripts/build-model-package.sh",
+    "build:linux": "bash ../scripts/linux-derle.sh"
+  },
+  "devDependencies": {
+    "electron": "^44.10.0",
+    "electron-builder": "^26.18.1"
+  },
+  "overrides": {
+    "minimatch@^10.2.5": "^11.0.8",
+    "minimatch@^9.0.3": "^11.0.8"
+  }
+}

@@ -1,0 +1,91 @@
+/* ═══════════════════════════════════════════════════════════════════
+   HQ › AYARLAR · satır (2026-09-27 — kişisel 7e12a2d "KONTROL MASASI" satırı, ürüne yeniden yazıldı)
+   Ad · ne işe yarar · ne zaman geçerli (HEMEN yeşil / YENİDEN BAŞLATINCA nötr) ·
+   "sen değiştirdin · varsayılan: X" + varsayılana dön.
+   🔴 Kişiseldeki 7 bölüm rayı YOK — kategoriler sol menüde (D5). Kişisel token'lar
+   (`--c-*`, `--sp-*`, `--fs-*`) üründe yok; yalnız ürün token'ları.
+   Canlı üçlü (dil/karakter/model) ve Görünüm bölümü eski `.hq-set-row`'da kalır (hq.css).
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Başlık şeridi ile gövde AYNI genişlikte: hq.css `#hq-settings-main > *` margin:auto veriyordu,
+   grid içinde auto kenar öğeyi içeriğine büzüyor → oda değişince satır sütunu 585↔684px oynuyor,
+   başlık satırlarla hizasız kalıyordu (goz 09-27). */
+#hq-settings-main > .oda-bas, #hq-settings-main > .oda-govde { inline-size: 100%; max-inline-size: 840px; box-sizing: border-box; }
+
+.ay-satir {
+  position: relative;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr; gap: 4px 24px; align-items: start;
+  padding: 14px 0; border-bottom: 1px solid var(--kenar);
+}
+.ay-ad { font: 500 var(--yazi-14)/1.4 var(--font); color: var(--ink-1); }
+.ay-ne { grid-column: 1; margin: 0; max-inline-size: 60ch; font: var(--yazi-12)/1.5 var(--font); color: var(--ink-2); }
+.ay-ctl { grid-row: 1 / span 2; grid-column: 2; align-self: center; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.ay-zaman { font: 11px var(--font-hud); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+.ay-zaman.canli { color: var(--yesil-ink); }
+.ay-zaman.canli::before { content: '●'; margin-right: 5px; }   /* işaret, metin değil (test_bl402) */
+
+.ay-sayi { inline-size: 96px; min-height: 36px; padding: 4px 10px; font: var(--yazi-14) var(--font-hud); text-align: right; }
+.ay-metin { inline-size: 240px; min-height: 36px; padding: 4px 10px; font: var(--yazi-13) var(--font-hud); }
+.ay-satir .hq-select { min-height: 36px; padding: 4px 10px; font: var(--yazi-13) var(--font-hud); border-radius: var(--r-1); }   /* hq.css'teki 10px seçici okunmuyordu */
+/* Seçim kutuları TEK genişlikte ( M10): içeriğe göre büzülünce Dil odasında üç kutu 130px,
+   model kutusu 266px çıkıyor, sol kenarlar satırdan satıra kayıyordu. Canlı üçlü (.hq-set-row) de
+   aynı boy + aynı punto — ikisi aynı odada alt alta duruyor. Uzun model adı kutuda kısalır. */
+.ay-satir .hq-select,
+#hq-settings-main .hq-set-row .hq-select { inline-size: min(240px, 56vw); max-inline-size: 100%; text-overflow: ellipsis; }
+#hq-settings-main .hq-set-row .hq-select { min-height: 36px; padding: 4px 10px; font: var(--yazi-13) var(--font-hud); border-radius: var(--r-1); }
+
+/* Değiştirdiğin satır: oluğa taşan ince işaret — içerik ve ayraç öbür satırlarla aynı hizada kalır
+   (padding/negatif pay 2px kaydırıyor, ayracı sola uzatıyordu; goz 09-27) */
+/* --altin-ink: açık temada --altin zemine karşı 1,66:1 kalıyordu (goz 09-27) */
+.ay-satir.degisti::before { content: ''; position: absolute; left: -12px; top: 12px; bottom: 12px; width: 3px; border-radius: 2px; background: var(--altin-ink); }
+.ay-iz { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.ay-degisti { font: 600 var(--yazi-12)/1.4 var(--font); color: var(--altin-ink); }
+.ay-iz button {
+  margin-left: auto;   /* kontrol sütununun altında hizalı — metnin boyuna göre kaymaz */
+  min-height: 32px; padding: 0 2px; background: none; border: 0; cursor: pointer;
+  font: var(--yazi-12) var(--font); color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px;
+}
+.ay-iz button:hover { color: var(--ink-1); }
+
+/* Durum (kaydedildi / hata) kontrolün altında, sağda — hata alanın yanında olsun (goz 09-27) */
+.ay-durum { grid-column: 1 / -1; justify-self: end; text-align: right; margin: 0; font: var(--yazi-12)/1.4 var(--font); color: var(--ink-2); }
+.ay-durum:empty { display: none; }
+.ay-durum.ok { color: var(--yesil-ink); }
+.ay-durum.hata { color: var(--kirmizi-ink); }
+
+/* Sıfırlama önizlemesi */
+/* Zemin nötr: kırmızı zeminde kırmızı "Evet, sıfırla" düğmesi 1,9:1'e düşüyordu (goz 09-27) */
+.ay-onizleme { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--kirmizi-ink); border-left-width: 3px; border-radius: var(--r-2, 8px); background: var(--yuzey-1); }
+.ay-onizleme[hidden] { display: none; }
+.ay-onizleme-bas { margin: 0 0 8px; font: 600 var(--yazi-13)/1.4 var(--font); color: var(--ink-1); }
+/* Ad ile değer yan yana (iki sütun ızgara, dar): 475px boşluk göze satırı kaybettiriyordu */
+/* ad · eski · ok · yeni — dört sütun: ok bir sütuna oturur, eski soluk / yeni koyu */
+.ay-onizleme ul { margin: 0 0 10px; padding: 0; list-style: none; display: grid; grid-template-columns: max-content max-content 16px max-content; align-items: center; gap: 8px 14px; }
+.ay-onizleme li { display: contents; }
+.ay-onizleme li b { margin-right: 14px; font: 500 var(--yazi-13)/1.4 var(--font); color: var(--ink-2); }
+.ay-onizleme .eski { font: var(--yazi-13)/1.4 var(--font-hud); color: var(--ink-2); }
+.ay-onizleme .yeni { font: 600 var(--yazi-13)/1.4 var(--font-hud); color: var(--ink-1); }
+.ay-onizleme .ok { width: 16px; height: 10px; color: var(--kirmizi-ink); }
+.ay-not { margin: 0 0 10px; font: var(--yazi-12)/1.5 var(--font); color: var(--ink-2); }
+
+@media (max-width: 600px) {
+  /* Telefonda tek sütun: ad → açıklama → (zaman · kontrol) aynı satırda */
+  .ay-satir { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+  .ay-onizleme ul { grid-template-columns: minmax(0, 1fr) max-content 16px max-content; gap: 8px 10px; }
+  .ay-onizleme li b { margin-right: 0; }
+  /* Telefonda durum (hata) kontrolün hemen altında — açıklamanın altında 106px uzaktı (goz 09-27) */
+  .ay-durum { order: 2; justify-self: start; text-align: left; }
+  .ay-ne { order: 3; }
+  .ay-iz { order: 4; }
+  .ay-ctl { grid-row: auto; grid-column: 1; flex-direction: row-reverse; justify-content: space-between; align-items: center; }
+  .ay-metin { inline-size: 100%; min-width: 0; }
+  .ay-ctl:has(.ay-metin) { flex-direction: column-reverse; align-items: stretch; }
+}
+@media (hover: none) {
+  /* Anahtar 38×20 fareyle yeterli, parmakla değil: büyür (topuz yolu da uzar) */
+  .ay-satir .hq-toggle { width: 54px; height: 32px; border-radius: 17px; }
+  .ay-satir .hq-toggle::after { top: 4px; left: 4px; width: 22px; height: 22px; }
+  .ay-satir .hq-toggle.on::after { transform: translateX(22px); }
+  .ay-iz button { min-height: 44px; }
+  .ay-sayi, .ay-metin, .ay-satir .hq-select, #hq-settings-main .hq-set-row .hq-select { min-height: 44px; }
+}

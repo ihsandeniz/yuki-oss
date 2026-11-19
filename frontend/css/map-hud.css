@@ -1,0 +1,938 @@
+/* ════════════════════════════════════════════════════════════════════════
+   map-hud.css — HARİTA ÖNCE (2026-10-04)
+
+   Kaynak: kişisel AliceAi `frontend/css/map-hud.css` @ 8dd7587 (09-28, geliştirici
+   seçimi "Taslak A"). Yerleşim + beş yüzen yüzey: YER ŞERİDİ · GÖRÜNÜM/
+   KATMANLAR · KATMANLAR çekmecesi · GÜNDEM · alt sağ. Paneller (yer detayı,
+   yönetici, zaman çizelgesi, 3D, gezegen) → css/map-controls.css.
+
+   🔑 Kopya DEĞİL çeviri (2026-09-18 kuralı aynen): kişiselin token adlarının
+   hiçbiri üründe yok. Eşlemenin özü:
+     · Kişiselde altın = seçili. Üründe seçili MOR (`01-TASARIM-DILI.md` §
+       seçili/aktif: --mor-zemin arka + --mor-ink metin); altın ekranda ≤2,
+       nadir. Bu dosyada ALTIN YOK.
+     · Kişiselde camgöbeği = canlı değer. Üründe mor "canlı hissi" için
+       KULLANILMAZ (aynı belge) → canlı değer `--mh-veri` = en parlak nötr
+       ink; etiket --ink-3, ikincil --ink-2. Hiyerarşiyi parlaklık kuruyor.
+     · Açık anahtar / açık araç = durum + eylem → mor.
+   inline #hex YOK; yarı saydam tonlar token'dan `oklch(from var(--x) …)`.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ──────────────────────────────────────────────────────
+   HARİTA SÖZLÜĞÜ → GLOBAL TOKEN KÖPRÜSÜ   (FAZ 6, 2026-08-18)
+   Adlar kalıyor (map-controls.css ~yüz çağrı), değerler tokens.css'ten.
+   ────────────────────────────────────────────────────── */
+#tab-map {
+  /* Zemin */
+  --m-bg:          var(--bg-base);
+  /* Cam: yüzey-1'in %88'i — harita altta seçilir ama yazı her temada okunur.
+     Açık temada yüzey-1 kâğıt beyazı, koyuda mora çalan kömür. */
+  --m-panel:       oklch(from var(--yuzey-1) l c h / 0.88);
+  --m-panel-solid: var(--yuzey-1);         /* yer detayı / yönetici — zemin susar */
+
+  /* Çizgiler */
+  --m-line:        var(--border-dim);
+  --m-line-strong: var(--border-hud);
+  --m-gold-line:   var(--border-glow);
+
+  /* Renk rolleri (map-controls.css bu adlarla çağırıyor) */
+  /* Adlar tarihsel ("gold"); değer MOR — haritada altın yok (göz tur 2: konum
+     onayı, yer detayı "sor" düğmesi altındı). Altın ekranda nadir vurgudur. */
+  --m-gold:        var(--mor-ink);
+  --m-gold-dim:    var(--mor-zemin);
+  --m-cyan:        var(--cyan);
+  --m-green:       var(--yesil-ink);
+  --m-red:         var(--kirmizi-ink);
+
+  /* Metin */
+  --m-ink:         var(--text);
+  --m-ink-soft:    var(--text-dim);
+  --m-ink-faint:   var(--mh-soluk);
+  --mh-veri:       var(--ink-1);           /* canlı değer — bkz. başlık */
+  --mh-soluk:      var(--ink-3);           /* etiket · ikincil — açık temada koyulaşır ↓ */
+
+  /* Geometri */
+  --m-radius:      var(--r-3);
+  --m-radius-sm:   var(--r-2);
+  --m-blur:        blur(18px) saturate(1.2);
+
+  /* Yüzen yüzeylerin ortak ölçüleri */
+  --mh-kenar:      8px;                    /* ekran kenarından boşluk          */
+  --mh-ust:        56px;                   /* şeridin altı (8 + 40 + 8)        */
+  --mh-cekmece:    320px;                  /* KATMANLAR çekmecesi genişliği     */
+  --mh-tl:         112px;                  /* zaman çizelgesi açıkken alt pay   */
+
+  /* Z-scale (semantik)
+     🔴 BİLEREK token merdivenine BAĞLANMADI. Leaflet kendi iç katmanlarını
+        400-700 aralığında kullanır; bu değerler onun ÜSTÜNDE durmak için
+        seçilmiş. tokens.css merdiveni (0-700) uygulama geneli içindir ve
+        buraya taşınırsa harita panelleri Leaflet katmanlarının ALTINA düşer.
+        (09-18 taşımasında map-controls.css'in --mz-bar'ları --z-yapisik'e (100)
+        çevrilmişti — yönetici ve zaman çizelgesi Leaflet'in altında kalıyordu;
+        10-04'te geri alındı.) Harita kendi yığın bağlamında (#map-center) yaşar. */
+  --mz-map: 1;
+  --mz-overlay: 500;
+  --mz-bar: 1000;
+  --mz-panel: 1100;
+  --mz-popup: 1200;
+  --mz-toast: 1300;
+
+  --m-t-fast: var(--sure-2);
+  --m-t-med:  var(--sure-3);
+}
+
+/* 🔴 AÇIK TEMA KONTRASTI (göz tur 2, 10-04). --ink-3 düz yüzey-1 üstünde
+   4.9:1'dir ama cam (%88) koyu haritanın üstünde ~%12 koyulaşıyor → şerit
+   etiketleri, çekmece sayaçları, katman alt satırları, kaynak adları ölçüldü:
+   4.0:1. Cam biraz daha örtük (%94) + soluk metin ink-2 ile ink-3'ün ortası
+   (token karışımı, yeni renk değil). Ölçüm: E-map-olcum/kontrast.py, koyu ve
+   açık karo tonu üstünde en kötü değer. Koyu temada zaten ≥4.5 → dokunulmadı. */
+:root[data-tema="acik"] #tab-map {
+  --m-panel:  oklch(from var(--yuzey-1) l c h / 0.94);
+  --mh-soluk: color-mix(in oklch, var(--ink-2) 50%, var(--ink-3));
+}
+
+/* ──────────────────────────────────────────────────────
+   SEKME + SAHNE
+   ────────────────────────────────────────────────────── */
+/* Görünürlük `hidden` özniteliğiyle (tab-nav.js) — burada display YAZILMAZ.
+   `div#tab-map`: style.css bu dosyadan SONRA yükleniyor ve aynı özgüllükte
+   `#tab-map{overflow:hidden}` yazıyor; öğe adı onu yener. */
+div#tab-map {
+  position: relative;
+  /* 🔴 KENDİ YIĞIN BAĞLAMI (10-04, geliştirici ekranı): --mz-bar/--mz-panel (1000+)
+     Leaflet'i aşmak için büyük; bu satır yokken #tab-map yığın bağlamı kurmuyordu
+     ve şerit + GÜNDEM uygulama ölçeğiyle yarışıp ☰ menü çekmecesinin (--z-perde+1)
+     ÜSTÜNE biniyordu. isolate: haritanın büyük z'leri sekmenin içinde kalır. */
+  isolation: isolate;
+  height: 100%;
+  width: 100%;
+  /* 🔴 clip, hidden DEĞİL: kapalı paneller (yönetici, yer detayı, zaman çizelgesi)
+     transform ile ekran dışında bekliyor ve kaydırılabilir taşma alanı yaratıyor.
+     overflow:hidden kutu programla/odakla KAYDIRILABİLİR — klavyeyle bir katman
+     satırına gelmek (scrollIntoView) tüm sekmeyi yukarı itiyordu (ölçüldü 09-28). */
+  overflow: clip;
+  background: var(--m-bg);
+}
+
+#map-center {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  z-index: var(--mz-map);   /* yığın bağlamı: harita katmanları içeride kalır */
+  background: var(--m-bg);
+}
+
+/* 🔴 Leaflet kabı — AÇIK YÜKSEKLİK ŞART (2026-09-21).
+   Bu kural yoktu ve harita HİÇ çizilmiyordu: Leaflet kabın boyutunu CSS'ten okur,
+   `height:auto` + boş içerik = 0 px. Ölçüldü: tile istekleri 200 dönüyor,
+   `#map-center` 1056 px, `#leaflet-map` 0 px, canvas 0×0, sayfa hatası yok.
+   `inset:0` seçildi, `height:100%` değil: `#map-center` içinde konumlandırılmış
+   kardeşler var (3D, gezegen, zaman çizelgesi) ve harita akışta yer kaplarsa
+   onları aşağı iter. */
+#leaflet-map {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-taban);
+}
+
+/* ── Bildirim kutusu haritada ÜST ORTADA (kişisel 09-28 kararı) ──
+   Varsayılanı sağ alt (ogeler.css .bildirim-kap). Harita açıkken alt köşe
+   yakınlaştırma + araçlar + görsel modla dolu; telefonda alt iki sıra
+   kontrolün üstüne biniyordu. Yer şeridinin (8 + 40) altında, ortada.
+   `data-tab` html'e tab-nav.js yazıyor (sekmeGecHam). */
+html[data-tab="map"] .bildirim-kap {
+  inset-block-start: calc(var(--b-5) + 52px);
+  inset-block-end: auto;
+  inset-inline-start: 50%;
+  inset-inline-end: auto;
+  translate: -50% 0;
+  align-items: center;
+  width: min(42ch, calc(100vw - 32px));
+}
+html[data-tab="map"] .bildirim { max-width: 100%; }
+
+/* ──────────────────────────────────────────────────────
+   ORTAK YÜZEY — "cam": haritanın üstünde okunur, haritayı öldürmez
+   ────────────────────────────────────────────────────── */
+#tab-map .mh-cam {
+  background: var(--m-panel);
+  backdrop-filter: var(--m-blur);
+  -webkit-backdrop-filter: var(--m-blur);
+  border: 1px solid var(--m-line);
+  border-radius: var(--m-radius-sm);
+  box-shadow: var(--golge-2);
+}
+
+#tab-map .mh-etiket {
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--mh-soluk);
+}
+#tab-map .mh-etiket-ana {
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+#tab-map .mh-d {
+  color: var(--mh-veri);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+#tab-map .mh-ikincil { color: var(--ink-2); white-space: nowrap; }
+/* JS değerleri VERSAL yazıyor ("PARÇALI BULUTLU", "AZALAN AY") — şeritte okunur
+   küçük harf. `html lang="tr"` sayesinde I→ı / İ→i doğru dönüşür. */
+#tab-map .mh-kucuk-harf { text-transform: lowercase; }
+
+/* :where → özgüllük 0,0,1: sınıf kurallarını (font-size, renk) EZMEZ.
+   `#tab-map button` (1,0,1) yazıldığında KATMANLAR/YÖNETİCİ düğmeleri gövde
+   boyutuna büyüyordu — ilk ekran görüntüsünde yakalandı. */
+:where(#tab-map) button { font: inherit; color: inherit; }
+/* Harf arası boşluk ("YAN GIN", "DEP REM") — göz tur 2. Ölçüldü: 1× ekranda Chromium
+   gliflerini tam piksele oturtuyor (Linux'ta alt-piksel konumlandırma kapalı), 2×'te
+   yok. Kusur gerçek ekranda da çıkar, ekran görüntüsü yanılgısı değil;
+   geometricPrecision ipuçlamayı kapatıp kesirli konuma izin veriyor (1×'te düzeldi). */
+:where(#tab-map) { text-rendering: geometricPrecision; }
+#tab-map :is(button, input, select, a):focus-visible {
+  outline: 2px solid var(--mor-ink);
+  outline-offset: 2px;
+}
+
+/* ── Segment (GÖRÜNÜM · görsel mod · araçlar) ── */
+#tab-map .mh-seg {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+}
+#tab-map .mh-seg-b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-1);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  letter-spacing: .14em;
+  color: var(--mh-soluk);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--sure-2) var(--egri), background var(--sure-2) var(--egri),
+              box-shadow var(--sure-2) var(--egri);
+}
+#tab-map .mh-seg-b:hover { color: var(--ink-1); background: var(--yuzey-2); }
+/* Seçili görünüm / seçili görsel mod — ürünün seçili dili: mor zemin + mor metin */
+#tab-map .mh-seg-b.active {
+  color: var(--mor-ink);
+  background: var(--mor-zemin);
+  box-shadow: inset 0 0 0 1px var(--mor-ink);
+}
+
+/* ══════════════════════════════════════════════════════
+   ① YER ŞERİDİ — sol üst, ☰'nin sağında
+   ══════════════════════════════════════════════════════ */
+#map-serit {
+  position: absolute;
+  top: var(--mh-kenar);
+  left: var(--nav-bosluk, 60px);               /* ☰ sabit sol üstte (kabuk.css § SEKME MENÜSÜ) */
+  z-index: var(--mz-bar);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 4px;
+  max-width: calc(100% - var(--nav-bosluk, 60px) - 16px - var(--mh-sag-ust-gen, 420px));  /* sağ üst gruba çarpmasın (JS ölçer) */
+}
+/* 🔑 SARAR, kaydırmaz ve hiçbir bölümü gizlemez (2026-10-04). Kişiselde şerit
+   `overflow-x:auto` + gizli kaydırma çubuğuydu ve "güneş" ≤1760px'te düşüyordu;
+   üründe 1024'te GÖK bölümü 307px taşıp görünmez kalıyordu (ölçüldü) — eski
+   UZAY kartının verisi kaybolmuş olurdu. Dar masaüstünde ikinci satıra iner;
+   ROTA kartı şeridin gerçek altına oturur (--mh-serit-alt, map-hud.js ölçer). */
+#map-serit .mh-bolum {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 40px;
+  align-content: center;
+  flex-wrap: nowrap;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  border-left: 1px solid var(--m-line);
+}
+/* Ayraç bölümün SOLUNDA ve satır başında YOK (map-hud.js `.mh-satir-basi` yazar).
+   Sağ kenara çizilince sarmada satır sonunda sahipsiz çizgi kalıyordu (göz tur 2). */
+#map-serit .mh-bolum:first-child,
+#map-serit .mh-bolum.mh-satir-basi { border-left: 0; }
+/* Sarınca satırlar boşluk bırakmadan dolar (tek satırda şerit içerik genişliğinde — etkisiz) */
+#map-serit.mh-sarili .mh-bolum { flex-grow: 1; }
+#map-serit .mh-bolum > * { flex-shrink: 0; }
+#map-serit .mh-sehir {
+  font-family: var(--font);
+  font-size: var(--yazi-12);
+  font-weight: 600;
+  color: var(--ink-1);
+  letter-spacing: 0;
+}
+/* Güneş verisi gelmezse (DONKI boş/erişilemez) öğe hiç görünmez — "güneş —" boş hücre olmasın */
+#map-serit .mh-gunes { display: inline-flex; align-items: baseline; gap: 8px; }
+#map-solar-grup[hidden] { display: none; }
+/* Şeridin tamamını açma düğmesi yalnız telefonda (aşağıda); masaüstünde hepsi görünür */
+#map-serit-ac { display: none; }
+
+/* ══════════════════════════════════════════════════════
+   ② SAĞ ÜST — ⌕ · GÖRÜNÜM · KATMANLAR
+   ══════════════════════════════════════════════════════ */
+#map-sag-ust {
+  position: absolute;
+  top: var(--mh-kenar);
+  right: var(--mh-kenar);
+  z-index: var(--mz-bar);
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  height: 40px;
+}
+#tab-map .mh-ikon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: color var(--sure-2) var(--egri), border-color var(--sure-2) var(--egri);
+}
+#tab-map .mh-ikon:hover,
+#tab-map .mh-ikon[aria-expanded="true"] { color: var(--ink-1); border-color: var(--kenar-guclu); }
+
+#map-katman-ac {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  letter-spacing: .16em;
+  color: var(--ink-2);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--sure-2) var(--egri), border-color var(--sure-2) var(--egri);
+}
+#map-katman-ac:hover,
+#map-katman-ac[aria-expanded="true"] { color: var(--ink-1); border-color: var(--kenar-guclu); }
+#map-katman-ac .mh-d { letter-spacing: .06em; }
+#map-katman-ac:not(.mh-var) .mh-d { color: var(--mh-soluk); }   /* 0 açık → canlı değer yok */
+
+/* ── Konum araması ── */
+#map-search-bar {
+  position: absolute;
+  top: var(--mh-ust);
+  right: var(--mh-kenar);
+  z-index: calc(var(--mz-panel) + 10);
+  width: 360px;
+  height: 44px;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 0 12px;
+  color: var(--mh-soluk);
+  transition: border-color var(--sure-2) var(--egri);
+}
+#tab-map.ara-acik #map-search-bar {
+  display: flex;
+  animation: mh-asagi var(--sure-4) var(--egri);
+}
+#map-search-bar:focus-within { border-color: var(--kenar-guclu); }
+#map-search-bar svg { flex-shrink: 0; }
+#map-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink-1);
+  font-family: var(--font);
+  font-size: var(--yazi-13);
+}
+#map-search-input::placeholder { color: var(--mh-soluk); }
+#map-search-input::-webkit-search-cancel-button { display: none; }
+#tab-map #map-search-input:focus-visible { outline: none; }   /* odak halkası kutunun kenarında */
+#map-search-btn {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--mor-ink);
+  border-radius: var(--r-1);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  letter-spacing: .16em;
+  color: var(--mor-ink);
+  cursor: pointer;
+  transition: background var(--sure-2) var(--egri);
+}
+#map-search-btn:hover { background: var(--mor-zemin); }
+#map-search-input:disabled + #map-search-btn { opacity: .5; }
+
+/* ══════════════════════════════════════════════════════
+   ③ KATMANLAR ÇEKMECESİ — sağdan 320px
+   ══════════════════════════════════════════════════════ */
+#map-katman-cekmece {
+  position: absolute;
+  top: var(--mh-ust);
+  right: var(--mh-kenar);
+  bottom: var(--mh-kenar);
+  width: var(--mh-cekmece);
+  z-index: var(--mz-panel);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+#tab-map.katman-acik #map-katman-cekmece {
+  display: flex;
+  animation: mh-soldan var(--sure-4) var(--egri);
+}
+#tab-map.katman-acik.ara-acik #map-katman-cekmece { top: calc(var(--mh-ust) + 52px); }
+
+.mk-bas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 10px 10px 16px;
+  border-bottom: 1px solid var(--m-line);
+  flex-shrink: 0;
+}
+.mk-bas-sag { display: flex; gap: 4px; }
+.mk-bas-b {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-1);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  letter-spacing: .14em;
+  color: var(--mh-soluk);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--sure-2) var(--egri), border-color var(--sure-2) var(--egri);
+}
+.mk-bas-b:hover { color: var(--ink-1); border-color: var(--m-line-strong); }
+.mk-bas-b[aria-expanded="true"] { color: var(--ink-1); border-color: var(--m-line-strong); }
+
+.mk-ic {
+  /* Altta devam eden satır varken solma (map-hud.js `.mk-sonda` yazar). Maske
+     yalnız saydamlık taşır — renk değil. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+          mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 16px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--m-line-strong) transparent;
+  overscroll-behavior: contain;
+}
+.mk-ic.mk-sonda { -webkit-mask-image: none; mask-image: none; }
+.mk-grup-bas {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0;
+  padding: 16px 0 6px;
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  font-weight: var(--ag-normal);
+  letter-spacing: .16em;
+  color: var(--mh-soluk);
+}
+.mk-grup-sayi { font-variant-numeric: tabular-nums; }
+.mk-grup-sayi b { font-weight: var(--ag-normal); }
+.mk-grup-acik .mk-grup-sayi b { color: var(--mh-veri); }
+
+/* Satırın kendisi anahtar (role="switch") — 52px dokunma alanı */
+.mk-satir {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "ad sayi anahtar" "ne ne anahtar";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 2px;
+  width: calc(100% + 16px);
+  min-height: 52px;
+  margin: 0 -8px;
+  padding: 9px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--m-line);
+  border-radius: var(--r-1);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--sure-2) var(--egri);
+}
+.mk-satir:last-child { border-bottom: 0; }
+.mk-satir:hover { background: var(--yuzey-2); }
+.mk-ad {
+  grid-area: ad;
+  font-family: var(--font);
+  font-size: var(--yazi-12);
+  font-weight: var(--ag-orta);
+  color: var(--ink-1);
+  letter-spacing: .02em;
+}
+.mk-ne {
+  grid-area: ne;
+  font-family: var(--font);
+  font-size: var(--yazi-11);
+  color: var(--mh-soluk);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mk-sayi {
+  grid-area: sayi;
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  color: var(--mh-veri);
+  font-variant-numeric: tabular-nums;
+}
+.mk-anahtar {
+  grid-area: anahtar;
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--yuzey-3);
+  box-shadow: inset 0 0 0 1px var(--m-line);
+  transition: background var(--sure-3) var(--egri), box-shadow var(--sure-3) var(--egri);
+}
+.mk-anahtar::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--mh-soluk);
+  transition: transform var(--sure-3) var(--egri), background var(--sure-3) var(--egri);
+}
+/* AÇIK anahtar = kullanıcının açtığı durum → mor (ürünün eylem/seçili rengi) */
+.mk-satir[aria-checked="true"] .mk-anahtar {
+  background: var(--mor-zemin);
+  box-shadow: inset 0 0 0 1px var(--mor-ink);
+}
+.mk-satir[aria-checked="true"] .mk-anahtar::after {
+  transform: translateX(16px);
+  background: var(--mor-ink);
+  box-shadow: var(--golge-1);
+}
+.mk-satir.yukleniyor .mk-anahtar::after { animation: mh-nabiz 1s var(--egri) infinite; }
+/* Açık temada koyu yuvarlak beyaz yuvada "açık" gibi okunuyordu (göz tur 2). Alışılmış
+   biçim: kapalı = gri yuva + beyaz top (kenar-guclu 3.1:1, WCAG 1.4.11), açık = mor
+   yuva + beyaz top sağda. */
+:root[data-tema="acik"] #tab-map .mk-anahtar { background: var(--kenar-guclu); box-shadow: none; }
+:root[data-tema="acik"] #tab-map .mk-anahtar::after { background: var(--yuzey-3); box-shadow: var(--golge-1); }
+:root[data-tema="acik"] #tab-map .mk-satir[aria-checked="true"] .mk-anahtar { background: var(--mor-yuzey); }
+:root[data-tema="acik"] #tab-map .mk-satir[aria-checked="true"] .mk-anahtar::after { background: var(--yuzey-3); }
+.mk-satir.yukleniyor .mk-sayi::before {
+  content: '…';                     /* dil bağımsız — yükleniyor durumu anahtarın nabzında */
+  color: var(--mh-soluk);
+  font-family: var(--font);
+  font-size: var(--yazi-11);
+}
+
+/* ══════════════════════════════════════════════════════
+   ④ GÜNDEM — sol alt
+   ══════════════════════════════════════════════════════ */
+#map-gundem {
+  position: absolute;
+  left: var(--mh-kenar);
+  bottom: var(--mh-kenar);
+  z-index: var(--mz-bar);
+  width: 380px;
+  max-height: calc(100% - var(--mh-ust) - var(--mh-kenar));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: bottom var(--sure-4) var(--egri);
+}
+#map-gundem-bas {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 14px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+#map-gundem-bas:hover .mh-etiket-ana { color: var(--ink-1); }
+#map-gundem-bas .mh-ipucu {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  letter-spacing: .12em;
+  color: var(--mh-soluk);
+  white-space: nowrap;
+}
+#tab-map .mh-ok {
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--mh-soluk);
+  border-bottom: 1.5px solid var(--mh-soluk);
+  transform: rotate(-135deg) translate(-2px, -2px);   /* açık: yukarı (kapat) */
+  transition: transform var(--sure-3) var(--egri);
+  flex-shrink: 0;
+}
+#map-gundem:not(.acik) .mh-ok { transform: rotate(45deg); }
+#map-gundem:not(.acik) .mh-ipucu { display: none; }
+
+.mh-haberler {
+  list-style: none;
+  margin: 0;
+  padding: 0 6px 6px;
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--m-line-strong) transparent;
+}
+#map-gundem:not(.acik) .mh-haberler { display: none; }
+.mh-haberler li + li .mh-haber { border-top: 1px solid var(--m-line); }
+.mh-haber {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--r-1);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: var(--yazi-12);
+  line-height: 1.45;
+  color: var(--ink-2);
+  transition: background var(--sure-2) var(--egri), color var(--sure-2) var(--egri);
+}
+.mh-haber:hover { background: var(--yuzey-2); color: var(--ink-1); }
+.mh-haber:hover .mh-haber-k { color: var(--ink-2); }
+.mh-haber-t {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mh-haber-k {
+  max-width: 96px;
+  padding-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  letter-spacing: .08em;
+  color: var(--mh-soluk);
+}
+/* Aynı olayı veren öbür kaynakların sayısı (gündem kümeleme): kaynak adının yanında "+2". */
+.mh-haber-k2 { max-width: 128px; display: flex; gap: 6px; justify-content: flex-end; }
+.mh-haber-ka { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.mh-haber-n {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border: 1px solid var(--m-line-strong);
+  border-radius: 999px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.mh-bos {
+  padding: 8px;
+  font-family: var(--font);
+  font-size: var(--yazi-11);
+  color: var(--mh-soluk);
+}
+
+/* ══════════════════════════════════════════════════════
+   ⑤ ALT SAĞ — koordinat · araçlar · görsel mod
+   ══════════════════════════════════════════════════════ */
+#map-alt-sag {
+  position: absolute;
+  right: var(--mh-kenar);
+  bottom: var(--mh-kenar);
+  z-index: var(--mz-bar);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: right var(--sure-4) var(--egri), bottom var(--sure-4) var(--egri);
+}
+#tab-map.katman-acik #map-alt-sag { right: calc(var(--mh-cekmece) + 2 * var(--mh-kenar)); }
+/* Dar masaüstünde çekmece açıkken alt sağ grup sola kayıp GÜNDEM'in üstüne biniyordu
+   (1024'te koordinat kutusu kartın 200px'ini örttü — ölçüldü). Koordinat bilgidir,
+   kontrol değil: o an düşer, araçlar ve görsel mod kalır. */
+@media (max-width: 1279px) and (min-width: 769px) {
+  #tab-map.katman-acik #map-coords { display: none; }
+}
+#map-coords {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  min-width: 27ch;
+  padding: 0 12px;
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+  letter-spacing: .1em;
+  color: var(--mh-soluk);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Araçlar (nişangâh, zaman çizelgesi) aç/kapa durumu → açık anahtarla aynı dil (mor) */
+#tab-map .mh-araclar .mh-seg-b { padding: 0; width: 32px; letter-spacing: 0; }
+#tab-map .mh-araclar svg { display: block; }
+#tab-map .mh-araclar .mh-seg-b.active {
+  color: var(--mor-ink);
+  background: var(--mor-zemin);
+  box-shadow: inset 0 0 0 1px var(--mor-ink);
+}
+
+/* Zaman çizelgesi açıkken alttaki yüzeyler onun üstüne çıkar */
+#tab-map:has(#map-timeline.tl-open) #map-gundem,
+#tab-map:has(#map-timeline.tl-open) #map-alt-sag { bottom: var(--mh-tl); }
+
+/* ══════════════════════════════════════════════════════
+   ROTA — yol tarifi çizilince sol üstte (JS display:'' ile açar)
+   ══════════════════════════════════════════════════════ */
+#map-card-route {
+  position: absolute;
+  top: var(--mh-serit-alt, var(--mh-ust));
+  left: var(--mh-kenar);
+  z-index: var(--mz-bar);
+  width: 320px;
+  max-height: 44vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 14px 12px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--yazi-11);
+}
+.mh-rota-bas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--m-line);
+}
+#map-route-clear {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-1);
+  background: transparent;
+  font-size: var(--yazi-11);
+  letter-spacing: .14em;
+  color: var(--mh-soluk);
+  cursor: pointer;
+}
+#map-route-clear:hover { color: var(--kirmizi-ink); border-color: var(--kirmizi-ink); }
+.mh-rota-sat {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+  color: var(--mh-soluk);
+  letter-spacing: .06em;
+}
+.mh-rota-sat .mh-d { overflow: hidden; text-overflow: ellipsis; }
+#map-route-steps {
+  margin-top: 8px;
+  overflow-y: auto;
+  min-height: 0;
+  font-family: var(--font);
+  font-size: var(--yazi-11);
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* ──────────────────────────────────────────────────────
+   GİRİŞ HAREKETLERİ (200-300 ms, amaçlı)
+   ────────────────────────────────────────────────────── */
+@keyframes mh-soldan { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
+@keyframes mh-asagi  { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes mh-yukari { from { opacity: 0; transform: translateY(8px); }  to { opacity: 1; transform: none; } }
+@keyframes mh-nabiz  { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+@media (prefers-reduced-motion: reduce) {
+  #tab-map.katman-acik #map-katman-cekmece,
+  #tab-map.ara-acik #map-search-bar,
+  #map-gundem.acik .mh-haberler,
+  .mk-satir.yukleniyor .mk-anahtar::after { animation: none; }
+}
+
+/* ══════════════════════════════════════════════════════
+   TELEFON (≤768px) — şerit üstte kısalır; kontroller başparmak bölgesinde
+   ══════════════════════════════════════════════════════
+   Alt iki sıra:   [GÖRÜNÜM ········· EO FLIR NV CRT]   bottom 56
+                   [GÜNDEM · N ······· ⌕  KATMANLAR]    bottom 8
+   Üründe ☰ telefonda da sol üstte (kabuk.css) → şerit --nav-bosluk'tan başlar. */
+@media (max-width: 768px) {
+  #tab-map { --mh-ust: 56px; }
+
+  #map-serit {
+    left: var(--nav-bosluk, 60px);
+    right: var(--mh-kenar);
+    max-width: none;
+    padding: 0 2px;
+  }
+  #map-serit .mh-bolum { padding: 10px 10px; gap: 6px; }
+  #map-serit .mh-bolum:nth-child(3) { border-right: 0; }
+  /* Kapalı: çekirdek üç bölüm (şehir · sıcaklık · gün). ⌄ ile tamamı açılır —
+     ayrıntı gizlenir ama KAYBOLMAZ (eski KONUM/HAVA/UZAY kartlarının hepsi burada). */
+  #map-serit:not(.acik) .mh-tel-gizle { display: none; }
+  /* Kapalıyken bölüm etiketleri (HAVA/GÜN) düşer: üç değer tek satıra sığar — EN'de
+     "WEATHER … DAY …" ikinci satıra iniyor, birinci satırın sonu boş kalıyordu.
+     Değer kendini anlatıyor (°C · doğuş–batış); etiketler ⌄ ile açılınca geri gelir. */
+  #map-serit:not(.acik) .mh-etiket { display: none; }
+  #map-serit.acik { padding: 4px 44px 6px 2px; }
+  /* Açıkken bölümler satır satır; bölümün KENDİSİ de sarar (GÖK ~340px, şerit ~330px) */
+  #map-serit.acik .mh-bolum {
+    border-right: 0;
+    flex-wrap: wrap;
+    min-height: 0;
+    padding: 6px 10px;
+    row-gap: 2px;
+    width: 100%;
+  }
+  #map-serit-ac {
+    display: grid;
+    place-items: center;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 44px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--m-radius-sm);
+    background: transparent;
+    cursor: pointer;
+  }
+  #map-serit-ac .mh-ok { transform: rotate(45deg) translate(-2px, -2px); }
+  #map-serit.acik #map-serit-ac .mh-ok { transform: rotate(-135deg) translate(-2px, -2px); }
+  #map-serit:not(.acik) { padding-right: 40px; }
+
+  /* Alt iki sıra TEK IZGARA (göz tur 2): sol yarı GÖRÜNÜM / GÜNDEM, sağ yarı
+     görsel mod / ⌕ + KATMANLAR. Kenarlar sekmenin %50'sinde hizalanır. */
+  #map-sag-ust {
+    top: auto;
+    bottom: var(--mh-kenar);
+    left: calc(50% + 4px);
+    right: var(--mh-kenar);
+    justify-content: flex-end;
+  }
+  /* Sağ yarıya ⌕ (40) + KATMANLAR sığmalı: 11-02'ye kadar geniş harf aralığıyla KATMANLAR
+     sığmıyor, ⌕ 390'da 14 px'e eziliyordu (dokunulamaz). En dar telefonda "açık" düşer, sayı kalır.
+     Ölçü: frontend/tests/test_harita_dar.py */
+  #map-katman-ac { flex: 1; justify-content: center; gap: 6px; padding: 0 8px; letter-spacing: .08em; }
+  @media (max-width: 374px) { #map-katman-ac .mh-d [data-i18n="harita.acik"] { display: none; } }
+  #map-gorunum {
+    position: absolute;
+    left: calc(-100% - 8px);      /* sağ yarının yüzdesi = sol yarının genişliği */
+    width: 100%;
+    bottom: 48px;
+    height: 40px;
+    box-sizing: border-box;
+  }
+  #map-gorunum .mh-seg-b, #map-view-bar .mh-seg-b { flex: 1; padding: 0 4px; }
+  #tab-map .mh-seg-b { min-height: 34px; padding: 0 10px; letter-spacing: .1em; }
+
+  #map-alt-sag { bottom: 56px; left: calc(50% + 4px); }
+  #map-view-bar { flex: 1; box-sizing: border-box; }
+  #map-coords { display: none; }
+  #tab-map .mh-araclar {
+    position: absolute;
+    right: 0;
+    bottom: 48px;
+    flex-direction: column;
+  }
+  #tab-map .mh-araclar .mh-seg-b { width: 36px; min-height: 36px; }
+  #map-view-bar { height: 40px; }
+
+  /* Arama telefonda şeridin yerini alır (üstte; ☰'ye yer bırakır) */
+  #map-search-bar {
+    top: var(--mh-kenar);
+    left: var(--nav-bosluk, 60px);
+    right: var(--mh-kenar);
+    width: auto;
+  }
+
+  /* Çekmece: şeridin altından alt sıranın üstüne, tam genişlik.
+     Şeridin GERÇEK altı (--mh-serit-alt): dar telefonda ya da uzun dilde
+     (EN "WEATHER … DAY …") şerit iki satıra iner, sabit 56px çekmecenin
+     başlığını örtüyordu (ölçüldü 10-04, 420 EN). */
+  #map-katman-cekmece,
+  #tab-map.katman-acik.ara-acik #map-katman-cekmece {
+    top: var(--mh-serit-alt, var(--mh-ust));
+    left: var(--mh-kenar);
+    right: var(--mh-kenar);
+    bottom: 56px;
+    width: auto;
+  }
+  #tab-map.katman-acik #map-katman-cekmece { animation-name: mh-yukari; }
+  #tab-map.katman-acik #map-alt-sag,
+  #tab-map.katman-acik #map-gorunum { visibility: hidden; }
+  #tab-map.katman-acik #map-alt-sag { right: var(--mh-kenar); }
+
+  /* GÜNDEM: kapalıyken yalnız başlık (sağdaki düğme grubuna kadar); açıkken
+     başlık altta kalır, liste yukarı doğru açılır — parmak başlığın üstünde. */
+  #map-gundem {
+    width: auto;
+    right: calc(50% + 4px);
+    max-height: 62vh;
+    flex-direction: column-reverse;
+  }
+  /* Açık GÜNDEM alt iki kontrol sırasının ÜSTÜNDE durur (8 + 40 + 8 + 40 + 8):
+     önceden listenin tamamı GÖRÜNÜM, EO/FLIR, ⌕ ve KATMANLAR'ı örtüyordu (göz tur 2). */
+  #map-gundem.acik {
+    right: var(--mh-kenar);
+    bottom: 104px;
+    max-height: calc(100% - 104px - var(--mh-serit-alt, var(--mh-ust)));
+    z-index: calc(var(--mz-panel) + 5);
+  }
+  #map-gundem.acik .mh-haberler { animation: mh-yukari var(--sure-4) var(--egri); padding-top: 6px; }
+  #map-gundem:not(.acik) #map-gundem-bas .mh-ipucu { display: none; }
+  #map-gundem.acik #map-gundem-bas { border-top: 1px solid var(--m-line); }
+  .mh-haber { font-size: var(--yazi-12); min-height: 44px; }
+
+  #map-card-route {
+    left: var(--mh-kenar);
+    right: var(--mh-kenar);
+    width: auto;
+    max-height: 40vh;
+  }
+
+  /* Zaman çizelgesi açıkken alt sıralar çekilir (çizelgenin kendi GİZLE'si var) */
+  #tab-map:has(#map-timeline.tl-open) #map-alt-sag,
+  #tab-map:has(#map-timeline.tl-open) #map-gorunum { visibility: hidden; }
+  #tab-map:has(#map-timeline.tl-open) #map-gundem { bottom: var(--mh-kenar); }
+}

@@ -1,0 +1,656 @@
+/* ============================================================================
+   YUKI · KABUK + ANA NAVİGASYON
+   tokens.css → temel.css → ogeler.css → kabuk.css sırasının son katmanı.
+   Eski tema kurallarını seçici ağırlığıyla değil, kaskad sırasıyla geçersiz kılar.
+   ========================================================================== */
+
+body { overflow: hidden; }
+
+.kabuk {
+  position: relative;
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  gap: 0;
+  padding: 0;
+  border-radius: var(--r-5);
+  background: var(--bg);
+  overflow: visible;
+  container-type: inline-size;
+  container-name: kabuk;
+}
+
+:root[data-pencere="panel"] .kabuk,
+:root[data-pencere="mini"] .kabuk {
+  background: color-mix(in oklab, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(130%);
+  backdrop-filter: blur(20px) saturate(130%);
+}
+
+:root[data-pencere="tam"] .kabuk {
+  background: var(--bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+
+.kabuk-icerik {
+  position: absolute;
+  min-width: 0;
+  min-height: 0;
+  border-radius: var(--r-4);
+}
+
+/* --------------------------------------------------------------------------
+   Pencere modu denetimleri  (2026-09-06: üst şerit kaldırıldı)
+
+   `.kabuk-ust-serit` · `.pencere-mod-dugme` · `.pencere-mod-popover` ·
+   `.pencere-mod-baslik` kuralları SİLİNDİ — markup GÖRÜNÜM menüsüne taşındı
+   (index.html `#pencere-mod-kaynak` → modes/chat-modes.js `.vmm-pencere`).
+   Kalan seçiciler popover'a bağlı DEĞİLDİ, taşındıktan sonra da çalışıyorlar.
+   ----------------------------------------------------------------------- */
+
+.pencere-kose-alani[hidden] {
+  display: none;
+}
+
+.pencere-mod-secenekleri {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--b-2);
+}
+
+.pencere-mod-secenegi {
+  min-width: 0;
+  padding-inline: var(--b-3);
+}
+
+.pencere-mod-secenegi svg {
+  width: var(--b-7);
+  height: var(--b-7);
+  flex: 0 0 auto;
+  stroke-width: 1.5;
+}
+
+.pencere-mod-secenegi[aria-checked="true"] {
+  background: var(--mor-zemin);
+  color: var(--mor-ink);
+  font-weight: var(--ag-kalin);
+}
+
+.pencere-kose-alani {
+  display: grid;
+  gap: var(--b-3);
+  padding: var(--b-4) var(--b-3) var(--b-3);
+}
+
+.pencere-kose-alani label {
+  color: var(--ink-2);
+  font-size: var(--yazi-12);
+  font-weight: var(--ag-orta);
+}
+
+/* İçerik kartı — kabuğun tamamı. Sekme menüsü artık yer KAPLAMIYOR (2026-09-25): ☰ ile açılan çekmece içeriğin üstüne biner, bu yüzden rayın ve
+   alt şeridin genişlik/yükseklik ofsetleri kalktı. Tek geometri, her genişlik. */
+.kabuk-icerik {
+  /* 11-14 tam hizala: kişisel Yuki gibi kenardan kenara (eskiden 12 px içeride, yuvarlak kart).
+     Kart dili 390'da her sekmeyi 24 px daraltıyordu (Dosya mührü gizleniyor, Plan başlıkları erken kesiliyordu). */
+  inset: 0;
+  border-radius: 0;
+  background: var(--yuzey-1);
+}
+
+/* --------------------------------------------------------------------------
+   Sekme yüzeyleri — görünürlük yalnız [hidden] + data-aktif ile yönetilir.
+   ----------------------------------------------------------------------- */
+
+.kabuk-icerik > #app,
+.kabuk-icerik > #tab-planner,
+.kabuk-icerik > #tab-galeri,
+.kabuk-icerik > #tab-dosya,
+.kabuk-icerik > #tab-hq {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  border-radius: inherit;
+}
+
+.kabuk-icerik > #app[data-aktif],
+.kabuk-icerik > #tab-planner[data-aktif],
+.kabuk-icerik > #tab-galeri[data-aktif],
+.kabuk-icerik > #tab-dosya[data-aktif],
+.kabuk-icerik > #tab-hq[data-aktif] {
+  display: flex;
+  view-transition-name: sekme;
+}
+
+/* ── Pencere konumlandırma kısıtı ────────────────────────────────────────────
+   Ölçüldü (2026-08-21, Hyprland/Wayland): setBounds sessizce yok sayılıyor.
+   Main sonucu ölçüp haber veriyor, burada durum GÖRÜNÜR kılınıyor — sessiz
+   başarısızlık yasak (C4). Devre dışı olan gerçekten devre dışı: soluk ama
+   tıklanabilir bırakmak, çalışmayan bir düğmeyi çalışıyor göstermek olurdu. */
+.pencere-mod-secenegi:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pencere-kisit-notu {
+  margin: var(--b-5) 0 0;
+  padding-top: var(--b-5);
+  border-top: 1px solid var(--kenar);
+  color: var(--ink-3);
+  font-size: var(--yazi-12);
+  line-height: var(--satir-orta);
+  max-width: 34ch;
+}
+
+/* Eski sekme rayı (60px ikon rayı · <620px alt şerit · TABS/‹ düğmeleri ·
+   body.nav-collapsed) 2026-09-25'te KALDIRILDI — yerini bu dosyanın
+   sonundaki "SEKME MENÜSÜ" çekmecesi aldı. Tarihçesi git geçmişinde.
+
+   Sürükleme (çerçevesiz Electron): pencere `#header` · `.hud-status-bar` ·
+   `.sohbet-baslik` üzerinden taşınır — ölçüldü 2026-09-06, 1280×800. */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AYARLAR = KATMAN, sekme değil          (2026-08-28)
+
+   Ölçülen sorun: girişte 3 kapı, birinin arkasında 17 oda; ve AYARLAR açıkken
+   ekranda İKİ dikey şerit yan yana duruyordu — 60px uygulama rayı (CHAT/PLAN/
+   AYARLAR) + 196px ayar menüsü = 256px, içerik başlamadan.
+
+   🔑 Rayın AYARLAR açıkken orada durması bir çelişki: kullanıcı zaten
+   AYARLAR'ın içinde, ray ona "AYARLAR" düğmesi gösteriyor. Katman rayı
+   ÖRTERek iki şeridi bire indiriyor — menüyü silmeye gerek kalmıyor.
+
+   ⚠️ DOM DEĞİŞMEDİ. `#tab-hq` yerinde duruyor, `switchTab` aynı şekilde
+   `data-aktif` yazıyor. Değişen yalnız konumlandırma → geri almak bu bloğu
+   silmek kadar. Kimlik/işlev/ARIA'ya dokunulmadı.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.kabuk-icerik > #tab-hq[data-aktif] {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-cekmece);   /* içeriğin üstünde; ☰, çekmece, modal/popover/bildirimin ALTINDA */
+  border-radius: 0;
+  background: var(--bg);
+  animation: hq-katman-gir var(--sure-4) var(--egri-giris) both;
+}
+
+@keyframes hq-katman-gir { from { opacity: 0; translate: 0 8px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .kabuk-icerik > #tab-hq[data-aktif] { animation: none; }
+}
+
+/* Katmanı kapatan düğme — sağ üstte, katmanın kendi düzleminde.
+   Katmanın kapanabilir olduğunu GÖSTEREN tek işaret bu (☰ katmanın üstünde
+   kalır ama başka sekmeye götürür — "geri" demek değil). */
+#hq-katman-kapat {
+  position: absolute;
+  inset-block-start: var(--b-5);
+  inset-inline-end: var(--b-5);
+  z-index: var(--z-yapisik);
+  display: grid;
+  place-items: center;
+  inline-size: var(--hedef);
+  block-size: var(--hedef);
+  padding: 0;
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-2);
+  background: var(--yuzey-1);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+#hq-katman-kapat:hover { background: var(--yuzey-2); color: var(--ink-1); }
+#hq-katman-kapat:focus-visible { outline: 2px solid var(--mor-ink); outline-offset: 2px; }
+
+
+/* ═══ KABUK — style.css'ten taşındı ( FAZ C/5a, 2026-09-01) ═══ */
+/* HUD Status Bar (replaces glass-pill) */
+.hud-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 12px;
+  background: rgba(96,165,250,0.06);
+  border: 1px solid var(--border-dim);
+  position: relative;
+
+  /* Mini corner brackets */
+  background-image:
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud)),
+    linear-gradient(var(--border-hud), var(--border-hud));
+  background-size:
+    8px 1px, 1px 8px,
+    8px 1px, 1px 8px,
+    8px 1px, 1px 8px,
+    8px 1px, 1px 8px;
+  background-position:
+    top left, top left,
+    top right, top right,
+    bottom left, bottom left,
+    bottom right, bottom right;
+  background-repeat: no-repeat;
+  background-color: rgba(96,165,250,0.05);
+}
+/* Sohbet sekme başlığı (11-13): görünüm css/baslik-gozlemevi.css'te; burada yalnız sürükleme +
+   durum rozetinin başlığa yaslanması (#header space-between — rozet ortaya kaçmasın). */
+.sohbet-baslik { -webkit-app-region: drag; }
+/* Halka modunda köşe hizası: #header sayfada 12,12; sol iç payı --nav-bosluk, üst payı 10px (dikey telefonda 5px).
+   Başlık ☰ ile aynı üst çizgide durur (ortalanınca 65px'lik çubukta 7px aşağı kayıyordu). */
+body.hud-ring-mode .sohbet-baslik {
+  align-self: flex-start;
+  margin-inline-start: calc(var(--sb-sol, 64px) - 12px - var(--nav-bosluk, 60px));
+  margin-block-start: calc(var(--sb-ust, 17px) - 12px - 10px);
+}
+.sohbet-baslik + .hud-status-bar { margin-inline-end: auto; }
+/* State badge */
+#state-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+#state-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--p-green);
+  box-shadow: 0 0 6px var(--p-green);
+  transition: background 0.3s, box-shadow 0.3s;
+  flex-shrink: 0;
+}
+#state-badge::after {
+  font-family: var(--font-hud);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+#state-badge.state-idle #state-dot        { background: var(--p-green);  box-shadow: 0 0 6px var(--p-green); }
+/* 2026-08-03: iki ayrı gösterge de "ONLINE" diyordu — biri Yuki'nin DURUMU,
+   öbürü (#ws-pill) BAĞLANTI. Aynı kelime, aynı yeşil nokta, iki farklı anlam:
+   kullanıcı ikisini de bağlantı sanıyordu. Durum artık ne yaptığını söylüyor.
+   Ayrıca metinler Türkçeleşti — arayüzün geri kalanı zaten Türkçe. */
+/* 2026-09-22: metin CSS'te sabit DEĞİL — core.js::_durumMetniYaz
+   sözlükten özniteliğe yazar (sabit metin EN kullanıcıya Türkçe görünüyordu). */
+#state-badge.state-idle::after      { content: attr(data-durum-metni); color: var(--p-green); }
+/* 11-13 (goz): model kurulu değilken boşta durum "HAZIR" (yeşil) değil — yanındaki rozet "ANAHTAR YOK"
+   derken çelişiyordu. Boştayken durum rozeti eksik kurulumu söyler (sarı); bağlantı rozeti aynı şeyi
+   ikinci kez söylemesin diye görsel olarak çekilir (role=status, ekran okuyucu yine okur). Gerçek
+   bir durum (dinliyor/düşünüyor…) varsa o görünür. Telefon kuralı aşağıda (@media) tüm durumları kapsar. */
+#header:has(#ws-pill.anahtar-yok) #state-badge.state-idle::after { content: attr(data-anahtar-metni); color: #f5cf73; }
+#header:has(#ws-pill.anahtar-yok) #state-badge.state-idle #state-dot { background: #f0b429; box-shadow: 0 0 6px #f0b429; }
+#header:has(#state-badge.state-idle) #ws-pill.anahtar-yok {
+  position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; padding: 0; border: 0;
+}
+/* Header controls */
+.hud-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+/* Volume Slider */
+#vol-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  -webkit-app-region: no-drag;
+}
+#vol-icon { font-size: 11px; cursor: pointer; user-select: none; }
+#vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+/* WS Connection Pill */
+#ws-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-family: var(--font-hud);
+  font-size: 7px;
+  letter-spacing: 0.08em;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.3);
+  -webkit-app-region: no-drag;
+  transition: border-color 0.3s, color 0.3s;
+}
+#ws-pill.offline { border-color: #ef444480; color: #fca5a5; }
+#ws-pill.offline #ws-dot { background: #ef4444; box-shadow: 0 0 5px #ef4444; animation: dotPulse 1s ease-in-out infinite; }
+/* Backend bağlı, yapay zekâ servisi kurulu değil (core.js `_anahtarYokla`): kırmızı değil sarı —
+   arıza değil, eksik kurulum. Anahtar ekranının "kurulum" ışığıyla aynı aile. */
+#ws-pill.anahtar-yok { border-color: #f0b42980; color: #f5cf73; }
+#ws-pill.anahtar-yok #ws-dot { background: #f0b429; box-shadow: 0 0 5px #f0b429; animation: none; }
+#ws-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #555;
+  flex-shrink: 0;
+}
+#avatar-toggle {
+  font-size: 10px;
+  font-family: var(--font-hud);
+  color: var(--muted);
+  padding: 0 6px;
+  width: auto;
+}
+
+
+/* Staggered entry animations */
+
+
+/* ═══ KABUK — tek ekranlı @media blokları (2026-09-01) ═══ */
+
+
+/* ═══ KABUK — tüm tanımlar birlikte (/2, 2026-09-01) ═══ */
+#mode-toggle {
+  font-size: 9px;
+  font-family: var(--font-hud);
+  letter-spacing: 0.06em;
+  padding: 0 6px;
+  width: auto;
+}
+/* ══════════════════════════════════════════════════════════
+   HEADER
+   ══════════════════════════════════════════════════════════ */
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-dim);
+  backdrop-filter: var(--glass-blur);
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+  gap: 10px;
+}
+#vol-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 60px;
+  height: 3px;
+  background: var(--border-dim);
+  outline: none;
+  border-radius: 2px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+.hud-mem-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: rgba(240,180,41,0.07);
+  border: 1px solid var(--border-gold);
+  font-family: var(--font-hud);
+  font-size: 10px;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+}
+#eye-indicator {
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+@media (max-width: 800px) {
+  /* Mobilde header'daki mode toggle gizle, floating buton göster */
+    #mode-toggle { display: none; }
+  /* Header taşma önle — az kullanılan butonları gizle */
+    #eye-indicator { display: none; }
+  .hud-mem-badge { display: none; }
+  #ws-label { display: none; }
+  /* HALKA kipinde telefonda bağlantı rozeti yazısız kalıp anlamsız bir nokta kutusuna
+     dönüyordu (goz 11-13). Yazıyı geri açmak başlığı taşırıyordu (421/366 px, ⋯ dışarı).
+     Rozet görsel olarak çekilir (ekran okuyucu için yerinde kalır, role=status); kopukluk
+     durum rozetinin İÇİNDE söylenir: kırmızı nokta + "BAĞLANTI YOK" (metin `_setWsPill`
+     sözlükten `data-baglanti-metni`ye yazar), yer açmak için YUKI etiketi o sırada çekilir. */
+  body.hud-ring-mode #ws-pill {
+    position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap; padding: 0; border: 0;
+  }
+  body.hud-ring-mode #header:has(#ws-pill.offline) #state-badge::after {
+    content: attr(data-baglanti-metni); color: #fca5a5;
+  }
+  body.hud-ring-mode #header:has(#ws-pill.offline) #state-dot {
+    background: #ef4444; box-shadow: 0 0 5px #ef4444;
+  }
+  /* Anahtar yokken de aynı yol: rozet çekili, eksik kurulum durum rozetinin içinde (sarı). */
+  body.hud-ring-mode #header:has(#ws-pill.anahtar-yok) #state-badge::after {
+    content: attr(data-anahtar-metni); color: #f5cf73;
+  }
+  body.hud-ring-mode #header:has(#ws-pill.anahtar-yok) #state-dot {
+    background: #f0b429; box-shadow: 0 0 5px #f0b429;
+  }
+  #vol-slider { display: none; }
+  /* Telefonda kopukken (ya da anahtar yokken — "ANAHTAR YOK", 11-13) rozet o yazı kadar genişler; sekme başlığı (11-13) da çubukta → 390'da
+     çubuk 45px taşıyordu (test_goz_duzelt ölçtü). Kopukken ses düğmesi işlevsiz (konuşma gelmez) → çekilir. */
+  @media (max-width: 480px) {
+    body.hud-ring-mode #header:has(#ws-pill.offline) #vol-icon,
+    body.hud-ring-mode #header:has(#ws-pill.anahtar-yok) #vol-icon { display: none; }
+    body.hud-ring-mode #header:has(#ws-pill.offline) .hud-status-bar,
+    body.hud-ring-mode #header:has(#ws-pill.anahtar-yok) .hud-status-bar { padding-inline: 8px; }
+  }
+  #theme-btn { display: none; }
+}
+@media (max-width: 800px) and (orientation: portrait) {
+  #header { padding: 5px 10px; }
+  body.hud-ring-mode .sohbet-baslik { margin-block-start: calc(var(--sb-ust, 17px) - 12px - 5px); }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SEKME MENÜSÜ — soldan kayan çekmece          (2026-09-25)
+   Kişisel AliceAi'de 2026-09-24'te kurulan düzenin ürün karşılığı; renk ve
+   ölçüler ürünün token'larından (mor = seçili), kişiselin altını değil.
+
+   · Tek düzen her genişlikte: 60px ray ve <620px alt şerit YOK. ☰ (#nav-ac)
+     çekmeceyi içeriğin ÜSTÜNE açar; sekme seçince / perdeye tıklayınca / Esc
+     ile TAMAMEN kapanır. İçerik kartı bu yüzden kabuğun tamamını alır.
+   · Kapalıyken `inert` (tab-nav.js): ekran dışındaki düğmeler Tab ile odak
+     almaz, ekran okuyucu görmez. `visibility` aynı işi CSS'te yapar.
+   · Katmanlar: AYARLAR katmanı `--z-cekmece` (200) → perde/çekmece/☰ onun
+     ÜSTÜNDE (AYAR'dan başka sekmeye dönüş yolu ☰), modal/popover ALTINDA.
+   · Hareket yalnız açılış/kapanışta; sürekli animasyon yok.
+   · ☰ sabit durur, altındaki öğeler ona yer açar (`--nav-bosluk`, kaynak
+     kurallarında): küçük avatar rozeti + başlık (sohbet.css) · #hq-subnav (hq.css) ·
+     #map-serit (map-hud.css; 10-04  öncesi #map-left-panel) · PLAN iframe'ine tab-nav.js'in eklediği
+     `#yuki-nav-bosluk` stili. Sol üste yeni öğe koyan buraya da baksın.
+   · ☰'ın sağındaki köşe = SEKME BAŞLIĞI (11-13): 8 sekmede ortak `.sekme-baslik`
+     (css/baslik-gozlemevi.css, sol kenar --sb-sol 64px · üst --sb-ust 17px).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.kabuk { --nav-w: 232px; --nav-bosluk: 60px; }
+
+/* ── ☰ — her sekmede içerik kartının sol üst köşesi ── */
+#nav-ac {
+  position: fixed;
+  inset-block-start: var(--b-4);    /* kişisel gibi köşeden 8 px (çerçeve kalkınca) */
+  inset-inline-start: var(--b-4);
+  z-index: calc(var(--z-perde) + 2);
+  display: grid;
+  place-items: center;
+  inline-size: var(--hedef-mini);
+  block-size: var(--hedef-mini);
+  padding: 0;
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-2);
+  background: var(--yuzey-2);
+  color: var(--ink-2);
+  box-shadow: var(--golge-1);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--sure-2) var(--egri),
+    color var(--sure-2) var(--egri),
+    border-color var(--sure-2) var(--egri);
+}
+#nav-ac:hover { background: var(--yuzey-3); color: var(--ink-1); }
+#nav-ac:focus-visible { outline: 2px solid var(--mor-ink); outline-offset: 2px; }
+/* Açıkken düğme çekmecenin başlık satırında durur — zemini çekmeceyle birleşir */
+body.nav-acik #nav-ac {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-1);
+}
+
+/* ── Perde ── */
+#nav-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-perde);
+  background: var(--perde);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--sure-4) var(--egri);
+}
+body.nav-acik #nav-backdrop { opacity: 1; pointer-events: auto; }
+
+/* ── Çekmece ── */
+#tab-nav {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: calc(var(--z-perde) + 1);
+  display: flex;
+  flex-direction: column;
+  inline-size: var(--nav-w);
+  max-inline-size: 86vw;
+  padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom);
+  border-inline-end: 1px solid var(--kenar);
+  border-start-end-radius: var(--r-4);
+  border-end-end-radius: var(--r-4);
+  background: var(--yuzey-1);
+  box-shadow: var(--golge-3);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition: transform var(--sure-4) var(--egri), visibility 0s linear var(--sure-4);
+  -webkit-app-region: no-drag;
+}
+#tab-nav::-webkit-scrollbar { display: none; }
+body.nav-acik #tab-nav {
+  transform: none;
+  visibility: visible;
+  transition: transform var(--sure-4) var(--egri), visibility 0s;
+}
+
+/* Başlık — ☰'ın oturduğu satır (☰'ın sağından başlar) */
+.nav-baslik {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  block-size: calc(var(--b-4) + var(--hedef-mini) + var(--b-4));
+  padding-inline-start: var(--nav-bosluk);
+  padding-block-start: 0;
+  border-block-end: 1px solid var(--kenar);
+}
+.nav-marka {
+  color: var(--ink-1);
+  font-size: var(--yazi-13);
+  font-weight: var(--ag-kalin);
+  letter-spacing: 0.2em;
+}
+
+#tab-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--b-1);
+  padding: var(--b-4);
+}
+
+.tab-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--b-5);
+  inline-size: 100%;
+  min-block-size: var(--hedef-dar);
+  padding: 0 var(--b-5);
+  border: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font);
+  font-size: var(--yazi-13);
+  font-weight: var(--ag-orta);
+  line-height: var(--satir-sik);
+  text-align: start;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition:
+    background-color var(--sure-2) var(--egri),
+    color var(--sure-2) var(--egri);
+}
+.tab-btn:hover:not([aria-selected="true"]) { background: var(--yuzey-2); color: var(--ink-1); }
+.tab-btn:focus-visible { outline: 2px solid var(--mor-ink); outline-offset: -2px; }
+.tab-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Seçili = mor zemin + mor yazı + sol çubuk: üç kanal birden */
+.tab-btn[aria-selected="true"] {
+  background: var(--mor-zemin);
+  color: var(--mor-ink);
+  font-weight: var(--ag-kalin);
+}
+.tab-btn[aria-selected="true"]::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: var(--b-4);
+  inline-size: 2px;
+  border-radius: var(--r-tam);
+  background: var(--mor-ink);
+}
+
+.tab-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  inline-size: var(--b-7);
+  block-size: var(--b-7);
+}
+.tab-icon svg { inline-size: 18px; block-size: 18px; stroke: currentColor; }
+
+/* Alt ipucu — klavye kısayolları */
+.nav-ipucu {
+  margin-block-start: auto;
+  padding: var(--b-5) var(--b-6);
+  border-block-start: 1px solid var(--kenar);
+  color: var(--ink-3);
+  font-size: var(--yazi-11);
+  line-height: var(--satir-orta);
+}
+/* Dokunmatikte klavye yok — ipucu yalan söylemesin */
+@media (hover: none) { .nav-ipucu { display: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  #tab-nav, #nav-backdrop { transition: none; }
+}

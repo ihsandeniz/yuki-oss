@@ -1,0 +1,20 @@
+# Yerel kayıt öncesi kapılar — CI'daki "Sır taraması + temizlik kapıları"nın
+# (.github/workflows/temizlik.yml) hızlı, yalnız stage'lenen içeriğe bakan karşılığı.
+# Yeni araç yok: var olan script'leri çağırır.
+#   pip install pre-commit && pre-commit install
+# pre-commit kurmak istemeyen: ln -sf ../../scripts/pre-commit .git/hooks/pre-commit
+repos:
+  - repo: local
+    hooks:
+      - id: temizlik-staged
+        name: temizlik kapıları + gitleaks (stage'lenen içerik)
+        entry: scripts/pre-commit
+        language: script
+        pass_filenames: false
+        always_run: true
+      - id: profil-adi
+        name: profil adı kapısı (kişisel alice-ai ile çakışma yok)
+        entry: python3 scripts/test_profil_adi.py
+        language: system
+        pass_filenames: false
+        files: ^(electron/|launcher/)

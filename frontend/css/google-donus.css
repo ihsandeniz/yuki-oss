@@ -1,0 +1,18 @@
+/* ── Google onay DÖNÜŞ sayfası (`/api/planner/google/callback`, 2026-09-28) ─────────────────
+ * Sistem tarayıcısında açılır — uygulamanın kabuğu, fontu, teması orada yok. Yalnız ürün
+ * token'ları (tokens.css). Eski hâli satır içi stil + ✅/⚠️ taşıyordu ( panel 11):
+ * durum artık başlığın solundaki ortak ışık biçimiyle söylenir, simgeyle değil.
+ */
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px 16px;
+  background: var(--bg); color: var(--ink-1); font: var(--yazi-14, 14px)/1.6 var(--font); }
+.gd-kart { max-inline-size: 34rem; inline-size: 100%; padding: 28px 28px 24px; border: 1px solid var(--kenar);
+  border-radius: var(--r-3, 12px); background: var(--yuzey-1); }
+.gd-kart h1 { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; font-size: var(--yazi-19, 19px); line-height: 1.35; }
+.gd-kart h1::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; box-sizing: border-box; }
+.gd-kart[data-durum="iyi"] h1::before { background: var(--yesil-ink); }
+.gd-kart[data-durum="uyari"] h1::before { border: 2px solid var(--altin-ink); }
+.gd-kart[data-durum="kritik"] h1::before { background: var(--kirmizi-ink); box-shadow: 0 0 0 3px var(--kirmizi-zemin); }
+.gd-kart p { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
+.gd-kart p b { color: var(--ink-1); }
+.gd-kart .gd-alt { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--kenar); font-size: var(--yazi-12, 12px); }

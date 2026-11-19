@@ -1,0 +1,164 @@
+/* ── YÜZ · KİMLİK KARTI ( panel 6, 2026-09-27) ─────────────────────────
+ * Ayarlar › Güvenlik odasının "Yüzle giriş" bölümüne gömülür (#faces-root).
+ * Yalnız ürün token'ları (tokens.css + style.css --font-hud) — kişisel
+ * hq-yuz.css'in 38 token'ından 37'si üründe TANIMSIZ, o yüzden kopyalanmadı.
+ * Kart içinde kart yok (hq.css:488): tek yüzey kimlik kartı; kamera ve kişiler
+ * bölüm başlığı + boşlukla ayrılır.
+ */
+
+.faces-root { display: flex; flex-direction: column; gap: var(--b-6); min-width: 0; }
+
+/* `hidden` özniteliği display tanımlı öğede ETKİSİZ (kişisel tuzak, 517e975) */
+.faces-root [hidden] { display: none !important; }
+
+/* ── kimlik kartı ── */
+.yk-kart {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) auto;
+  gap: var(--b-5) var(--b-7); align-items: center;
+  padding: var(--b-6); border: 1px solid var(--kenar); border-radius: var(--r-3);
+  background: var(--yuzey-1);
+}
+.yk-kimlik { display: flex; gap: var(--b-5); align-items: center; min-width: 0; }
+.yk-avatar {
+  flex: none; width: 64px; height: 64px; aspect-ratio: 1; align-self: center; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: var(--yazi-23); font-weight: var(--ag-kalin); color: var(--ink-1);
+  border: 2px solid var(--altin); background: var(--yuzey-2);
+}
+/* 'bos' DEĞİL: genel boş-durum sınıfı .bos 48px iç boşluk verip avatarı elipse çeviriyordu (goz tur 2) */
+.yk-avatar.soluk { border-style: dashed; border-color: var(--kenar-guclu); color: var(--ink-3); }
+.yk-kimlik-metin { min-width: 0; }
+.yk-durum { display: flex; align-items: center; gap: var(--b-3); }
+.yk-durum b { font-size: var(--yazi-19); font-weight: var(--ag-kalin); color: var(--ink-1); overflow-wrap: anywhere; }
+.yk-isik { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--ink-3); }
+.yk-isik.ok { background: var(--yesil-ink); box-shadow: 0 0 0 3px var(--yesil-zemin); }
+.yk-isik.warn { background: var(--altin-ink); box-shadow: 0 0 0 3px var(--altin-zemin); }
+.yk-isik.err { background: var(--kirmizi-ink); box-shadow: 0 0 0 3px var(--kirmizi-zemin); }
+.yk-durum-alt { margin-top: var(--b-2); }
+.yk-durum-alt p { margin: 2px 0 0; font-size: var(--yazi-13); line-height: 1.45; color: var(--ink-2); }
+.yk-uyari { color: var(--altin-ink); }
+.yk-hata { color: var(--kirmizi-ink); }
+
+.yk-kalite { display: flex; flex-direction: column; gap: var(--b-2); min-width: 0; }
+.yk-kalite small { font-size: var(--yazi-12); line-height: 1.45; color: var(--ink-2); }
+.yk-kalite small.yk-uyari { color: var(--altin-ink); }
+.yk-kalite small.yk-hata { color: var(--kirmizi-ink); }
+
+.yk-hud { display: flex; justify-content: space-between; gap: var(--b-3); align-items: baseline;
+  font: var(--yazi-11) var(--font-hud); letter-spacing: .12em; color: var(--ink-2); }
+/* Büyük harf CSS ile (html lang dile göre → Türkçe İ doğru); kişi adı olduğu gibi kalır */
+.yk-hud > span:first-child, .yk-hud-deger { text-transform: uppercase; }
+.yk-hud b { font-weight: var(--ag-normal); color: var(--ink-1); letter-spacing: .04em; text-transform: none; white-space: nowrap; }
+/* Kalite HÜKMÜ rozet: en küçük yazı olarak kalınca altındaki uyarılar onu bastırıyordu (goz tur 1) */
+.yk-hukum { flex: none; white-space: nowrap; font: var(--ag-kalin) var(--yazi-12) var(--font); letter-spacing: .06em; padding: 3px 10px; border-radius: var(--r-tam);
+  background: var(--yuzey-2); color: var(--ink-1); }
+.yk-hukum.ok { background: var(--yesil-zemin); color: var(--yesil-ink); }
+.yk-hukum.warn { background: var(--altin-zemin); color: var(--altin-ink); }
+.yk-hukum.err { background: var(--kirmizi-zemin); color: var(--kirmizi-ink); }
+.yk-hud-deger { color: var(--ink-2); white-space: nowrap; }
+.yk-hud-deger.ok, .yk-hud-deger.acik { color: var(--yesil-ink); }
+.yk-hud-deger.warn { color: var(--altin-ink); }
+.yk-hud-deger.err { color: var(--kirmizi-ink); }
+
+/* Tutarlılık ölçeği 0–0.60: yol (yeşil→kırmızı), örneklerin aralığı, kesin/sınır çizgileri */
+.yk-olcek { position: relative; height: 40px; margin-top: 14px; }
+.yk-olcek .yol { position: absolute; left: 0; right: 0; top: 14px; height: 6px; border-radius: 3px;
+  background: linear-gradient(90deg, var(--yesil-ink) 0 58%, var(--altin-ink) 75%, var(--kirmizi-ink)); opacity: .55; }
+.yk-olcek .aralik { position: absolute; top: 10px; height: 14px; min-width: 14px; border-radius: 7px;
+  border: 2px solid var(--ink-1); background: color-mix(in srgb, var(--ink-1) 18%, transparent); }
+.yk-olcek .cizgi { position: absolute; top: -12px; bottom: 6px; width: 0; border-left: 1px dashed var(--ink-2); }
+.yk-olcek .cizgi i { position: absolute; top: -2px; left: 4px; font: var(--yazi-11) var(--font-hud); font-style: normal; color: var(--ink-2); white-space: nowrap; }
+.yk-olcek .cizgi.sol i { left: auto; right: 4px; }
+.yk-olcek .uc { position: absolute; top: 24px; font: var(--yazi-11) var(--font-hud); color: var(--ink-3); }
+.yk-olcek .uc.sag { right: 0; }
+/* Aralık ölçeğin dışına taşıyorsa sağ ucu açık (kesik) — "burada bitiyor" sanılmasın */
+.yk-olcek .aralik.tasiyor { border-right-style: dashed; border-radius: 7px 0 0 7px; }
+.yk-olcek-not { font-size: var(--yazi-12); color: var(--ink-2); }
+
+.yk-aykiri { display: flex; flex-direction: column; gap: var(--b-2); margin-top: var(--b-2); }
+.yk-aykiri-satir { display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-2) var(--b-3);
+  font-size: var(--yazi-12); color: var(--ink-2); }
+.yk-aykiri-satir > span:first-child { font-family: var(--font-hud); }
+.yk-onay { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--b-2); }
+.yk-onay-dugme { display: inline-flex; gap: var(--b-2); white-space: nowrap; }   /* Sil + Vazgeç hep yan yana */
+
+/* SABİT genişlik: sonuç metni gelince sütun 139→240 genişleyip bütün kartı yeniden diziyordu (goz tur 2) */
+.yk-eylem-kutu { display: flex; flex-direction: column; gap: var(--b-3); inline-size: 200px; }
+.yk-eylem .dg { inline-size: 100%; }
+.yk-eylem { display: flex; flex-direction: column; gap: var(--b-3); }
+.yk-eylem .dg { white-space: nowrap; }
+/* Sonuç düğmenin hemen altında — kartın öbür köşesinde aranıyordu (goz tur 1) */
+.yk-mesaj { margin: 0; font-size: var(--yazi-13); line-height: 1.45; color: var(--ink-2); }
+.yk-mesaj:empty { display: none; }
+.yk-mesaj.ok { color: var(--yesil-ink); }
+.yk-mesaj.err { color: var(--kirmizi-ink); }
+
+/* ── kamera | kişiler ── */
+.yk-alt { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--b-7); align-items: start; }
+.yk-kamera, .yk-kisiler { display: flex; flex-direction: column; gap: var(--b-4); min-width: 0; }
+.yk-kamera > .yk-hud, .yk-kisiler > .yk-hud { padding-bottom: var(--b-3); border-bottom: 1px solid var(--kenar); }
+
+.yk-video { position: relative; aspect-ratio: 4 / 3; border: 1px solid var(--kenar); border-radius: var(--r-3);
+  overflow: hidden; background: var(--yuzey-2); }
+.yk-video video { width: 100%; height: 100%; object-fit: cover; display: block; transform: scaleX(-1); }
+.yk-perde { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--b-2); padding: var(--b-6); text-align: center; background: var(--yuzey-2); }
+.yk-oval { width: 84px; height: 106px; border-radius: 50%; border: 1.5px dashed var(--kenar-guclu); margin-bottom: var(--b-3); }
+.yk-perde b { font-size: var(--yazi-14); color: var(--ink-1); }
+.yk-perde small { max-width: 34ch; font-size: var(--yazi-12); line-height: 1.45; color: var(--ink-2); }
+
+.yk-dugmeler { display: flex; flex-wrap: wrap; gap: var(--b-3); }
+/* Çerçevesiz .dg bu panelde düz yazı gibi okunuyordu (Sil / Tanı) — ikincil düğmelere kenar */
+.faces-root .dg:not(.dg-birincil):not(.dg-ikincil):not(.dg-yikici) { --dg-kenar: var(--kenar-guclu); }
+.yk-sonuc { margin: 0; min-height: 1.4em; font-size: var(--yazi-13); color: var(--ink-2); overflow-wrap: anywhere; }
+
+.yk-sihirbaz { display: flex; flex-direction: column; gap: var(--b-3); padding: var(--b-5);
+  border: 1px solid var(--mor-ink); border-radius: var(--r-3); background: var(--mor-zemin); }
+.yk-sihirbaz-bas { display: flex; justify-content: space-between; align-items: baseline; gap: var(--b-3); }
+.yk-sihirbaz-bas b { font-size: var(--yazi-14); color: var(--ink-1); }
+.yk-sihirbaz p { margin: 0; font-size: var(--yazi-14); color: var(--ink-1); }
+.yk-sihirbaz small { font-size: var(--yazi-12); }
+.yk-noktalar { display: flex; gap: 6px; }
+.yk-noktalar i { flex: 1; height: 4px; border-radius: 2px; background: var(--kenar-guclu); }
+.yk-noktalar i.dolu { background: var(--mor-ink); }
+.yk-noktalar i.simdi { background: transparent; box-shadow: inset 0 0 0 1.5px var(--mor-ink); height: 6px; margin-top: -1px; }
+
+.yk-liste { display: flex; flex-direction: column; }
+.yk-kisi { display: flex; align-items: center; gap: var(--b-4); padding: var(--b-3) 0; }
+.yk-kisi + .yk-kisi { border-top: 1px solid var(--kenar); }
+.yk-kisi-bas { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  font-weight: var(--ag-kalin); color: var(--ink-1); background: var(--yuzey-2); border: 1px solid var(--kenar); }
+.yk-kisi p { flex: 1; min-width: 0; margin: 0; font-size: var(--yazi-14); color: var(--ink-1); overflow-wrap: anywhere; }
+.yk-kisi p small { display: block; font-size: var(--yazi-12); color: var(--ink-2); }
+/* Altın yazı açık camda 4,0:1'di → metin mürekkep rengi, altın yalnız çerçevede */
+.yk-sahip { margin-inline-start: 6px; padding: 0 6px; border: 1px solid var(--altin); border-radius: var(--r-tam);
+  font-size: var(--yazi-11); font-weight: var(--ag-kalin); color: var(--ink-1); letter-spacing: .06em; }
+.yk-bos { display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-3); padding: var(--b-4) 0; font-size: var(--yazi-13); color: var(--ink-2); }
+
+.yk-tanit { display: flex; flex-direction: column; gap: var(--b-3); padding-top: var(--b-4); border-top: 1px solid var(--kenar); }
+.yk-tanit > b { font-size: var(--yazi-13); color: var(--ink-1); }
+.yk-tanit > small { font-size: var(--yazi-12); line-height: 1.45; color: var(--ink-2); }
+
+.yk-indir { display: flex; flex-direction: column; gap: var(--b-3); align-items: flex-start; }
+.yk-indir b { color: var(--ink-1); }
+.yk-indir p { margin: 0; font-size: var(--yazi-13); color: var(--ink-2); line-height: 1.5; }
+
+/* Orta genişlik: eylemler kartın altına iner */
+@media (max-width: 1180px) {
+  .yk-kart { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .yk-eylem-kutu { grid-column: 1 / -1; inline-size: auto; }
+  .yk-eylem .dg { inline-size: auto; }
+  .yk-eylem { flex-direction: row; flex-wrap: wrap; }
+  .yk-eylem .dg { flex: 1 1 auto; }
+}
+/* Dar: tek sütun */
+@media (max-width: 760px) {
+  .yk-kart, .yk-alt { grid-template-columns: minmax(0, 1fr); }
+  .yk-avatar { width: 52px; height: 52px; font-size: var(--yazi-19); align-self: flex-start; }
+  .yk-kimlik { align-items: flex-start; }
+}
+/* Dokunmatik: parmak hedefi */
+@media (hover: none) {
+  /* --hedef = 44 (dokunma). --hedef-min 24'tür (WCAG alt sınırı) — tur 1'de onu yazınca düğmeler 24px kaldı */
+  .faces-root .dg { min-height: var(--hedef, 44px); }
+}

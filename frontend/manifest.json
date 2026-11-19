@@ -1,0 +1,64 @@
+{
+  "name": "Yuki",
+  "short_name": "Yuki",
+  "description": "Sesli, hafızalı ve duygusal kişisel AI asistan",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#00d4ff",
+  "orientation": "portrait-primary",
+  "lang": "tr",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/ui/assets/icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/ui/assets/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/ui/assets/icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/ui/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/ui/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Harita",
+      "short_name": "Map",
+      "description": "Taktik harita & GPS rota takibi",
+      "url": "/ui/index.html#tab-map",
+      "icons": [{ "src": "/ui/assets/icons/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Sohbet",
+      "short_name": "Chat",
+      "description": "Yuki ile konuş",
+      "url": "/ui/index.html",
+      "icons": [{ "src": "/ui/assets/icons/icon-96.png", "sizes": "96x96" }]
+    }
+  ],
+  "permissions": ["geolocation"]
+}

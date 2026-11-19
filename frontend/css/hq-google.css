@@ -1,0 +1,92 @@
+/* ── GOOGLE · BAĞLANTI KARTI ( panel 11, 2026-09-28 — geliştirici taslak A'yı seçti) ──────────
+ * Taslak A (2026-09-26 HQ taslakları). Yalnız ürün token'ları.
+ * ANAHTAR kartının (hq-anahtar.css `.an-*`) dili: kurulmamışken üç adım, kuruluyken durum satırları.
+ * Işık ortak: ogeler.css § 14 `.durum-isik` (aynı durum = aynı ışık, SAĞLIK/ANAHTAR ile).
+ * `.ak-form/.ak-dugmeler/.ak-mesaj/.ak-uyari` hq.css'ten gelir; burada yalnız kartın kendi düzeni.
+ */
+
+.gg-kart { max-inline-size: 880px; padding: var(--b-7); border: 1px solid var(--kenar); border-radius: var(--r-3); background: var(--yuzey-1); }
+.gg-bas h4 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: var(--yazi-16); font-weight: var(--ag-kalin);
+  color: var(--ink-1); line-height: 1.35; text-wrap: wrap; }
+.gg-alt { margin: var(--b-2) 0 0; padding-inline-start: 20px; font-size: var(--yazi-12); color: var(--ink-2); line-height: 1.5; }
+.gg-mesaj { margin: var(--b-3) 0 0; padding-inline-start: 20px; font-size: var(--yazi-13); line-height: 1.5; color: var(--ink-1); overflow-wrap: anywhere; }
+.gg-mesaj:empty { min-height: 0; margin: 0; }
+.gg-mesaj[data-hata="1"] { color: var(--kirmizi-ink); }
+.gg-kart code { font-family: var(--font-hud, var(--font-mono)); font-size: var(--yazi-12); color: var(--ink-1); overflow-wrap: anywhere;
+  padding: 0 5px; border: 1px solid var(--kenar); border-radius: var(--r-1); background: var(--yuzey-2);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.gg-kucuk { margin: 0; font-size: var(--yazi-12); color: var(--ink-2); line-height: 1.5; }
+.gg-kucuk b, .gg-alt-adim b { color: var(--ink-1); font-weight: var(--ag-orta); }
+.gg-mono { font-family: var(--font-hud, var(--font-mono)); }
+.gg-kart .girdi { min-height: var(--hedef, 44px); }
+.gg-eylem { align-items: center; margin-top: var(--b-4); }
+
+/* "· değiştir" yetim kalmasın: önündeki noktayla birlikte alt satıra iner */
+.gg-bitisik { white-space: nowrap; }
+.gg-kucuk.gg-hata { color: var(--ink-1); }
+/* Kaydet'in 400'ü: hatalı alanlar kırmızı çerçeve alır (uyarı kutusu formun içinde) */
+.gg-kart .girdi[aria-invalid="true"] { border-color: var(--kirmizi-ink); }
+
+/* satır içi bağ ("değiştir"): metnin akışında kalır, vuruş alanı negatif blok boşluğuyla büyür (ANAHTAR .an-bag) */
+.gg-bag { display: inline-flex; align-items: center; vertical-align: middle; margin-block: -8px; min-height: 32px; padding: 0;
+  border: 0; background: none; font: inherit; color: var(--mor-ink); text-decoration: underline; cursor: pointer; }
+.gg-bag:focus-visible { outline: 2px solid var(--mor-ink); outline-offset: 2px; }
+
+/* ── kurulum: üç adım ── */
+.gg-adimlar { list-style: none; margin: var(--b-6) 0 0; padding: 0; }
+.gg-adim { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--b-5); padding: var(--b-6) 0; border-block-start: 1px solid var(--kenar); }
+.gg-no { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--kenar-guclu);
+  font-size: var(--yazi-12); font-weight: var(--ag-kalin); color: var(--ink-2); }
+.gg-adim.simdi .gg-no { background: var(--mor-yuzey); border-color: transparent; color: #fff; }
+.gg-adim.bitti .gg-no { background: var(--yesil-zemin); border-color: transparent; color: var(--yesil-ink); }
+.gg-adim h5 { margin: 3px 0 var(--b-3); font-size: var(--yazi-14); font-weight: var(--ag-kalin); color: var(--ink-1); }
+.gg-alt-adim { margin: var(--b-3) 0 0; padding-inline-start: 18px; font-size: var(--yazi-13); color: var(--ink-2); line-height: 1.55; }
+.gg-alt-adim li { margin: 3px 0; }
+.gg-alt-adim code { font-size: var(--yazi-12); }
+.gg-form { margin-top: var(--b-2); gap: var(--b-4); }
+.gg-iki-alan { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--b-4); }
+
+/* ── kurulu: durum satırları (etiket · değer · eylem) — her satır kendi ızgarası ── */
+.gg-satirlar { margin: var(--b-6) 0 0; }
+.gg-satir { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: var(--b-5); align-items: start;
+  padding: var(--b-4) 0; border-block-start: 1px solid var(--kenar); }
+.gg-satir dt, .gg-satir dd:not(.gg-eylem-hucre) { padding-block-start: calc((var(--hedef, 44px) - 1.5em) / 2); line-height: 1.5; }
+.gg-satir dt { font-size: var(--yazi-13); color: var(--ink-2); }
+.gg-satir dd { margin: 0; min-width: 0; font-size: var(--yazi-13); color: var(--ink-1); overflow-wrap: anywhere; }
+.gg-satir .gg-eylem-hucre { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--b-3); }
+.gg-satir .gg-eylem-hucre:empty { min-height: var(--hedef, 44px); }
+.gg-satir.acik dd { grid-column: 2 / -1; padding-block-start: 0; }
+.gg-etiket { display: inline-block; margin-inline-end: var(--b-2); padding: 1px 8px; border-radius: var(--r-tam); font-size: var(--yazi-11);
+  white-space: nowrap; vertical-align: 1px; }
+.gg-etiket.iyi { color: var(--yesil-ink); background: var(--yesil-zemin); }
+.gg-etiket.uyari { color: var(--altin-ink); background: var(--altin-zemin); }
+.gg-etiket.kritik { color: var(--kirmizi-ink); background: var(--kirmizi-zemin); }
+.gg-etiket.sessiz { color: var(--ink-2); border: 1px dashed var(--kenar-guclu); padding: 0 7px; }
+
+/* ── kopuk / eksik izin: sebep kutusu + tek çözüm düğmesi ── */
+.gg-neden { display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-4) var(--b-5); margin-top: var(--b-5);
+  padding: var(--b-4) var(--b-5); border-radius: var(--r-2); background: var(--kirmizi-zemin); color: var(--kirmizi-ink); }
+.gg-neden p { flex: 1 1 280px; margin: 0; font-size: var(--yazi-13); line-height: 1.5; color: var(--ink-1); }
+.gg-neden b { color: var(--kirmizi-ink); }   /* yalnız "Neden olabilir:" vurgusu kırmızı; gövde metni okunur kalır (tur 5 #16) */
+.gg-neden.uyari { background: var(--altin-zemin); color: var(--ink-1); }
+.gg-neden.uyari b { color: inherit; }
+
+/* Pro kapısı: ortak `.ak-govde` iskeleti kartın içinde — kendi dolgusu/ölçüsü kartınkine bırakılır */
+.gg-pro.ak-govde { padding: 0; margin: 0; max-inline-size: none; overflow: visible; }
+
+/* güven notu — ne İSTEMEDİĞİMİZİ söyler (Gmail yok, başka Drive dosyası yok) */
+.gg-guven { margin: var(--b-6) 0 0; padding: var(--b-4) var(--b-5); border: 1px dashed var(--kenar-guclu); border-radius: var(--r-2);
+  font-size: var(--yazi-12); color: var(--ink-2); line-height: 1.5; }
+.gg-guven b { color: var(--ink-1); }
+
+@media (max-width: 760px) {
+  .gg-kart { padding: var(--b-6); }
+  .gg-iki-alan { grid-template-columns: minmax(0, 1fr); }
+  .gg-satir { grid-template-columns: minmax(0, 1fr); row-gap: var(--b-2); }
+  .gg-satir dt { grid-column: 1 / -1; padding-block-start: 0; }
+  .gg-satir dd:not(.gg-eylem-hucre) { padding-block-start: calc((var(--hedef, 44px) - 1.5em) / 2); }
+  .gg-satir .gg-eylem-hucre { grid-column: 1 / -1; justify-content: flex-start; }   /* değer tam genişlik, düğmeler altında */
+  .gg-satir .gg-eylem-hucre:empty { display: none; }
+  .gg-satir.acik dd { grid-column: 1 / -1; }
+  .gg-bag { min-height: 44px; min-width: 44px; justify-content: center; margin-block: -14px; }   /* dokunmatik hedef 44 — satır yüksekliği değişmez */
+}

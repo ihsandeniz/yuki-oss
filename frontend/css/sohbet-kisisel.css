@@ -1,0 +1,475 @@
+/* ════════════════════════════════════════════════════════════════════
+   sohbet-kisisel.css — Sohbet ekranı kişisel Yuki düzeninde (2026-11-14)
+
+   Geliştirici seçimi (11-14 işaretleme sayfası, madde 1-4): "kişiseldeki gibi".
+   Kaynak: kişisel AliceAi css/ust-bar.css + css/giris-konsol.css (DÜZEN alındı; renkler
+   bu deponun token'larından — açık tema da çalışsın diye sabit renk yerine --altin-ink,
+   --kenar-guclu, --yuzey-*, --ink-*).
+
+   Dört bölüm:
+     1) üst çubuk   [● Yuki hazır]        [ses ▬ │ hafıza 0] [▤ HALKA ▾] │ [◧ 🗑 ⤓]
+     2) boş ekran   iki satır daktilo yazısı, kart yok
+     3) yazı çubuğu altın halkalı mikrofon · cam hap · altın gönder · ⋯ → araç YAYI
+                    (masaüstü yay, telefon ızgara; konum core.js _girisYayiDiz)
+     4) kip seçici  etiketli altın hap (VİDEO · RESİM · CANLI) — modes/sohbet-sahne.js çizer
+
+   🔴 Özgüllük: mod CSS'leri (hud-ring / sohbet-sahne) TEMBEL yüklenir → bu dosyadan SONRA
+      gelir. Kurallar `#app #…` (2 id) ile yazıldı ki `body.x-mode #…` (1 id) ezmesin.
+      Yazı çubuğu iki modda (SOHBET + HALKA) aynı görünür — kişiseldeki gibi.
+   🔴 #input-container bir GRID ve öğelerin yeri sohbet.css'te yazılı; burada yer
+      değiştirilmez, yalnız görünüm. Hap = grid'in ::before katmanı (giris-konsol.css).
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── 1) Üst çubuk ───────────────────────────────────────────────────── */
+#app #header {
+  --ub-ctl: 32px;
+  --ub-ink: var(--ink-1);
+  --ub-ink-2: var(--ink-2);
+  --ub-ink-3: var(--ink-3);
+  --ub-cizgi: var(--kenar);
+  --ub-kart: var(--kenar-guclu);
+  --ub-uzerinde: var(--yuzey-3);
+  --ub-altin: var(--altin-ink);
+  --ub-ok: var(--p-green, #3ddc84);
+  --ub-kotu: var(--kirmizi-ink, #ff6b6b);
+  min-height: 52px;
+  padding: 8px 12px 8px 16px;
+  gap: 12px;
+  border-radius: 0;
+  border: 0;
+  border-block-end: 1px solid var(--ub-cizgi);
+  background: color-mix(in oklab, var(--yuzey-1) 88%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: none;
+}
+/* HALKA'da sahne yok, ☰ (#nav-ac, sabit) çubuğun sol ucunda → kimlik onun sağından başlar */
+body.hud-ring-mode #app #header { padding-inline-start: 64px; }
+/* kimlik: ● Yuki hazır */
+#app #header .hud-status-bar {
+  flex: 1 1 auto;
+  gap: 10px;
+  min-height: 0;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  min-width: 0;
+}
+/* #state-badge kendi kutusunu bırakır (display:contents): noktası (order 0) ve durum sözcüğü
+   (::after, order 2) şeridin flex öğesi olur, "Yuki" (order 1) arada kalır → ● Yuki hazır */
+#app #header #state-badge { display: contents; }
+#app #header #state-dot { order: 0; width: 8px; height: 8px; flex-shrink: 0; box-shadow: 0 0 0 3px color-mix(in oklab, var(--ub-ok) 16%, transparent); background: var(--ub-ok); }
+#app #header .hud-unit-label {
+  order: 1;
+  font: 600 15px/1 var(--font-ui, 'Inter', system-ui, sans-serif);
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--ub-ink);
+}
+/* tek durum sözcüğü — adın sağında, sessiz (metin core.js _durumMetniYaz'dan) */
+#app #header #state-badge::after,
+#app #header #state-badge[class]::after {
+  order: 2;
+  display: inline;
+  content: attr(data-durum-metni);
+  font: 500 12px/1 var(--font-ui, 'Inter', system-ui, sans-serif);
+  letter-spacing: 0;
+  text-transform: lowercase;
+  color: var(--ub-ink-3);
+  white-space: nowrap;
+}
+#app #header #state-badge.state-listening::after { color: var(--c-data, #00d4ff); }
+#app #header #state-badge.state-thinking::after { color: var(--ub-altin); }
+#app #header #state-badge.state-talking::after { color: var(--mor-ink, #c9a7ff); }
+#app #header #state-badge.state-busy::after { color: var(--ub-kotu); }
+#app #header .ub-durum { display: none; }
+#app #header #ws-pill { display: none; }
+/* bağlantı yoksa / anahtar yoksa durum sözcüğünün yerine o söylenir */
+#app #header:has(#ws-pill.offline) #state-badge::after { display: none; }
+#app #header #ws-pill.offline {
+  order: 2; display: inline-flex; padding: 0; min-height: 0; background: none; border: 0; box-shadow: none;
+}
+#app #header #ws-pill.offline #ws-dot { display: none; }
+#app #header #ws-pill.offline #ws-label { font: 500 12px/1 var(--font-ui, system-ui, sans-serif); letter-spacing: 0; text-transform: lowercase; color: var(--ub-kotu); }
+#app #header:has(#ws-pill.offline) #state-dot { background: var(--ub-kotu); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ub-kotu) 16%, transparent); animation: none; }
+#app #header:has(#ws-pill.anahtar-yok) #state-badge.state-idle::after { content: attr(data-anahtar-metni); color: var(--altin-ink); }
+#app #header:has(#ws-pill.anahtar-yok):has(#state-badge.state-idle) #state-dot { background: var(--altin); box-shadow: 0 0 0 3px color-mix(in oklab, var(--altin) 18%, transparent); }
+
+/* gösterge şeridi: ses · hafıza — tek kap, ayraçlı */
+#app #header .hud-controls { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; position: static; background: none; border: 0; padding: 0; box-shadow: none; }
+#app #header #vol-wrap,
+#app #header .hud-mem-badge {
+  display: inline-flex; align-items: center;
+  height: var(--ub-ctl); min-height: 0;
+  padding: 0 12px; margin: 0;
+  background: transparent;
+  border: 1px solid var(--ub-kart);
+  border-radius: 0;
+  font: 500 12px/1 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0;
+  color: var(--ub-ink-2);
+  gap: 8px;
+  box-shadow: none;
+}
+#app #header #vol-wrap { border-radius: 8px 0 0 8px; padding-left: 4px; }
+#app #header #vol-wrap + .hud-mem-badge { margin-left: -9px; border-radius: 0 8px 8px 0; }
+#app #header .ub-hafiza-etiket { font-size: 12px; color: var(--ub-ink-3); text-transform: none; letter-spacing: 0; }
+#app #header #mem-num { font: 600 13px/1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ub-ink); }
+#app #header #vol-icon { width: 26px; height: 26px; min-width: 0; min-height: 0; padding: 0; border: 0; background: none; color: var(--ub-ink-2); }
+#app #header #vol-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+#app #header #vol-icon svg polygon { fill: none; }
+#app #header #vol-icon:hover { color: var(--ub-ink); }
+/* ses ikonu durumu: data-durum (core.js) — SVG'nin dalga çizgileri kısıkta biri, kapalıda hiçbiri */
+#app #header #vol-icon[data-durum="kisik"] svg path { d: path("M15.5 8.5a5 5 0 0 1 0 7"); }
+#app #header #vol-icon[data-durum="kapali"] { color: var(--ub-kotu); }
+#app #header #vol-icon[data-durum="kapali"] svg path { d: path("M16 9.5l5 5M21 9.5l-5 5"); }
+#app #header #vol-slider { -webkit-appearance: none; appearance: none; width: 64px; min-width: 0; height: 20px; min-height: 0; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; accent-color: var(--ub-ink-2); }
+#app #header #vol-slider::-webkit-slider-runnable-track { height: 3px; border: 0; border-radius: 2px; background: color-mix(in oklab, var(--ub-ink) 16%, transparent); }
+#app #header #vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; margin-block-start: -4.5px; border: 0; border-radius: 50%; background: var(--ub-ink); box-shadow: none; }
+#app #header #vol-slider:hover::-webkit-slider-thumb { background: var(--ub-ink); border: 0; }
+#app #header #vol-slider::-moz-range-track { height: 3px; border: 0; background: color-mix(in oklab, var(--ub-ink) 16%, transparent); }
+#app #header #vol-slider::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: var(--ub-ink); }
+
+/* görünüm düğmesi — altın, her modda aynı biçim */
+#app #header #mode-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  width: auto; min-width: 116px; justify-content: space-between;
+  height: var(--ub-ctl); min-height: 0; padding: 0 10px 0 9px; margin-left: 4px;
+  border: 1px solid color-mix(in oklab, var(--ub-altin) 45%, transparent); border-radius: 8px;
+  background: color-mix(in oklab, var(--ub-altin) 8%, transparent); color: var(--ub-altin); box-shadow: none;
+  font: 600 12px/1 var(--font-ui, system-ui, sans-serif); letter-spacing: 0.06em; text-transform: uppercase;
+}
+#app #header #mode-toggle::before {
+  content: ''; width: 16px; height: 16px; flex-shrink: 0; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.7' stroke-linejoin='round'%3E%3Cpath d='M12 4l9 5-9 5-9-5z'/%3E%3Cpath d='M3 14l9 5 9-5'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.7' stroke-linejoin='round'%3E%3Cpath d='M12 4l9 5-9 5-9-5z'/%3E%3Cpath d='M3 14l9 5 9-5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+#app #header #mode-toggle::after {
+  content: ''; width: 10px; height: 10px; opacity: 0.7; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+#app #header #mode-toggle:hover { background: color-mix(in oklab, var(--ub-altin) 16%, transparent); border-color: var(--ub-altin); }
+#app #header #mode-toggle:focus-visible { outline: 2px solid var(--ub-altin); outline-offset: 2px; }
+
+/* eylem düğmeleri — çizgi ikon, hayalet zemin */
+#app #header #avatar-toggle,
+#app #header #ub-temizle,
+#app #header #ub-disa {
+  width: var(--ub-ctl); height: var(--ub-ctl); min-width: 0; min-height: 0; padding: 0;
+  display: inline-grid; place-items: center;
+  color: var(--ub-ink-2); background: transparent; border: 1px solid transparent; border-radius: 8px; box-shadow: none;
+  position: relative;
+}
+#app #header #avatar-toggle svg, #app #header #ub-temizle svg, #app #header #ub-disa svg {
+  width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+}
+#app #header #avatar-toggle:hover, #app #header #ub-temizle:hover, #app #header #ub-disa:hover { color: var(--ub-ink); background: var(--ub-uzerinde); border-color: var(--ub-kart); }
+#app #header #ub-temizle:hover { color: var(--ub-kotu); }
+#app #header #avatar-toggle:focus-visible, #app #header #ub-temizle:focus-visible, #app #header #ub-disa:focus-visible { outline: 2px solid var(--ub-altin); outline-offset: 2px; }
+#app #header #avatar-toggle { margin-left: 4px; }
+#app #header #avatar-toggle::after { content: ''; position: absolute; left: -7px; top: 7px; bottom: 7px; width: 1px; background: var(--ub-cizgi); }
+
+/* dar şerit (pencere geniş, sohbet sütunu dar) — şeridin kendi genişliğine bakılır */
+#app #header { container: ubar / inline-size; }
+@container ubar (max-width: 830px) {
+  #app #header #vol-slider { display: none; }
+  #app #header #mode-toggle { min-width: 0; font-size: 0; gap: 0; padding: 0; width: var(--ub-ctl); justify-content: center; }
+  #app #header #mode-toggle::after { display: none; }
+}
+@container ubar (max-width: 520px) {
+  #app #header { gap: 6px; }
+  #app #header #state-badge::after { display: none; }
+  #app #header .hud-mem-badge { display: none; }
+  #app #header #vol-wrap { border-radius: 8px; border: 0; padding: 0; }
+  #app #header .hud-controls { gap: 2px; }
+}
+/* telefon: 40 px dokunma hedefleri, avatar düğmesi yok (sahne üstte) */
+@media (max-width: 800px) {
+  #app #header { padding: 6px 8px 6px 12px; }
+  #app #header #mode-toggle { width: 40px; height: 40px; }
+  #app #header #mode-toggle::before { width: 20px; height: 20px; }
+  #app #header #ub-temizle, #app #header #ub-disa, #app #header #vol-icon { width: 40px; height: 40px; }
+  #app #header #avatar-toggle { display: none; }
+}
+
+/* ── 2) Boş ekran: iki satır daktilo yazısı ─────────────────────────── */
+#app #chat-empty-state {
+  gap: 10px;
+  padding: 0 16px;
+  color: var(--ink-3);
+  font: 400 13px/1.6 var(--font-mono);
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  user-select: none;
+}
+#app #chat-empty-state .empty-title,
+#app #chat-empty-state .empty-sub {
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  text-align: center;
+}
+
+/* ── 3) Yazı çubuğu ─────────────────────────────────────────────────── */
+#app #input-area {
+  --gk-altin: var(--altin-ink);
+  --gk-altin-cizgi: color-mix(in oklab, var(--altin-ink) 45%, transparent);
+  --gk-altin-hayalet: color-mix(in oklab, var(--altin-ink) 12%, transparent);
+  --gk-mor: color-mix(in oklab, var(--mor-ink, #9b8cff) 30%, transparent);
+  --gk-mor-guclu: color-mix(in oklab, var(--mor-ink, #9b8cff) 55%, transparent);
+  --gk-cam-koyu: color-mix(in oklab, var(--yuzey-1) 97%, transparent);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+/* altın halkalı mikrofon */
+/* Kişiseldeki ölçü: yazı çubuğu en çok 720 px ve ortada; mikrofon 52 px (dokunma hedefi büyür) */
+@media (min-width: 801px) {
+  #app #input-area #input-container { width: min(720px, 100%); margin-inline: auto; grid-template-columns: 56px minmax(0, 1fr) var(--hedef) var(--hedef); }
+  #app #input-area #input-container.konusuyor { grid-template-columns: 56px minmax(0, 1fr) var(--hedef) var(--hedef) var(--hedef); }
+  #app #input-area #mic-container { width: 56px; height: 56px; }
+  #app #input-area #mic-btn { width: 52px; height: 52px; }
+  #app #input-area #hizli-satir { width: min(720px, 100%); margin-inline: auto; }
+}
+#app #input-area #mic-btn {
+  border: 1px solid var(--gk-altin-cizgi);
+  border-radius: 50%;
+  color: var(--gk-altin);
+  background: radial-gradient(circle, color-mix(in oklab, var(--altin-ink) 10%, transparent), color-mix(in oklab, var(--yuzey-1) 72%, transparent) 70%);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--mor-ink, #9b8cff) 7%, transparent), 0 0 22px color-mix(in oklab, var(--altin-ink) 10%, transparent);
+}
+#app #input-area #mic-btn:hover { border-color: var(--gk-altin); }
+#app #input-area #mic-btn.recording { border-color: var(--kirmizi-ink); color: var(--kirmizi-ink); background: var(--kirmizi-zemin); }
+/* cam hap: mor ince çizgi, yumuşak gölge */
+#app #input-area #input-container::before {
+  border-color: var(--gk-mor);
+  background: color-mix(in oklab, var(--yuzey-1) 55%, transparent);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.30);
+}
+#app #input-area #input-container:focus-within::before {
+  border-color: var(--gk-mor-guclu);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.30), 0 0 18px color-mix(in oklab, var(--mor-ink, #9b8cff) 14%, transparent);
+}
+#app #input-area #msg-input { caret-color: var(--gk-altin); font-size: 15px; }
+#app #input-area #msg-input::placeholder { color: var(--ink-3); }
+/* HALKA'da da aynı cam hap (kişiselde iki modda tek konsol). oss'un hap katmanı
+   giris-konsol.css'te yalnız SOHBET'e yazılı; HALKA için aynı katman burada. */
+/* HALKA'nın eski düzeni flex + `order` idi (⋯ telefonda mikrofonun yanına düşüyordu) →
+   SOHBET'le aynı grid; "sıralamaya güvenme, YERİ SÖYLE" (sohbet.css § ①). */
+body.hud-ring-mode #app #input-area #input-container {
+  display: grid;
+  grid-template-columns: var(--hedef) minmax(0, 1fr) var(--hedef) var(--hedef);
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--b-3);
+  column-gap: calc(var(--b-2) + 12px);
+  isolation: isolate;
+  padding: var(--b-2) var(--b-2) var(--b-2) 0;
+}
+body.hud-ring-mode #app #input-area #input-container.konusuyor { grid-template-columns: var(--hedef) minmax(0, 1fr) var(--hedef) var(--hedef) var(--hedef); }
+body.hud-ring-mode #app #input-area #mic-container  { grid-column: 1; grid-row: 1; order: 0; }
+body.hud-ring-mode #app #input-area #msg-input      { grid-column: 2; grid-row: 1; order: 0; }
+body.hud-ring-mode #app #input-area #input-more-btn { grid-column: 3; grid-row: 1; order: 0; }
+body.hud-ring-mode #app #input-area #send-btn       { grid-column: 4; grid-row: 1; order: 0; }
+body.hud-ring-mode #app #input-area #stop-audio-btn.gorunur { grid-column: 5; grid-row: 1; }
+body.hud-ring-mode #app #input-area #input-break { display: none; }
+body.hud-ring-mode #app #input-area #input-container::before {
+  content: '';
+  position: relative;
+  z-index: -1;
+  grid-column: 2 / -1;
+  grid-row: 1;
+  align-self: stretch;
+  margin: calc(-1 * var(--b-2));
+  border: 1px solid var(--gk-mor);
+  border-radius: calc(var(--hedef) / 2 + var(--b-2));
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+}
+body.hud-ring-mode #app #input-area #msg-input { padding: 10px 0 10px var(--b-5); align-self: center; min-block-size: 0; background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.hud-ring-mode #app #input-area #msg-input:focus-visible { outline: none; }
+body.hud-ring-mode #app #input-area #send-btn,
+body.hud-ring-mode #app #input-area #input-more-btn { border-radius: var(--r-tam); width: 36px; height: 36px; min-width: 0; min-height: 0; align-self: center; justify-self: center; }
+#app #input-area #input-more-btn svg { width: 18px; height: 18px; fill: currentColor; stroke: currentColor; }
+#app #input-area #send-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
+#app #input-area #mic-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+/* Hep dinle yazısı telefonda da tam görünür (kişisel 390'da tam) */
+#app #input-area #hep-dinle-anahtar .hap-metin { max-width: none; overflow: visible; text-overflow: clip; }
+/* HALKA: kabuk kişiseldeki gibi şeffaf — çerçeveyi hap taşır, dış kutu/sol çizgi yok */
+body.hud-ring-mode #app #input-area { background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.hud-ring-mode #app #input-area::before, body.hud-ring-mode #app #input-area::after { display: none; }
+
+/* gönder: altın çizgili yuvarlak, dolgu yok */
+#app #input-area #send-btn {
+  color: var(--gk-altin); background: transparent; border: 1px solid var(--gk-altin-cizgi); box-shadow: none;
+}
+#app #input-area #send-btn:hover { background: var(--gk-altin-hayalet); }
+#app #input-area #input-more-btn { color: var(--ink-3); background: transparent; border-color: transparent; }
+#app #input-area #input-more-btn:hover { color: var(--ink-1); background: color-mix(in oklab, var(--ink-1) 7%, transparent); }
+#app #input-area #input-more-btn[aria-expanded="true"] { color: var(--gk-altin); background: var(--gk-altin-hayalet); }
+
+/* Hep dinle anahtarı (durum satırı) — kapalı gri nokta, açık yeşil */
+#hep-dinle-anahtar { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; }
+#hep-dinle-anahtar .hd-nokta { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink-1) 18%, transparent); flex-shrink: 0; }
+#hep-dinle-anahtar.acik { color: var(--p-green, #10b981); }
+#hep-dinle-anahtar.acik .hd-nokta { background: var(--p-green, #10b981); box-shadow: 0 0 6px color-mix(in oklab, var(--p-green, #10b981) 70%, transparent); }
+
+/* ⋯ → araç YAYI (masaüstü). Menü kabı görünmez bir sahne olur, öğeler yuvarlak düğüm. */
+#app #input-area #input-secondary-btns {
+  display: block;
+  position: absolute;
+  left: 50%; right: auto; top: auto;
+  bottom: calc(100% + 4px);
+  width: min(680px, calc(100% - 32px));
+  height: 118px;
+  min-width: 0; max-height: none;
+  margin: 0; padding: 0;
+  transform: translateX(-50%);
+  background: none; border: 0; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  overflow: visible;
+  pointer-events: none;
+  visibility: hidden;
+  z-index: 30;
+  transition: visibility 0s linear .26s;
+}
+#app #input-area #input-secondary-btns.acik { visibility: visible; transition: none; }
+/* Model + konuşma dili durum satırında; yayda tekrar edilmez. Ayraçlar yayda yok. */
+#app #input-area #input-secondary-btns > #model-selector-wrap,
+#app #input-area #input-secondary-btns > #lang-toggle-btn,
+#app #input-area #input-secondary-btns > .more-sep { display: none; }
+#app #input-area #input-secondary-btns > .more-item {
+  position: absolute;
+  left: var(--x, 50%); top: var(--y, 60px);
+  width: 42px; height: 42px; min-height: 0;
+  margin: 0; padding: 0;
+  display: grid; place-items: center; place-content: center; gap: 0;
+  border-radius: 50%;
+  color: var(--ink-2);
+  background: var(--gk-cam-koyu);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border: 1px solid var(--kenar);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+  font-size: 0;
+  opacity: 0; transform: translate(-50%, 18px) scale(.85);
+  transition: opacity .2s var(--egri, ease), transform .26s var(--egri, ease), color .15s, border-color .15s, background .15s;
+  transition-delay: calc(var(--i, 0) * 18ms);
+  pointer-events: none;
+}
+#app #input-area #input-secondary-btns > .more-item[hidden] { display: none; }
+#app #input-area #input-secondary-btns.acik > .more-item { opacity: 1; transform: translate(-50%, 0) scale(1); pointer-events: auto; }
+#app #input-area #input-secondary-btns:not(.acik) > .more-item { transition-delay: 0ms; }
+#app #input-area #input-secondary-btns > .more-item .mi-ico { width: 17px; height: 17px; margin: 0; filter: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+#app #input-area #input-secondary-btns > .more-item .yay-ad {
+  position: absolute; top: calc(100% + 5px); left: 50%; transform: translateX(-50%);
+  font: 10px/1 var(--font-mono); letter-spacing: .02em;
+  color: var(--ink-2); white-space: nowrap;
+  padding: 3px 6px; border-radius: 5px; background: color-mix(in oklab, var(--yuzey-0, #06040c) 85%, transparent);
+  opacity: 0; transition: opacity .15s; pointer-events: none;
+}
+#app #input-area #input-secondary-btns > .more-item:hover,
+#app #input-area #input-secondary-btns > .more-item:focus-visible { color: var(--gk-altin); border-color: var(--gk-altin-cizgi); outline: none; }
+#app #input-area #input-secondary-btns > .more-item:hover .yay-ad,
+#app #input-area #input-secondary-btns > .more-item:focus-visible .yay-ad { opacity: 1; }
+#app #input-area #input-secondary-btns > .more-item.active,
+#app #input-area #input-secondary-btns > .more-item.on,
+#app #input-area #input-secondary-btns > .more-item.native-active {
+  color: var(--gk-altin); border-color: var(--gk-altin-cizgi); background: color-mix(in oklab, var(--altin-zemin) 85%, transparent);
+}
+#app #input-area #input-secondary-btns > #always-on-btn.active { color: var(--p-green, #10b981); border-color: color-mix(in oklab, var(--p-green, #10b981) 60%, transparent); }
+/* kilit rozeti (kademe kilitli öğe) düğüm köşesinde */
+#app #input-area #input-secondary-btns > .more-item .mi-kilit { position: absolute; top: -2px; right: -2px; font-size: 10px; }
+
+/* Telefon (dikey): yay → ızgara, adlar görünür */
+@media (max-width: 800px) and (orientation: portrait) {
+  #app #input-area #input-secondary-btns {
+    left: 10px; right: 10px; width: auto; height: auto; transform: none;
+    bottom: calc(100% + 4px);
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 24px 6px;
+    padding: 12px 8px 22px; border-radius: 18px;
+    background: var(--gk-cam-koyu); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+    border: 1px solid var(--kenar);
+    opacity: 0; transition: opacity .2s, visibility 0s linear .2s;
+  }
+  #app #input-area #input-secondary-btns.acik { opacity: 1; transition: opacity .2s; }
+  #app #input-area #input-secondary-btns > .more-item { position: relative; left: auto; top: auto; justify-self: center; transform: none; width: 44px; height: 44px; }
+  #app #input-area #input-secondary-btns.acik > .more-item { transform: none; }
+  #app #input-area #input-secondary-btns > .more-item .yay-ad { opacity: 1; background: none; top: calc(100% + 3px); color: var(--ink-3); }
+}
+/* Telefon: durum satırı tek satıra sığsın — ayraçlar gizli, küçült yalnız ikon (aria-label var),
+   yer tutucu tek satır (kişisel 390'da da tek satır) */
+@media (max-width: 800px) {
+  #app #input-area #hizli-satir .hizli-ayrac { display: none; }
+  /* kişisel 390'da satır mikrofon sütununun altından başlar (girintisiz) → model adı tam sığar (11-14 tam hizala) */
+  #app #input-area #hizli-satir:not([hidden]) { padding-inline-start: 0; }
+  #app #input-area #hizli-satir .hizli-haplar { gap: 4px; }
+  #app #input-area #giris-kucult .hap-metin { display: none; }
+  /* model adı tam (kişisel 390'da tam), sığmazsa üç noktayla kısalır */
+  #app #input-area #hap-model .hap-kisa { display: none; }
+  #app #input-area #hap-model .hap-tam { position: static; width: auto; height: auto; clip-path: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-inline-size: 24ch; display: inline-block; vertical-align: bottom; }
+  #app #input-area #hap-dil .hap-metin { max-inline-size: none; overflow: visible; }
+  /* ayraçlar gizliyken TR dar kalıp 44 px dokunma alanını komşulara kaptırmasın (birleşik test, 11-14) */
+  #app #input-area #hizli-satir #hap-dil { min-inline-size: 44px; justify-content: center; }
+  #app #input-area #hizli-satir .hizli-hap { flex-shrink: 0; }
+  #app #input-area #hizli-satir #hap-model { flex-shrink: 1; min-width: 0; }
+  /* anahtar yokken çip model adı değil "kurulum gerekli" der — o metin kısalmaz (test_halka_anahtar, birleşik 11-14) */
+  #app #input-area #hizli-satir #hap-model.anahtar-yok { flex-shrink: 0; }
+  #app #input-area #msg-input::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* yer tutucu tam sığsın (kişisel 390'da tam): hap içi düğmeler 36 px, yazı 14 px */
+  #app #input-area #input-container { grid-template-columns: var(--hedef) minmax(0, 1fr) 36px 36px; column-gap: 8px; }
+  #app #input-area #input-container.konusuyor { grid-template-columns: var(--hedef) minmax(0, 1fr) 36px 36px 36px; }
+  #app #input-area #input-more-btn, #app #input-area #send-btn { width: 36px; height: 36px; min-width: 0; min-height: 0; }
+  #app #input-area #msg-input { font-size: 14px; padding-inline-start: 12px; }
+  #app #input-area #msg-input::placeholder { font-size: 14px; }
+  body.hud-ring-mode #app #input-area { width: calc(100% - 16px); padding-inline: 4px; }
+  body.hud-ring-mode #app #input-area #input-container { grid-template-columns: var(--hedef) minmax(0, 1fr) 36px 36px; column-gap: 8px; }
+  body.hud-ring-mode #app #input-area #msg-input { padding-inline-start: 12px; }
+}
+/* Arayüz dili düğümünde yalnız kısa ad görünür (#arayuz-label'i JS yazar, title'da kalır) */
+#app #input-area #arayuz-toggle-btn #arayuz-label,
+#app #input-area #arayuz-toggle-btn #arayuz-baslik-uzun { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  #app #input-area #input-secondary-btns > .more-item,
+  #app #input-area #input-secondary-btns.acik > .more-item { transition: opacity .15s; transition-delay: 0ms; transform: translate(-50%, 0); }
+}
+@media (prefers-reduced-motion: reduce) and (max-width: 800px) and (orientation: portrait) {
+  #app #input-area #input-secondary-btns > .more-item,
+  #app #input-area #input-secondary-btns.acik > .more-item { transform: none; }
+}
+
+/* ── 4) Sahne kip seçici: etiketli altın hap ─────────────────────────
+   Kişisel modes/sohbet-sahne.css .ss-mod: seçili kip ADIYLA altın, ötekiler yalnız ikon
+   (dar sahne sütununda); telefonda üçü de adıyla. Ses dalgası şeridi (#waveform-hud)
+   kişiselde SOHBET'te yok — sahne kendi durumunu (ŞU AN) gösteriyor. */
+body.sohbet-mode #app .ss-kip {
+  gap: 2px; padding: 3px;
+  border: 1px solid var(--kenar-guclu);
+  background: color-mix(in oklab, var(--yuzey-1) 72%, transparent);
+}
+body.sohbet-mode #app .ss-kip button {
+  gap: 8px; padding: 0 14px;
+  color: var(--ink-3);
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+}
+body.sohbet-mode #app .ss-kip button:hover { color: var(--ink-1); background: var(--yuzey-3); }
+body.sohbet-mode #app .ss-kip button[aria-checked="true"] {
+  color: var(--altin-ink);
+  background: color-mix(in oklab, var(--altin-ink) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--altin-ink) 45%, transparent);
+  font-weight: 700;
+}
+body.sohbet-mode #app .ss-kip button:focus-visible { outline-color: var(--altin-ink); }
+/* seçili kip adıyla, ötekiler yalnız ikon (eski `.ss-kip-uc` hepsini ikona indiriyordu) */
+body.sohbet-mode #app .ss-kip.ss-kip-uc button[aria-checked="true"] .ss-kip-ad { display: inline; }
+body.sohbet-mode #app .ss-kip.ss-kip-uc button[aria-checked="true"] { gap: 8px; padding: 0 14px 0 12px; }
+body.sohbet-mode #app .ss-kip:not(.ss-kip-uc) button .ss-kip-ad { display: inline; }
+body.sohbet-mode #app #waveform-hud { display: none; }
+@media (max-width: 800px) {
+  body.sohbet-mode #app .ss-kip button { padding: 0 11px; }
+  body.sohbet-mode #app .ss-kip button .ss-kip-ad { display: inline; }
+}

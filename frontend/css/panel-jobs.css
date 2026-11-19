@@ -1,0 +1,78 @@
+/* ════════════════════════════════════════════════════════════════════
+   panel-jobs.css — Panel/Job UI + Wake-word Durum Göstergesi Stilleri
+
+   Spec: 02-frontend-ui (2026-09-04)
+   - Wake-word banner durum class'ları (dinliyor/duyuldu)
+   - Komuta Paneli stilleri (Arka Plan İşleri açık kaynak sürümde yok, 2026-10-17)
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Wake-word Banner Durum Göstergesi ────────────────────────────── */
+
+#wake-word-banner {
+  /* Base state varsayılan (sohbet.css'de tanımlı) */
+  transition: border-color var(--sure-2) var(--egri), background-color var(--sure-2) var(--egri);
+}
+
+#wake-word-banner.dinliyor {
+  border-color: var(--yesil-ink);
+  background-color: var(--yesil-zemin);
+}
+
+#wake-word-banner.duyuldu {
+  border-color: var(--yesil-ink);
+  background-color: var(--yesil-zemin);
+  color: var(--yesil-ink);
+  font-weight: var(--ag-kalin);
+}
+
+/* ── Komuta Paneli sekmesi ────────────────────────────────────
+   `alice-canvas.js` kişiselden porte edildi ve `#alice-canvas` kökünü
+   `position:absolute; inset:0` ile çiziyor → konteyner konumlandırılmış
+   olmak ZORUNDA, yoksa kanvas en yakın konumlandırılmış ataya (çoğu zaman
+   <body>) yapışır ve panel sekmesinin dışına taşar.
+
+   ⚠️ Dalga 1'in stub'ı `var(--ink-sag)` ve `var(--eff)` kullanıyordu; bu iki
+   token ürünün tokens.css'inde YOK — yani o stiller hiç uygulanmıyordu
+   (fallback'siz `var()` geçersiz değer üretir ve kural düşer). Aşağıdakiler
+   gerçek token adlarını kullanır: --ink-2/3 · --kenar · --yuzey-1. */
+
+#panel-content {
+  position: relative;
+  min-height: 320px;
+  height: 100%;
+}
+
+/* PANEL sekmesi kartın TAMAMINI alır. `#tab-panel` kabuk.css'in mutlak konumlu sekme
+   listesinde (#app/#tab-planner/#tab-hq) yoktu → yüksekliği `auto` kalıyor, kanvas
+   `min-height: 320px`'e çöküyordu (1440×900'de 320px şerit + altında boş kart
+   canlı ölçümünde bulundu). */
+.kabuk-icerik > #tab-panel {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+/* Kanvas panel yokken `display:none` (ac-active sınıfı yoksa). O yüzden boş
+   durumu konteynerin kendisi anlatır — kullanıcı boş kutuya bakmasın. */
+.pv-bilgi {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  padding: 24px;
+  text-align: center;
+}
+.pv-bilgi p {
+  margin: 0;
+  max-width: 46ch;
+  color: var(--ink-3);
+  font-size: var(--yazi-14, 0.875rem);
+  line-height: 1.6;
+}
+
+/* Boş durum (yetki var, panel yok) 2026-10-04'ten beri alice-canvas.js'in
+   KENDİ kartıdır: adres kutusu + kayıtlı/son siteler + ipucu — "kayıt yok" demek yerine
+   arayüzü öğretir (tasarım dili §8). Eski `::before` metni o kartın üstüne binerdi. */

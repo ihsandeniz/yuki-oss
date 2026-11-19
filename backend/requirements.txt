@@ -1,0 +1,14 @@
+# Yuki (ürün) — bağımlılıklar
+#
+# Bu dosya bilerek ince: gerçek liste `requirements-product.txt`.
+# Sebep: eski requirements.txt kişisel Alice'ten miras kalmıştı ve üründen
+# SÖKÜLEN özelliklerin paketlerini ilan ediyordu (yerel TTS, torch, opencv,
+# mediapipe, face-recognition, python-telegram-bot, ccxt, pyzbar, pytesseract,
+# python-kasa, youtube-transcript-api…). Kuran kişi gigabaytlarca ölü bağımlılık
+# indiriyor, okuyan kişi üründe olmayan özellikleri var sanıyordu.
+#
+# Kurulum (README'deki komut aynen çalışmaya devam eder):
+#   pip install -r requirements.txt
+#
+# Geliştirme ekleri: requirements-dev.txt
+-r requirements-product.txt

@@ -1,0 +1,102 @@
+/* ── ANAHTAR · BAĞLANTI KARTI ( panel 8, 2026-09-27 — geliştirici taslak A'yı seçti) ──────────
+ * Taslak A (2026-09-26 HQ taslakları). Yalnız ürün token'ları.
+ * İki hâl tek kartta: durum (servis · anahtar · model satırları + ücretsiz sınır) ve kur (üç adım).
+ * Eski iki kolonun .ak-kolonlar/.ak-ogren/.ak-kart kuralları hq.css'ten silindi; .ak-govde/.ak-bas/
+ * .ak-form google/yedekleme panellerinde yaşıyor, onlara dokunulmadı.
+ */
+
+.an-kart { max-inline-size: 880px; padding: var(--b-7); border: 1px solid var(--kenar); border-radius: var(--r-3); background: var(--yuzey-1); }
+.an-kart-bas { display: flex; align-items: center; gap: var(--b-4); }
+.an-kart-bas h4 { flex: 1; min-width: 0; margin: 0; font-size: var(--yazi-16); font-weight: var(--ag-kalin); color: var(--ink-1); line-height: 1.35;
+  text-wrap: wrap; }   /* temel.css balance (ve pretty) telde başlığı yarı genişlikte iki satıra bölüyordu */
+/* Işık rengi/biçimi ortak: ogeler.css § 14 `.durum-isik` (SAĞLIK ile aynı durum = aynı ışık, 09-28).
+   Burada yalnız başlık içi yerleşim. */
+.an-isik { margin-inline-end: 10px; vertical-align: 1px; }
+.an-vazgec { flex: none; }
+.an-alt { margin: var(--b-3) 0 0; font-size: var(--yazi-12); color: var(--ink-2); line-height: 1.5; }
+.an-kart > .an-alt:first-child { margin: 0; }
+.an-kart code { font-family: var(--font-hud); font-size: var(--yazi-13); color: var(--ink-1); overflow-wrap: anywhere;
+  padding: 0 5px; border: 1px solid var(--kenar); border-radius: var(--r-1); background: var(--yuzey-2);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; }   /* satır sonunda bölünürse iki parça da kapalı kutu */
+.an-kart a.dg { text-decoration: none; }
+.an-ipucu { margin: var(--b-3) 0 0; max-inline-size: 72ch; font-size: var(--yazi-12); color: var(--ink-2); line-height: 1.5; }
+.an-ipucu code { font-size: var(--yazi-12); }
+.an-ipucu:empty { display: none; }
+.an-uyari { color: var(--altin-ink); }
+.an-rozet { display: inline-block; padding: 1px 8px; border: 1px solid var(--kenar); border-radius: var(--r-tam);
+  font-size: var(--yazi-11); color: var(--ink-2); white-space: nowrap; vertical-align: 1px; }
+.an-rozet.mor { color: var(--mor-ink); background: var(--mor-zemin); border-color: transparent; }
+
+/* ── durum: satırlar (etiket · değer · eylem) — her satır kendi ızgarası, çizgiler kaymasın ── */
+.an-satirlar { margin: var(--b-6) 0 0; }
+.an-satir { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: var(--b-5); align-items: start;
+  padding: var(--b-4) 0; border-block-start: 1px solid var(--kenar); }
+/* Üst hizalı + düğme yüksekliğine göre iç pay: değer iki satıra çıkınca etiket ilk satırın yanında kalır
+   (ortalanınca "Model" etiketi uyarı satırının yanına düşüyordu — goz 09-28) */
+.an-satir dt, .an-satir dd:not(.an-eylem) { padding-block-start: calc((var(--hedef, 44px) - 1.5em) / 2); line-height: 1.5; }
+.an-satir dt { font-size: var(--yazi-13); color: var(--ink-2); }
+.an-satir dd { margin: 0; min-width: 0; font-size: var(--yazi-13); color: var(--ink-1); overflow-wrap: anywhere; }
+.an-satir .an-eylem { justify-self: end; }
+.an-satir.acik dd { grid-column: 2 / -1; padding-block-start: 0; }   /* düzenlemede eylem sütunu yok — liste satır sonuna uzanır */
+.an-model-duzenle { display: flex; flex-direction: column; gap: var(--b-3); }
+.an-dugmeler { display: flex; flex-wrap: wrap; gap: var(--b-3); }
+.an-sinir { margin-top: var(--b-6); padding: var(--b-5) var(--b-6); border: 1px solid var(--kenar); border-radius: var(--r-2); background: var(--yuzey-2); }
+.an-sinir b { display: block; font-size: var(--yazi-13); color: var(--ink-1); }
+.an-sinir p { margin: var(--b-2) 0 0; max-inline-size: 72ch; font-size: var(--yazi-12); color: var(--ink-2); line-height: 1.5; }
+
+/* ── kur: üç adım ── */
+.an-adimlar { list-style: none; margin: var(--b-6) 0 0; padding: 0; }
+.an-adim { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--b-5); padding: var(--b-6) 0; border-block-start: 1px solid var(--kenar); }
+.an-no { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--kenar-guclu);
+  font-size: var(--yazi-12); font-weight: var(--ag-kalin); color: var(--ink-2); }
+.an-adim.simdi .an-no { background: var(--mor-yuzey); border-color: transparent; color: #fff; }
+.an-adim h5 { margin: 3px 0 var(--b-4); font-size: var(--yazi-14); font-weight: var(--ag-kalin); color: var(--ink-1); }
+.an-adim .dg-ikincil { margin-top: var(--b-4); }
+.an-secim { display: flex; flex-wrap: wrap; gap: var(--b-3); }
+.an-diger { margin-top: var(--b-4); padding-top: var(--b-4); border-top: 1px dashed var(--kenar); }
+.an-servis { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-height: 44px; padding: 7px 14px;
+  border: 1px solid var(--kenar-guclu); border-radius: var(--r-2); background: transparent; color: var(--ink-1);
+  font: var(--yazi-13) var(--font); text-align: start; cursor: pointer;
+  transition: border-color var(--sure-2) var(--egri), background-color var(--sure-2) var(--egri); }
+.an-servis small { font-size: var(--yazi-11); color: var(--ink-2); }
+@media (hover: hover) { .an-servis:hover { border-color: var(--mor-ink); } }   /* dokunmatikte takılı kalan hover ikinci "seçili" gibi görünüyordu */
+.an-servis.secili { border-color: var(--mor-ink); background: var(--mor-zemin); }
+.an-servis:focus-visible { outline: 2px solid var(--mor-ink); outline-offset: 2px; }
+.an-satir-form { display: flex; flex-wrap: wrap; gap: var(--b-3); }
+.an-satir-form .girdi { flex: 1 1 240px; min-width: 0; }
+.an-kart .girdi { min-height: var(--hedef, 44px); }
+.an-anahtar { font-family: var(--font-hud); }
+.an-etiket { display: block; margin: var(--b-5) 0 var(--b-2); font-size: var(--yazi-12); font-weight: var(--ag-orta); color: var(--ink-1); }
+.an-kayitli { display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-3) var(--b-5); margin-bottom: var(--b-2);
+  padding: var(--b-4) var(--b-5); border: 1px solid var(--kenar); border-radius: var(--r-2); font-size: var(--yazi-13); }
+.an-kayitli span { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.an-kayitli .dg-ikincil { margin-top: 0; }
+/* satır içi bağ: metnin akışında kalır, vuruş alanı negatif blok boşluğuyla büyür (MODLAR .md-bag deseni) */
+.an-bag { display: inline-flex; align-items: center; vertical-align: middle; margin-block: -8px; min-height: 32px; padding: 0;
+  border: 0; background: none; font: inherit; color: var(--mor-ink); text-decoration: underline; cursor: pointer; }
+.an-abonelik { margin: var(--b-3) 0 0; padding: var(--b-4) var(--b-5); border: 1px dashed var(--kenar-guclu); border-radius: var(--r-2);
+  font-size: var(--yazi-12); color: var(--ink-2); line-height: 1.5; }
+
+.an-sonuc { margin: var(--b-4) 0 0; font-size: var(--yazi-13); line-height: 1.5; color: var(--ink-1); overflow-wrap: anywhere; }
+.an-sonuc.ok { color: var(--yesil-ink); }
+.an-sonuc.err { color: var(--kirmizi-ink); }
+.an-sonuc.uyari { color: var(--altin-ink); }
+.an-hata { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--b-4); font-size: var(--yazi-13); color: var(--kirmizi-ink); }
+.an-hata p { margin: 0; }
+
+@media (max-width: 600px) {
+  .an-kart { padding: var(--b-6) var(--b-5); }
+  .an-satir { grid-template-columns: minmax(0, 1fr) auto; gap: var(--b-2) var(--b-4); }
+  .an-satir dt { grid-column: 1 / -1; }
+  .an-satir dt { padding-block-start: 0; }
+  .an-satir.acik dd { grid-column: 1 / -1; }
+  .an-adim { gap: var(--b-4); }
+  .an-servis { flex: 1 1 100%; }
+  /* 13 servis tam genişlikte alt alta ~800px tutuyordu → iki sütun */
+  .an-diger .an-servis { flex: 0 1 calc(50% - var(--b-3) / 2); min-width: 0; }
+  .an-diger .an-servis span, .an-diger .an-servis small { overflow-wrap: anywhere; }
+}
+@media (hover: none) {
+  .an-bag { min-height: var(--hedef, 44px); margin-block: -12px; }
+  .an-kart .dg { min-height: var(--hedef, 44px); }
+}

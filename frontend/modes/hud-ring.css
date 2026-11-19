@@ -1,0 +1,2165 @@
+/* ════════════════════════════════════════════════════════════════════
+   hud-ring.css — Mod 01 v2: "Great Sage" HUD Halka (ZUZU layout)
+
+   Referanslar: screen-10.webp (ZUZU — layout iskeleti) +
+   Tensei Slime rünik çemberler (katman/ışık dili).
+   Yapı: dev merkez halka → altında prompt + durum satırı →
+   en altta hap (pill) input → sağda ARAÇLAR + KONUŞMA AKIŞI panelleri.
+   Tüm class'lar hr- önekiyle. Karakter teması --gm-accent'ten beslenir.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Sahne ── */
+body.hud-ring-mode {
+  /* HALKA modunun KENDİ z-index ölçeği (B2 kararı 2026-08-27, geliştirici) —
+     ana ölçekten bilinçli ayrı; değerler birebir korunarak adlandırıldı. */
+  --z-hr-alt: 0; --z-hr-taban: 1; --z-hr-kat2: 2; --z-hr-glow: 3; --z-hr-cark: 4;
+  --z-hr-rozet: 5; --z-hr-ray: 6; --z-hr-bar: 10; --z-hr-tepe: 50;
+
+  --hr-accent: var(--gm-accent, var(--accent, #60a5fa));
+  --hr-deep: #020708;
+}
+/* 🔴 HALKA palet sabitleme — ikinci yarısı (birincisi chat-modes.js'te:
+   bu kaplara `data-tema="koyu"` basılır, tokens.css'in kapsanabilir koyu
+   bloğu devreye girer).
+   ⚠️ TOKEN'I DEĞİŞTİRMEK TEK BAŞINA YETMEZ — `color` KALITSAL bir özelliktir:
+   `body`de `var(--ink-1)` zaten AÇIK tokenıyla HESAPLANMIŞTIR ve alt öğeler
+   hesaplanmış değeri miras alır. Kapta `--ink-1`i koyuya çevirmek yukarıda
+   çözülmüş rengi geri almaz. Ölçüldü: `#hr-stage` üzerinde --ink-1 doğru
+   (oklch 0.970) iken `#hr-g-state-val` hâlâ oklch(0.24) — yani açık mürekkep.
+   Bu yüzden kapta rengin KENDİSİ yeniden bildirilir; alt öğeler artık koyu
+   paletten miras alır, kendi `var(--ink-*)` kuralları da kapsanmış token'ları
+   çözer. */
+body.hud-ring-mode #chat-pane,
+body.hud-ring-mode #hr-stage { color: var(--ink-1); }
+
+body.hud-ring-mode #avatar-pane { display: none !important; }
+/* Avatar-pane gizlenince içindeki #mode-toggle-fab de kaybolur → mobilde
+   header'daki #mode-toggle'ı geri göster ki moddan çıkış/değişim erişilebilir kalsın. */
+@media (max-width: 800px) {
+  body.hud-ring-mode #mode-toggle { display: inline-flex !important; }
+}
+body.hud-ring-mode #chat-pane {
+  position: relative;
+  background: var(--hr-deep);
+}
+body.hud-ring-mode #chat-empty-state { display: none !important; }
+body.hud-ring-mode #scroll-btn { display: none !important; }
+
+/* ince scanline dokusu */
+body.hud-ring-mode #chat-pane::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg,
+    rgba(0, 0, 0, 0.16) 0px, rgba(0, 0, 0, 0.16) 1px,
+    transparent 1px, transparent 4px);
+  opacity: 0.5;
+  z-index: var(--z-hr-kat2);
+}
+
+/* ── Merkez sahne ── */
+#hr-stage {
+  flex: 1;
+  min-height: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding-right: 0;
+  padding-bottom: 112px; /* input alanı payı — SABİT (input pill ~sabit yükseklikte; kısaltılırsa örtüşür) */
+  z-index: var(--z-hr-taban);
+}
+body.hud-ring-mode #hr-stage { display: flex; }
+@media (max-width: 1100px) {
+  /* Sağ panel gizli → halka dikeyde ORTALANSIN (altta dev boşluk kalmasın),
+     sohbet + input normal akışta halkanın altına insin. */
+  #hr-stage { padding-right: 0; flex: 0 0 auto; max-height: 45vh; padding-bottom: 6px; }
+  /* Dar/ölçeklenmiş pencerede halka 45vh sahneye sığsın (üstten kesilmesin).
+     body.hud-ring-mode öneki: base #hr-ring-wrap kuralı kaynakta sonra geldiği için
+     eşit specificity'de onu ezmesin diye ağırlık artırıldı. */
+  /* Göz turu 2: 84vw'de zaman çemberi (×1.16) 420px ekranda 400px'e çıkıp
+     kabuğun iki yanında kesiliyordu (KARA MANA'da elmaslar kenara dayanıyordu).
+     74vw → çember 361px, iki yanda ~18px pay. */
+  body.hud-ring-mode #hr-ring-wrap {
+    --hr-w: min(74vw, 40vh, 360px);
+    width: var(--hr-w);
+    margin-block: calc(var(--hr-w) * 0.08);
+  }
+  body.hud-ring-mode #messages {
+    display: flex; flex: 0 1 auto; min-height: 0; max-height: 34vh;
+    overflow-y: auto; padding: 10px 14px;       /* boş/dolu — içeriği kadar yer kaplar */
+  }
+  /* input artık akışta (absolute değil) → halkanın altında, boşluk yok */
+  body.hud-ring-mode #input-area {
+    position: static !important; transform: none !important; left: auto !important; bottom: auto !important;
+    width: auto; margin: 8px; z-index: auto !important;
+  }
+  /* ticker bottom-anchor'lı; mobilde gizle */
+  #hr-ticker { display: none; }
+}
+
+#hr-clock { display: none !important; }
+
+/* ── Halka ── */
+#hr-ring-wrap {
+  position: relative;
+  /* Yükseklik-duyarlı: kısa/ölçeklenmiş ekranlarda halka, prompt + input için
+     yeterli dikey boşluk kalacak şekilde küçülür (calc ile ~250px rezerve).
+     🔵 2026-09-08: sabit tavan 540px → 680px. Sol ray kaldırılınca
+     yatayda ~190px yer açıldı ama halka BÜYÜMEDİ — çünkü sınırlayan yatay alan
+     değil, buradaki SABİT TAVANDI. Yer açmak tek başına yetmiyor, tavan da
+     yükselmeli (geliştirici: "halkanın daha büyük olması lazım").
+     ⚠️ 680 bir tavan, hedef değil: 900px yükseklikte gerçek sınır
+     `calc(100vh - 275px)` = 625px olur. Yani halka ekran uzadıkça büyür,
+     prompt + input alanını asla yemez.
+     🔴 2026-10-04 ( göz turu 2): "asla yemez" YANLIŞTI — formül halkayı
+     ölçüyordu ama zaman çemberi (#hr-time) halkanın %16 dışına taşıyor
+     (scale 1.16) ve yer kaplamıyor. Ölçüldü, 1440×900: halka 625px, sahne
+     77'de başlarken halka 61'de, zaman çemberi 11'de başlıyordu → "AETHER
+     FLOW" yazısı başlık şeridine binip üst kenarda kesiliyordu; altta da
+     çember + elmas "Yuki'ye bir şey sor…" satırının üstünden geçiyordu.
+     Çözüm: boyut zaman çemberinin DIŞ çapına göre hesaplanır ve taşan %8
+     iki yandan margin ile yer olarak ayrılır. 290 = başlık (65) + kabuk
+     payları (24) + input payı (112) + istem satırı (~89). */
+  --hr-w: max(280px, min(90vw, 680px, calc((100vh - 290px) / 1.16)));
+  width: var(--hr-w);
+  margin-block: calc(var(--hr-w) * 0.08);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+/* dışa taşan yumuşak hale */
+#hr-ring-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: transparent;
+  pointer-events: none;
+}
+
+/* ── Zaman çemberi (en dış sarıcı katman) ── */
+#hr-time {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  overflow: visible; pointer-events: none;
+  z-index: var(--z-hr-kat2);                       /* halkanın üstü, çarkın (z:4) altı → halka & çark tıklanabilir */
+  transform: scale(1.16);           /* zaman çemberini halkanın dışına doğru büyüt */
+  transform-origin: center;
+}
+#hr-time .hr-layer { transform-origin: 300px 300px; will-change: transform; }
+.hr-time-band { animation: hr-rot 120s linear infinite; }   /* en dış katman = en yavaş dönüş */
+.hr-time-txt {
+  font-family: var(--font-hud, monospace);
+  font-size: 7.5px; letter-spacing: 3px;
+  fill: var(--hr-accent); opacity: 0.5;
+}
+@media (prefers-reduced-motion: reduce) { .hr-time-band { animation: none; } }
+
+#hr-ring { width: 100%; height: 100%; overflow: visible; --hr-spin: 46s; }
+#hr-ring .hr-layer { transform-origin: 300px 300px; will-change: transform; }
+
+@keyframes hr-rot   { from { transform: rotate(0deg); }   to { transform: rotate(360deg); } }
+@keyframes hr-rot-r { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+@keyframes hr-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.022); } }
+@keyframes hr-flicker { 0%, 100% { opacity: 0.3; } 42% { opacity: 0.14; } 60% { opacity: 0.34; } 78% { opacity: 0.2; } }
+@keyframes hr-core-pulse {
+  0%, 100% { text-shadow: 0 0 8px #fff, 0 0 18px var(--hr-accent), 0 0 40px var(--hr-accent); }
+  50%      { text-shadow: 0 0 10px #fff, 0 0 26px var(--hr-accent), 0 0 60px var(--hr-accent); }
+}
+@keyframes hr-dots { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+
+/* katman hız/yön orkestrasyonu */
+#hr-ring .hr-tick-ring   { animation: hr-rot   calc(var(--hr-spin) * 2.4) linear infinite; }
+#hr-ring .hr-seg-ring    { animation: hr-rot-r calc(var(--hr-spin) * 1.7) linear infinite; }
+#hr-ring .hr-fili        { animation: hr-rot-r calc(var(--hr-spin) * 2.8) linear infinite; }
+#hr-ring .hr-sat-ring    { animation: hr-rot   calc(var(--hr-spin) * 1.3) linear infinite; }
+#hr-ring .hr-rune-outer  { animation: hr-rot   var(--hr-spin) linear infinite; }
+#hr-ring .hr-thin-rings  { animation: hr-rot-r calc(var(--hr-spin) * 2) linear infinite; }
+#hr-ring .hr-rune-mid    { animation: hr-rot-r calc(var(--hr-spin) * 1.15) linear infinite; }
+#hr-ring .hr-rune-inner  { animation: hr-rot-r calc(var(--hr-spin) * 0.75) linear infinite; }
+#hr-ring .hr-node-ring   { animation: hr-rot   calc(var(--hr-spin) * 0.55) linear infinite; }
+#hr-ring .hr-starburst   { animation: hr-rot   calc(var(--hr-spin) * 3.2) linear infinite; }
+#hr-ring .hr-rays        { opacity: 0; transition: opacity 0.5s; }
+
+#hr-ring text {
+  font-family: var(--font-hud, 'JetBrains Mono', monospace);
+  fill: var(--hr-accent);
+}
+#hr-ring .hr-rune-outer text { font-size: 17px; letter-spacing: 7px; opacity: 0.8; }
+#hr-ring .hr-rune-mid text   { font-size: 9.5px; letter-spacing: 4px; opacity: 0.45; }
+#hr-ring .hr-rune-inner text { font-size: 11px; letter-spacing: 5px; opacity: 0.5; }
+
+#hr-core-name {
+  font-size: 30px;
+  letter-spacing: 14px;
+  font-weight: 600;
+  fill: var(--text-bright, #e8f4fa);
+  text-anchor: middle;
+  animation: hr-core-pulse 3.2s ease-in-out infinite;
+}
+
+/* Merkez durum satırı — adın altında, accent renginde.
+   Durum halkada bugüne kadar YALNIZ renkle anlatılıyordu; bu satır aynı
+   bilgiyi yazıyla da verir. Rengi --hr-accent olduğu için durum değişince
+   (idle → karakter rengi · thinking → altın · talking → mor) kendiliğinden
+   döner: tek kaynak, iki kanal. Adın 30px'ine karşı 12px — merkezde ad
+   birincil, durum ikincil kalsın diye. */
+#hr-ring #hr-core-status {
+  font-size: 12px;
+  letter-spacing: 6px;
+  font-weight: 500;
+  /* 🔴 Düz `var(--hr-accent)` + opacity .85 ÖLÇÜLDÜ ve düştü (08-30, piksel
+     örneklemesi): HAZIR 6.61:1 ✅ · DÜŞÜNÜYOR 2.52:1 ❌ · KONUŞUYOR 3.21:1 ❌.
+     Sebep accent'in kendisi: thinking'de altın (L≈0.52), talking'de mor —
+     ikisi de koyu zemin üstünde 12px metin için yetersiz, opacity onu bir kat
+     daha düşürüyordu.
+     Çözüm rengi durumdan KOPARMIYOR: ton ve kroma büyük ölçüde korunur,
+     yalnız açıklık yükseltilir. Böylece "renk durumu taşır" kuralı yaşar
+     ama metin de okunur.
+
+     ⚠️ İKİ YOL DENENDİ VE ÖLÇÜLDÜ, İKİSİ DE TUTMADI:
+     ① `fill: oklch(from … max(l,.78) c h)` — sözdizimi geçerli sayılıyor ama
+        SVG `fill` üzerinde hesaplanmıyor, computed değer accent'in ham hâli.
+     ② `color: oklch(from … max(l,.78) c h); fill: currentColor` — `max()`
+        relative-color içinde düşüyor: DÜŞÜNÜYOR 2.52 → 2.82, hedef 4.5.
+     Çalışan yol `color-mix`: açıklığı ölçülebilir biçimde yükseltir, ton ve
+     kroma büyük ölçüde korunur — durum rengi hâlâ okunur, metin de okunur.
+
+     ⚠️ SEÇİCİ `#hr-ring #hr-core-status` OLMAK ZORUNDA: bu dosyanın 150.
+     satırındaki `#hr-ring text { fill: var(--hr-accent) }` (0-1-0-1) düz
+     `#hr-core-status`i (0-1-0-0) eziyor. Ölçülmeseydi görünmezdi — kural
+     CSSOM'da duruyor, font-size uygulanıyor, YALNIZ fill ezilmiş oluyordu.
+
+     🔴 KARIŞIM HEDEFİ `--text-bright` DEĞİL, `white`: ölçüldü (08-30) —
+     `--text-bright` → `--ink-1` → AÇIK temada `oklch(0.240 …)`, yani KOYU.
+     Halka kendi koyu zeminini (--hr-deep) tema-bağımsız kullandığı için o
+     token burada koyu-üstüne-koyu veriyordu (mix sonucu L 0.52 → kontrast
+     3.49). `white` ile L 0.95. Zemin her temada koyu olduğundan bu güvenli.
+     ⚠️ Aynı tuzak 162. satırda da var (#hr-core-name → --text-bright);
+     halka modunun AÇIK temadaki okunurluğu ayrı bir iş olarak durulmalı. */
+  fill: color-mix(in oklab, var(--hr-accent, #60a5fa) 35%, white);
+  text-anchor: middle;
+  opacity: 1;
+}
+
+/* ── Durum varyasyonları ── */
+#hr-stage.hr-idle      { --hr-accent: var(--gm-accent, #60a5fa); }
+#hr-stage.hr-idle      #hr-ring { --hr-spin: 46s; }
+#hr-stage.hr-listening #hr-ring { --hr-spin: 22s; animation: hr-breathe 1.2s ease-in-out infinite; }
+#hr-stage.hr-thinking  { --hr-accent: var(--gold, #f0b429); }
+#hr-stage.hr-thinking  #hr-ring { --hr-spin: 9s; }
+#hr-stage.hr-thinking  #hr-ring .hr-rays,
+#hr-stage.hr-talking   #hr-ring .hr-rays { opacity: 0.3; animation: hr-flicker 1.1s steps(3) infinite; }
+#hr-stage.hr-talking   #hr-ring { --hr-spin: 18s; animation: hr-breathe 0.55s ease-in-out infinite; }
+#hr-stage.hr-talking   { --hr-accent: #b98aff; }
+
+/* ── Prompt + durum satırı ── */
+#hr-prompt {
+  /* Halkanın taşan zaman çemberine artık margin ile yer ayrılıyor (yukarıda);
+     eski 26px'lik ek boşluk istemi gereksiz yere input'a itiyordu. */
+  margin-top: var(--b-2);
+  text-align: center;
+  pointer-events: none;
+}
+#hr-prompt-text {
+  font-size: clamp(15px, 2.4vh, 19px);
+  letter-spacing: 1px;
+  color: var(--text-bright, #e8f4fa);
+  text-shadow: 0 0 16px rgba(96, 165, 250, 0.35);
+}
+/* B2 (11-14): son cevap "bir şey sor" satırının yerinde — en çok 3 satır, tıklanır (AKIŞ açılır). */
+#hr-prompt-text.hr-son-cevap {
+  max-width: min(560px, 88vw);
+  margin-inline: auto;
+  font-size: clamp(14px, 2vh, 16px);
+  line-height: 1.5;
+  letter-spacing: 0.2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  pointer-events: auto;
+  cursor: pointer;
+}
+#hr-dots { margin: 8px 0 6px; }
+#hr-dots span {
+  display: inline-block;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  margin: 0 4px;
+  background: var(--hr-accent);
+  animation: hr-dots 1.6s ease-in-out infinite;
+}
+#hr-dots span:nth-child(2) { animation-delay: 0.25s; }
+#hr-dots span:nth-child(3) { animation-delay: 0.5s; }
+#hr-status {
+  font-family: var(--font-hud, 'JetBrains Mono', monospace);
+  font-size: 11.5px;
+  letter-spacing: 2.5px;
+  color: var(--hr-accent);
+  text-transform: none;
+}
+/* 11-13 (goz #1b): anahtar yokken boştaki merkez etiketi + durum satırı sarı — sohbet rozetinin
+   ANAHTAR YOK'uyla aynı renk ailesi. Halkanın kendi aksanı (çizgiler) değişmez; yalnız metin. Gerçek
+   bir durum (dinliyor/düşünüyor…) varsa sınıf yine durur ama kural yalnız .hr-idle'da çalışır. */
+#hr-stage.hr-idle.hr-anahtar-yok #hr-status { color: #f5cf73; }
+#hr-stage.hr-idle.hr-anahtar-yok #hr-ring #hr-core-status { fill: color-mix(in oklab, #f0b429 35%, white); }
+
+/* ── Input (orijinal butonlar korunur, HUD kabuğuna sarılır) ── */
+body.hud-ring-mode #input-area {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 14px;
+  width: min(960px, calc(100% - 348px));
+  background: rgba(5, 8, 18, 0.82);
+  border: 1px solid color-mix(in srgb, var(--hr-accent) 35%, transparent);
+  border-radius: 20px;
+  padding: 6px 12px;
+  backdrop-filter: var(--glass-blur, blur(12px));
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.5), 0 0 14px color-mix(in srgb, var(--hr-accent) 12%, transparent);
+  z-index: var(--z-hr-bar);
+  transition: width 0.28s cubic-bezier(0.4,0,0.2,1);
+}
+/* Sağ panel daraltık → input alanı genişle */
+body.hud-ring-mode:has(#hr-side.hr-collapsed) #input-area {
+  width: min(960px, calc(100% - 80px));
+}
+@media (max-width: 1100px) {
+  body.hud-ring-mode #input-area { width: min(960px, calc(100% - 32px)); }
+}
+body.hud-ring-mode #input-container { background: transparent; border: none; }
+/* 🔴 2026-08-31 — `min-block-size` BURADA olmak zorunda.
+   Asgari yüksekliği veren kural `sohbet.css:968`'de ama seçicisi
+   `body:not(.hud-ring-mode)` → HALKA modunda hiç uygulanmıyordu ve buradaki
+   kural yalnız zemin/kenarlık ezdiği için kutu 20px'te kalıyordu (WCAG 2.5.8
+   asgarisi 24). Yani ürünün ANA metin girişi HALKA modunda dokunma hedefi
+   eşiğinin altındaydı. Canlı ölçüm: 1280px'te 642×20, 1920px'te 766×20.
+   Bu kusur bugüne dek görünmedi çünkü kapı HALKA'ya hiç geçemiyordu
+   (chat-modes.js localStorage anahtarı göçle uyuşmuyordu — aynı turda kapandı). */
+body.hud-ring-mode #msg-input {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-block-size: var(--hedef);
+  max-block-size: 132px;
+}
+
+/* ── Sağ launcher card — kompakt yüzer buton barı ── */
+#hr-side {
+  position: absolute;
+  /* 2026-08-03: `top:10px` üst bardaki MEM/KLASİK düğmelerinin ÜSTÜNE biniyordu
+     (z-index:10 ile onları örtüyor). Panel bara değil, barın ALTINA hizalanır. */
+  top: 52px;
+  right: 10px;
+  width: auto;
+  height: auto;
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  z-index: var(--z-hr-bar);
+}
+body.hud-ring-mode #hr-side { display: flex; }
+/* ── DAR EKRAN: PANEL alt çekmece + tek widget tabakası (2026-11-13) ──────────
+   Eskiden (2026-10-04) dar ekranda ray ve widget'lar `display:none` idi: telefonda
+   HAFIZA/MODLAR/ALARM/GÖREV'e hiçbir yol yoktu (ana sekme çubuğunda yoklar).
+   Kişisel Yuki'deki gibi ray alt çekmeceye iner; sağ ortadaki ▴ (#hr-cekmece-fab,
+   hud-ring.js `_cekmeceKur`) açar/kapar. Seçilen widget giriş çubuğunun üstünde
+   tam genişlik tabaka olur, aynı anda tek (`hr-w-mobil-gizli`, yalnız görsel).
+   ⚠️ `!important` süs değil: ray sürüklenince `_setupSideDrag` left/top'u INLINE
+   yazar, widget konumu da inline — çekmece/tabaka konumu ancak böyle korunur.
+   z: tabaka ≤68 (`_Z_TAVAN`), perde 71, çekmece 72, düğme 73 — çekmece açıkken
+   açık bir tabakanın üstünde kalır. */
+#hr-cekmece-fab, #hr-cekmece-backdrop { display: none; }
+@media (max-width: 1100px) {
+  body.hud-ring-mode #hr-side {
+    display: flex;
+    position: fixed;
+    inset-inline: 0 !important;
+    inset-block-start: auto !important;
+    inset-block-end: 0;
+    inline-size: auto !important;
+    max-inline-size: none;
+    max-block-size: 62vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateY(101%);    /* 101: 1px'lik alt kenar sızıntısını da kes */
+    visibility: hidden;             /* kapalıyken Tab odağı ekran dışına gitmesin */
+    transition: transform .26s var(--egri), visibility 0s linear .26s;
+    z-index: 72;
+    border-radius: 12px 12px 0 0;
+    border-block-end: 0;
+    padding-block-end: env(safe-area-inset-bottom);
+  }
+  body.hud-ring-mode.hr-cekmece-acik #hr-side {
+    transform: translateY(0);
+    visibility: visible;
+    transition: transform .26s var(--egri), visibility 0s;
+  }
+  /* Daraltma düğmesi çekmecede anlamsız (kapatma ▴ ve perdede); dar mod (ikon
+     sütunu) etiketleri gizler — çekmecede yer bol, ikon tek başına okunmaz. */
+  body.hud-ring-mode #hr-side .hr-collapse-btn { display: none; }
+  body.hud-ring-mode #hr-side.hr-collapsed .hr-tb-label { display: inline; }
+  body.hud-ring-mode #hr-side.hr-collapsed .hr-grup { display: flex; }
+  body.hud-ring-mode #hr-side.hr-collapsed .hr-side-name { display: inline; }
+  /* Düğmeler ızgarada: hepsi tek ekranda; grup başlığı tam satır. */
+  body.hud-ring-mode #hr-side .hr-tabs-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 8px;
+    padding: 12px;
+  }
+  /* yalnız düğme ızgarasının grupları — HALKA TEMASI başlığı kendi iç payında kalır (goz: x≈3'e yapışıyordu) */
+  body.hud-ring-mode #hr-side .hr-tabs-bar .hr-grup { grid-column: 1 / -1; padding: 6px 2px 0; }
+  body.hud-ring-mode #hr-side .hr-tab-btn {
+    min-block-size: 48px;           /* parmak hedefi; WCAG 2.5.8 asgarisi 24 */
+    block-size: auto;
+    justify-content: flex-start;
+    inline-size: auto;
+    padding: 0 10px;
+  }
+  /* Tutamak — "bu panel aşağı kayar" işareti, sabit bir panelle karışmasın. */
+  body.hud-ring-mode #hr-side .hr-side-header { position: relative; padding-block-start: 14px; cursor: default; }
+  body.hud-ring-mode #hr-side .hr-side-header::before {
+    content: '';
+    position: absolute; inset-block-start: 6px; inset-inline-start: 50%; transform: translateX(-50%);
+    inline-size: 34px; block-size: 3px; border-radius: 2px;
+    background: color-mix(in srgb, var(--hr-accent) 45%, transparent);
+  }
+
+  /* Widget = giriş çubuğunun üstünde tam genişlik tabaka. Alt pay hud-ring.js
+     `_widgetAltPay` ölçer; 76px yalnız ölçü gelmeden önceki ilk kare için.
+     Üst sınır ▴ düğmesinin (dikey orta) altında kalır. */
+  body.hud-ring-mode .hr-widget {
+    display: flex;
+    flex-direction: column;
+    position: fixed !important;
+    inset-inline: 8px !important;
+    inset-block-start: auto !important;
+    inset-block-end: var(--hr-widget-alt, 76px) !important;
+    inline-size: auto !important;
+    block-size: auto !important;
+    max-block-size: min(56vh, 420px, calc(50vh - var(--hr-widget-alt, 76px) - 30px));
+  }
+  body.hud-ring-mode .hr-widget .hr-widget-body { max-block-size: none; overflow-y: auto; overscroll-behavior: contain; }
+  body.hud-ring-mode .hr-widget .hr-widget-resize { display: none; }
+  body.hud-ring-mode .hr-widget.hr-w-mobil-gizli { display: none !important; }
+
+  /* Çekmeceyi açan düğme — sağ orta. Sağ ALT kişiselde denendi: açıkken çekmecenin
+     son satırına, kapalıyken gönder düğmesine biniyordu. */
+  body.hud-ring-mode #hr-cekmece-fab {
+    display: flex;
+    align-items: center; justify-content: center;
+    position: fixed;
+    inset-inline-end: 12px;
+    inset-block-start: 50%;
+    transform: translateY(-50%);
+    inline-size: var(--hedef); block-size: var(--hedef);
+    padding: 0;
+    z-index: 73;
+    border-radius: var(--r-tam);
+    border: 1px solid color-mix(in srgb, var(--hr-accent) 40%, transparent);
+    background: color-mix(in oklab, var(--hr-deep) 92%, transparent);
+    color: var(--hr-accent);
+    cursor: pointer;
+    transition: transform .2s var(--egri), border-color .2s, color .2s;
+  }
+  body.hud-ring-mode #hr-cekmece-fab svg { inline-size: 18px; block-size: 18px; }
+  body.hud-ring-mode #hr-cekmece-fab:focus-visible { outline: 2px solid var(--hr-accent); outline-offset: 2px; }
+  /* Açıkken ALTIN = seçili + ok döner (translateY korunur, yoksa düğme ortadan kayar). */
+  body.hud-ring-mode.hr-cekmece-acik #hr-cekmece-fab {
+    color: var(--altin, #f0b429);
+    border-color: color-mix(in srgb, var(--altin, #f0b429) 55%, transparent);
+    transform: translateY(-50%) rotate(180deg);
+  }
+  body.hud-ring-mode #hr-cekmece-backdrop {
+    display: block;
+    position: fixed; inset: 0; z-index: 71;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0; pointer-events: none;
+    transition: opacity .26s;
+  }
+  body.hud-ring-mode.hr-cekmece-acik #hr-cekmece-backdrop { opacity: 1; pointer-events: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.hud-ring-mode #hr-side,
+  body.hud-ring-mode #hr-cekmece-fab,
+  body.hud-ring-mode #hr-cekmece-backdrop { transition: none; }
+}
+
+/* Sol kenarda nabız atan neural çizgi (clip-path içinde kalır) */
+@keyframes hr-neural-pulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.8; }
+}
+
+.hr-panel-head {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 12px;
+  font-family: var(--font-hud, 'JetBrains Mono', monospace);
+  font-size: 10.5px;
+  letter-spacing: 3px;
+  color: var(--text-bright, #e8f4fa);
+  border-bottom: 1px solid color-mix(in srgb, var(--hr-accent) 18%, transparent);
+  background: color-mix(in srgb, var(--hr-accent) 7%, transparent);
+}
+.hr-panel-head .hr-head-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--hr-accent);
+  box-shadow: 0 0 6px var(--hr-accent);
+}
+
+
+/* Karakter satırı: ad + rol (2026-08-03). Rol ikincil, ad öne çıkar. */
+
+/* KONUŞMA AKIŞI — #messages bu panelin gövdesine taşınır */
+#hr-flow-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+body.hud-ring-mode #hr-flow-body #messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: transparent;
+  padding: 8px;
+}
+/* akış içinde kompakt mesaj görünümü */
+body.hud-ring-mode #hr-flow-body .msg-row { margin: 4px 0; }
+body.hud-ring-mode #hr-flow-body .msg-avatar { display: none; }
+body.hud-ring-mode #hr-flow-body .msg-bubble {
+  font-size: 11.5px;
+  line-height: 1.45;
+  padding: 6px 9px;
+  max-width: 100%;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   YENİ HUD KATMANLARI (JARVIS referansları)
+   ① ses-spektrum · ② hızlı-aksiyon çarkı · ③ gauge kartları · ④ küre + saat
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── ① Ses-spektrum çubukları (state'e tepkili equalizer) ── */
+#hr-ring .hr-bar {
+  fill: var(--hr-accent);
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  transform: scaleY(0.22);
+  animation: hr-bar 2.4s ease-in-out infinite alternate;
+  /* per-element drop-shadow KALDIRILDI (64 filtre/kare = kasma) → grup glow'u yeter */
+}
+@keyframes hr-bar { to { transform: scaleY(1); } }
+.hr-spectrum { filter: drop-shadow(0 0 2px var(--hr-accent)); }  /* tek glow, 64 yerine 1 */
+#hr-stage.hr-idle      #hr-ring .hr-bar { opacity: 0.40; animation-duration: 2.6s; }
+#hr-stage.hr-listening #hr-ring .hr-bar { opacity: 0.95; animation-duration: 0.7s; }
+#hr-stage.hr-thinking  #hr-ring .hr-bar { opacity: 0.80; animation-duration: 1.1s; }
+#hr-stage.hr-talking   #hr-ring .hr-bar { opacity: 1.00; animation-duration: 0.4s; }
+
+/* ── ④ Merkez 3B ikosahedron (RAF; wireframe küre yerine) ── */
+#hr-poly { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--hr-accent) 50%, transparent)); }
+#hr-poly polygon { stroke: var(--hr-accent); stroke-linejoin: round; }
+
+/* ── ② ODAKLI HALKA — merkez menüsü (2026-10-11, kişisel 933779b'nin ürün çevirisi) ──
+   Halkaya tıkla → aç/kapat (#hr-ring-wrap.hr-wheel-open). Aynı anda TEK grup
+   (SEKMELER · KARAKTER), büyük düğümler, merkezde bilgi ekranı. Eski sekme çarkı
+   (.hr-wheel-btn 44×42, 7px etiket) ve karakter çarkı (.hr-cw-btn) kuralları silindi.
+   Renk: halkanın kendi vurgusu --hr-accent (BUZ / KARA MANA teması belirler) —
+   kişiseldeki altın ürüne alınmadı. Karakter düğümü kendi renginde (--od-k). */
+#hr-ring-wrap { cursor: pointer; }   /* halka tıklanabilir (menüyü açar) */
+#hr-odak { position: absolute; inset: 0; pointer-events: none; z-index: var(--z-hr-cark); }
+#hr-ring-wrap.hr-wheel-open #hr-odak { pointer-events: auto; cursor: default; }
+/* Arka örtü: menü açıkken rünler ve çizgiler susar, yazı okunur */
+.hr-od-ortu {
+  position: absolute; left: 50%; top: 50%; width: 104%; aspect-ratio: 1; border-radius: 50%;
+  transform: translate(-50%, -50%) scale(.92);
+  background: radial-gradient(circle, rgba(4,6,14,.95) 0%, rgba(4,6,14,.88) 30%, rgba(4,6,14,.76) 58%, rgba(4,6,14,.3) 72%, transparent 78%);
+  opacity: 0; pointer-events: none;
+  transition: opacity .25s var(--e-out, cubic-bezier(.25,1,.4,1)), transform .35s var(--e-out, cubic-bezier(.25,1,.4,1));
+}
+#hr-ring-wrap.hr-wheel-open .hr-od-ortu { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+/* Grup anahtarı */
+.hr-od-anahtar {
+  position: absolute; left: 50%; top: 0; transform: translate(-50%, -30%);
+  display: flex; gap: 2px; padding: 3px; border-radius: 22px;
+  background: rgba(6,8,18,.9); border: 1px solid color-mix(in srgb, var(--hr-accent) 25%, transparent);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s, transform .3s var(--e-out, cubic-bezier(.25,1,.4,1));
+}
+#hr-ring-wrap.hr-wheel-open .hr-od-anahtar { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
+.hr-od-grup {
+  min-height: 36px; padding: 0 clamp(10px, 2.6cqi, 16px); border-radius: 18px; border: 0; background: none; cursor: pointer;
+  font: 600 11px/1 var(--font-hud, 'JetBrains Mono', monospace); letter-spacing: .08em; color: rgba(220,232,255,.62);
+  transition: color .15s, background .15s;
+}
+.hr-od-grup:hover { color: #f2f6ff; }
+.hr-od-grup.hr-od-grup-sec { background: color-mix(in srgb, var(--hr-accent) 18%, transparent); color: var(--hr-accent); }
+.hr-od-grup:focus-visible { outline: 2px solid var(--hr-accent); outline-offset: 2px; }
+/* Kilitli grup (SİTELER, Ultra değilken): kesikli çerçeve + kilit rozeti — kilitli karakter düğümüyle aynı dil */
+.hr-od-grup.hr-od-grup-kilitli { position: relative; border: 1px dashed rgba(220,232,255,.46); }
+/* üstüne gelince parlamaz: kilitli seçenek seçili gruptan parlak görünüyordu (goz 10-12 #1) */
+.hr-od-grup.hr-od-grup-kilitli:hover { color: rgba(220,232,255,.62); }
+.hr-od-grup-kilitli .hr-od-kilit { top: -6px; right: -4px; }
+/* Düğümler — ≥44px dokunma hedefi */
+.hr-od-dugum {
+  position: absolute; width: clamp(44px, 11cqi, 60px); aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center; padding: 0; cursor: pointer;
+  background: rgba(6,8,18,.9); border: 1px solid rgba(220,232,255,.46); color: rgba(220,232,255,.78);   /* sınır ≥3:1 (goz 10-12 #5; .2'de 1,44:1) */
+  transform: translate(-50%, -50%) scale(.6); opacity: 0; pointer-events: none;
+  transition: opacity .22s var(--e-out, cubic-bezier(.25,1,.4,1)) var(--od-gec, 0s),
+              transform .3s var(--e-out, cubic-bezier(.25,1,.4,1)) var(--od-gec, 0s),
+              color .15s, border-color .15s, box-shadow .15s;
+}
+#hr-ring-wrap.hr-wheel-open .hr-od-dugum { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
+.hr-od-ik { display: grid; place-items: center; width: 42%; height: 42%; pointer-events: none; }
+.hr-od-ik svg { width: 100%; height: 100%; }
+.hr-od-harf { font: 700 clamp(15px, 3.6cqi, 20px)/1 var(--font-disp, 'Chakra Petch', sans-serif); pointer-events: none; }
+.hr-od-etiket {
+  position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  font: 600 clamp(10px, 2cqi, 11.5px)/1 var(--font-hud, 'JetBrains Mono', monospace); letter-spacing: .05em; text-transform: uppercase;
+  color: rgba(220,232,255,.7); white-space: nowrap; pointer-events: none; transition: color .15s;
+  text-shadow: 0 1px 3px rgba(0,0,0,.9);
+}
+.hr-od-dugum:hover, .hr-od-dugum.hr-od-sec, .hr-od-dugum:focus-visible {
+  color: var(--hr-accent); border-color: color-mix(in srgb, var(--hr-accent) 60%, transparent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--hr-accent) 22%, transparent);
+}
+#hr-ring-wrap.hr-wheel-open .hr-od-dugum:hover,
+#hr-ring-wrap.hr-wheel-open .hr-od-dugum.hr-od-sec { transform: translate(-50%, -50%) scale(1.07); }
+.hr-od-dugum:hover .hr-od-etiket, .hr-od-dugum.hr-od-sec .hr-od-etiket { color: #f2f6ff; }
+.hr-od-dugum:focus-visible { outline: 2px solid var(--hr-accent); outline-offset: 3px; }
+.hr-od-sekme.hr-od-aktif { background: color-mix(in srgb, var(--hr-accent) 16%, rgba(6,8,18,.92)); }
+/* Karakter düğümleri kendi renginde */
+.hr-od-kar { color: var(--od-k); border-color: color-mix(in srgb, var(--od-k) 55%, transparent); }
+.hr-od-kar:hover, .hr-od-kar.hr-od-sec, .hr-od-kar:focus-visible { color: var(--od-k); border-color: var(--od-k); box-shadow: 0 0 22px color-mix(in srgb, var(--od-k) 35%, transparent); }
+.hr-od-kar.hr-od-aktif { background: color-mix(in srgb, var(--od-k) 20%, rgba(6,8,18,.9)); box-shadow: 0 0 0 3px rgba(6,8,18,.9), 0 0 0 4.5px var(--od-k); }
+/* Kilitli karakter (açık kaynakta kilit yok; kapı ileride eklenecek karakterler için): soluk değil KESİKLİ çerçeve + kilit rozeti —
+   sönüklük okunurluğu düşürür, durumu çerçeve anlatır (sohbet-sahne.css karakter şeridi kuralı). */
+.hr-od-kar.hr-od-kilitli { border-style: dashed; background: rgba(6,8,18,.92); }
+.hr-od-kilit {
+  position: absolute; top: -3px; right: -3px; width: 18px; height: 18px; border-radius: 50%;
+  display: grid; place-items: center; background: rgba(6,8,18,.95); border: 1px solid rgba(220,232,255,.35);
+  pointer-events: none;
+}
+.hr-od-kilit svg { width: 10px; height: 10px; fill: none; stroke: rgba(220,232,255,.85); stroke-width: 2; stroke-linecap: round; }
+.hr-od-lv {
+  position: absolute; top: -4px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+  display: grid; place-items: center; font: 700 10px/1 var(--font-hud, 'JetBrains Mono', monospace);
+  color: #05070f; background: var(--hr-accent); pointer-events: none;
+}
+/* Merkez bilgi ekranı */
+.hr-od-merkez {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 42%; display: grid; justify-items: center; gap: clamp(3px, 1.1cqi, 6px); text-align: center;
+  pointer-events: none; opacity: 0; transition: opacity .2s .05s;
+}
+#hr-ring-wrap.hr-wheel-open .hr-od-merkez { opacity: 1; }
+.hr-od-ust { font: 600 clamp(9.5px, 1.9cqi, 10.5px)/1 var(--font-hud, 'JetBrains Mono', monospace); letter-spacing: .14em; color: rgba(220,232,255,.62); }
+.hr-od-ad { font: 600 clamp(17px, 4.8cqi, 26px)/1.1 var(--font-disp, 'Chakra Petch', sans-serif); letter-spacing: .03em; color: #f2f6ff; }
+.hr-od-ne { font: clamp(11px, 2.4cqi, 13px)/1.45 var(--font, system-ui, sans-serif); color: rgba(220,232,255,.8); text-wrap: balance; }
+.hr-od-ipucu { margin-top: 2px; text-wrap: balance; font: 600 clamp(9.5px, 1.9cqi, 10.5px)/1.3 var(--font-hud, 'JetBrains Mono', monospace); letter-spacing: .06em; color: var(--hr-accent); }
+/* ── SİTELER (2026-10-11) — site düğümü harfli, EKLE/TÜM ikonlu ──
+   Uzun ad halkada kısalır (tam ad merkezde ve aria-label'da). */
+.hr-od-site .hr-od-etiket { max-width: 11ch; overflow: hidden; text-overflow: ellipsis; }
+.hr-od-ekle .hr-od-ik svg, .hr-od-tum .hr-od-ik svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.hr-od-ekle { border-style: dashed; color: var(--hr-accent); border-color: color-mix(in srgb, var(--hr-accent) 55%, transparent); }
+/* Merkez paneli: SİTE EKLE formu · TÜM SİTELER listesi — modal değil, merkezin yerini alır */
+/* Genişlik (goz 10-12 #4): 58%'de panel yan düğümlerin etiketlerini ortadan kesiyordu (1280'de "TÜM SİTELER"in R'si).
+   Düğüm merkezleri R=38% → etiketin iç ucu ≈%21; panel %50'de kalır. 390'da 220px tabanı yine
+   düğümlere biner → panel açıkken düğümler çekilir (aşağıda, #3). */
+.hr-od-merkez.hr-od-panelli { width: clamp(220px, 50%, 320px); pointer-events: auto; }
+#hr-ring-wrap:not(.hr-wheel-open) .hr-od-merkez.hr-od-panelli { pointer-events: none; }
+/* Panel açıkken düğümler ve grup anahtarı çekilir (goz 10-12 #3, geliştirici kararı 10-12): panel merkezin
+   yerini alır ama 390'da halkanın neredeyse tamamını kaplıyor — düğüm/etiketleri ortadan kesip
+   üstte SEKMELER şeridine biniyordu. Panelin kendi ✕'i ve Esc geri getirir; visibility sekme
+   sırasından da çıkarır (anında; kapanınca düğümler açık-hâl geçişiyle döner). Aynı özgüllükte
+   (1-2-0) açık-hâl kuralından SONRA gelir. */
+#hr-odak:has(.hr-od-panelli) .hr-od-dugum,
+#hr-odak:has(.hr-od-panelli) .hr-od-anahtar { opacity: 0; visibility: hidden; pointer-events: none; transition-delay: 0s; }
+.hr-od-panel {
+  position: relative; display: grid; gap: 8px; width: 100%; padding: 14px 12px 12px;
+  border-radius: 16px; text-align: start;
+  /* Tam opak (goz 10-12 #1): .94'te arkadaki düğüm/etiket liste metninin altında hayalet gibi okunuyordu */
+  background: rgb(6,8,18); border: 1px solid color-mix(in srgb, var(--hr-accent) 30%, transparent);
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+}
+.hr-sp-baslik { padding-inline-end: 40px; font: 600 12px/1.2 var(--font-hud, 'JetBrains Mono', monospace); letter-spacing: .1em; text-transform: uppercase; color: #f2f6ff; }
+.hr-sp-baslik span { color: rgba(220,232,255,.62); letter-spacing: .04em; }
+.hr-sp-kapat {
+  position: absolute; top: 2px; right: 2px; width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center; padding: 0; border: 0; background: none; cursor: pointer; color: rgba(220,232,255,.7);
+}
+.hr-sp-kapat:hover { color: #f2f6ff; }
+.hr-sp-kapat svg, .hr-sp-sil svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.hr-sp-form { display: grid; gap: 8px; }
+.hr-sp-in {
+  width: 100%; min-height: 44px; padding: 0 12px; border-radius: 10px;
+  font: 14px/1.2 var(--font, system-ui, sans-serif); color: #f2f6ff;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(220,232,255,.32);
+}
+.hr-sp-in::placeholder { color: rgba(220,232,255,.62); }
+.hr-sp-in:focus-visible { outline: 2px solid var(--hr-accent); outline-offset: 2px; border-color: transparent; }
+.hr-sp-in[aria-invalid="true"] { border-color: #ff8a8a; }
+.hr-sp-hata { min-height: 0; text-wrap: balance; font: 12px/1.35 var(--font, system-ui, sans-serif); color: #ffb4b4; }
+.hr-sp-hata:empty { display: none; }
+.hr-sp-eylem { display: flex; justify-content: flex-end; gap: 6px; }
+.hr-sp-dg {
+  min-height: 44px; padding: 0 14px; border-radius: 10px; cursor: pointer;
+  font: 600 11px/1 var(--font-hud, 'JetBrains Mono', monospace); letter-spacing: .08em; text-transform: uppercase;
+  color: rgba(220,232,255,.85); background: none; border: 1px solid rgba(220,232,255,.22);
+}
+.hr-sp-dg:hover { color: #f2f6ff; border-color: rgba(220,232,255,.45); }
+.hr-sp-birincil { color: var(--hr-accent); border-color: color-mix(in srgb, var(--hr-accent) 60%, transparent); background: color-mix(in srgb, var(--hr-accent) 12%, transparent); }
+/* Yükseklik 4,5 satır (satır 44 + ara 2): son görünen satır yarıdan kesilir → "devamı var" okunur (goz 10-12 tur 2 #2) */
+.hr-sp-liste { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; max-height: min(28vh, 206px); overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--hr-accent) 55%, transparent) transparent; }
+/* Kaydırma ipucu (goz 10-12 #2): liste sığmıyorsa alt kenar solar — son satır yarım kesik değil
+   "devamı var" okunur; uca gelince solma kalkar. Sınıfları _odListeIpucu (hud-ring.js) yazar. */
+.hr-sp-liste.hr-sp-kayar:not(.hr-sp-son) {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), rgba(0,0,0,.3));
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), rgba(0,0,0,.3));
+}
+.hr-sp-satir { display: flex; align-items: center; gap: 2px; }
+.hr-sp-ac {
+  flex: 1; min-width: 0; min-height: 44px; padding: 4px 8px; border-radius: 10px; border: 0; background: none; cursor: pointer;
+  display: grid; text-align: start; gap: 2px; color: #f2f6ff;
+}
+.hr-sp-ac:hover { background: rgba(255,255,255,.05); }
+.hr-sp-ac b { font: 600 13px/1.2 var(--font, system-ui, sans-serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hr-sp-ac span { font: 11px/1.2 var(--font-hud, 'JetBrains Mono', monospace); color: rgba(220,232,255,.7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hr-sp-sil {
+  flex: 0 0 44px; width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center;
+  padding: 0; border: 0; background: none; cursor: pointer; color: rgba(220,232,255,.7);
+}
+.hr-sp-sil:hover { color: #ff8a8a; background: rgba(255,90,90,.08); }
+.hr-sp-not { font: 12px/1.45 var(--font, system-ui, sans-serif); color: rgba(220,232,255,.8); }
+.hr-sp-kapat:focus-visible, .hr-sp-dg:focus-visible, .hr-sp-ac:focus-visible, .hr-sp-sil:focus-visible { outline: 2px solid var(--hr-accent); outline-offset: 2px; }
+/* Menü açıkken merkezdeki ad ve çekirdek bilgiye yer açar */
+#hr-ring-wrap.hr-wheel-open #hr-core-name,
+#hr-ring-wrap.hr-wheel-open #hr-core-status,
+#hr-ring-wrap.hr-wheel-open .kg-ad { opacity: 0 !important; transition: opacity .2s; }
+@media (prefers-reduced-motion: reduce) {
+  .hr-od-dugum, .hr-od-ortu, .hr-od-anahtar { transition: opacity .15s; transition-delay: 0s; }
+  #hr-ring-wrap.hr-wheel-open .hr-od-dugum:hover,
+  #hr-ring-wrap.hr-wheel-open .hr-od-dugum.hr-od-sec { transform: translate(-50%, -50%); }
+}
+
+@keyframes hrCharFlash {
+  0%   { filter: brightness(1) saturate(1); }
+  20%  { filter: brightness(3.5) saturate(2.5); }
+  50%  { filter: brightness(1.8) saturate(1.8); }
+  75%  { filter: brightness(2.2) saturate(2); }
+  100% { filter: brightness(1) saturate(1); }
+}
+.hr-char-flash #hr-ring { animation: hrCharFlash 0.8s var(--e-out,cubic-bezier(.25,1,.4,1)) forwards; }
+
+/* ── Dış orbit ── */
+#hr-outer-orbit {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: var(--z-hr-glow);
+}
+.hr-orb-btn {
+  position: absolute;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(4, 8, 22, 0.82);
+  border: 1.5px solid color-mix(in srgb, var(--hr-accent) 50%, transparent);
+  color: var(--hr-accent);
+  font-size: 13px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0.55;
+  pointer-events: auto;
+  transition:
+    opacity   0.4s var(--e-out,cubic-bezier(.25,1,.4,1)) var(--orb-delay, 0s),
+    transform 0.4s cubic-bezier(0.2, 0.85, 0.32, 1.3) var(--orb-delay, 0s),
+    box-shadow 0.25s var(--e-out,cubic-bezier(.25,1,.4,1)),
+    background 0.25s var(--e-out,cubic-bezier(.25,1,.4,1)),
+    border-color 0.2s var(--e-out,cubic-bezier(.25,1,.4,1));
+  box-shadow: 0 0 6px color-mix(in srgb, var(--hr-accent) 20%, transparent);
+  animation: hrOrbIn 0.5s cubic-bezier(0.2, 0.85, 0.32, 1.3) var(--orb-delay, 0s) both;
+}
+@keyframes hrOrbIn {
+  from { transform: translate(-50%,-50%) scale(0.3); opacity: 0; }
+  to   { transform: translate(-50%,-50%) scale(0.6); opacity: 0.55; }
+}
+.hr-orb-btn:hover {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.45);
+  box-shadow:
+    0 0 20px color-mix(in srgb, var(--hr-accent) 65%, transparent),
+    0 0 8px  color-mix(in srgb, var(--hr-accent) 40%, transparent);
+  background: color-mix(in srgb, var(--hr-accent) 14%, rgba(4,8,22,0.92));
+  border-color: var(--hr-accent);
+}
+.hr-orb-btn:active {
+  transform: translate(-50%, -50%) scale(1.2);
+  transition-duration: 0.1s;
+}
+.hr-orb-icon { font-size: 13px; line-height: 1; }
+.hr-orb-lbl  {
+  position: absolute;
+  top: calc(100% + 7px); left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  font-size: 8px; letter-spacing: 0.7px; font-weight: 600;
+  background: rgba(4,8,22,0.95);
+  border: 1px solid color-mix(in srgb, var(--hr-accent) 45%, transparent);
+  padding: 3px 7px; border-radius: 4px;
+  white-space: nowrap; color: var(--hr-accent);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.22s var(--e-out,cubic-bezier(.25,1,.4,1)), transform 0.22s var(--e-out,cubic-bezier(.25,1,.4,1));
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.hr-orb-btn:hover .hr-orb-lbl {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── Sol alt: mini olay ticker ── */
+#hr-ticker {
+  /* Göz turu 2: sabit 190px genişlik + ellipsis saatin son hanesini kesiyordu
+     ("· 16:0"). Genişlik içerik kadar; tavan yalnız aşırı uzun olay metni için. */
+  position: absolute; left: 18px; bottom: 122px; width: max-content; max-width: min(360px, 28vw);
+  font-family: var(--font-hud, monospace); font-size: var(--yazi-11); letter-spacing: 1px;
+  color: var(--hr-accent); z-index: var(--z-hr-rozet);
+  border-left: 2px solid color-mix(in srgb, var(--hr-accent) 50%, transparent);
+  padding-left: 8px; pointer-events: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#hr-ticker span { display: inline-block; animation: hr-tickin 0.45s var(--e-out,cubic-bezier(.25,1,.4,1)); }
+@keyframes hr-tickin { from { opacity: 0; transform: translateX(-7px); } to { opacity: 1; transform: none; } }
+
+/* ── Arka plan: neural-network dokusu (sabit çapraz mesh + yavaş kayan node'lar) ── */
+#hr-particles {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: var(--z-hr-alt);
+  background-image:
+    /* sinir ağı bağlantı çizgileri — iki çapraz yön (statik) */
+    repeating-linear-gradient(60deg,  transparent 0 37px, color-mix(in srgb, var(--hr-accent) 9%, transparent) 37px 37.7px, transparent 37.7px 75px),
+    repeating-linear-gradient(-60deg, transparent 0 37px, color-mix(in srgb, var(--hr-accent) 7%, transparent) 37px 37.7px, transparent 37.7px 75px),
+    /* node noktaları (yavaş kayar) */
+    radial-gradient(circle, color-mix(in srgb, var(--hr-accent) 40%, transparent) 0 1px, transparent 1.6px),
+    radial-gradient(circle, color-mix(in srgb, var(--hr-accent) 22%, transparent) 0 1px, transparent 1.6px);
+  background-size: 75px 75px, 75px 75px, 120px 120px, 200px 200px;
+  opacity: 0.20;
+  animation: hr-particles 32s linear infinite;
+}
+@keyframes hr-particles {
+  from { background-position: 0 0, 0 0, 0 0,    60px 90px; }
+  to   { background-position: 0 0, 0 0, 0 120px, 60px 290px; }
+}
+
+/* ⚠️ ≤480px bloğu buradan ≤800px bloğunun ALTINA taşındı (2026-08-02).
+   Sebep: eşit specificity'de SONRAKİ kural kazanır. Dar breakpoint geniş olandan
+   önce yazılırsa, ikisi de eşleşen telefon genişliğinde geniş olan ezer ve dar
+   kural sessizce ölür — halka olması gerekenden küçük çiziliyordu.
+   🔴 Bunu `body.hud-ring-mode` öneki ekleyerek "güçlendirme": o önek mobil
+   kuralları da ezip ölü bırakır. SIRA = KASKAD, önek değil. */
+
+/* ── Erişilebilirlik: hareketi azalt ── */
+@media (prefers-reduced-motion: reduce) {
+  #hr-ring .hr-bar, .hr-merid, .hr-merid2, #hr-particles,
+  #hr-ring-wrap::after, #hr-ring .hr-mandala,
+  #hr-ring .hr-fili, #hr-ring .hr-sat-ring, #hr-ring .hr-rune-mid,
+  #hr-ring .hr-starburst { animation: none !important; }
+}
+
+/* ── Mobil (≤800px) ── */
+@media (max-width: 800px) {
+  /* Halka ortala. */
+  #hr-stage { padding-left: 8px; padding-right: 8px; padding-top: 0; }
+  #hr-ring-wrap { width: min(72vw, 38vh); }
+  #hr-ticker { display: none; }
+  
+
+  /* Mobil HALKA: stage tüm dikey alanı kapla → halka ortada kalır. */
+  body.hud-ring-mode #hr-stage { flex: 1 !important; max-height: none !important; }
+
+  /* Mobil HALKA: sohbet akışı gizli — sadece masaüstünde görünür. */
+  body.hud-ring-mode #messages { display: none !important; }
+
+  /* Input: akışta (absolute değil), margin-top:auto ile en alta yapışır. */
+  body.hud-ring-mode #input-area {
+    position: static !important;
+    transform: none !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    z-index: auto !important;
+    margin: 8px;
+    margin-top: auto !important;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  /* ── PERFORMANS: mobilde kasmayı önle ── */
+  #hr-ring .hr-spectrum g:nth-child(even) { display: none; }   /* 64 → 32 çubuk */
+  .hr-spectrum { filter: none; }                                /* grup glow'u kapat */
+  #hr-ring .hr-seg-ring,
+  #hr-ring .hr-node-ring { filter: none !important; }           /* SVG drop-shadow yok */
+  #hr-ring .hr-thin-rings,
+  #hr-ring .hr-rune-inner { animation: none; }                  /* 2 dönen katman dur */
+  #hr-particles { animation: none; opacity: 0.13; }             /* parçacık statik */
+  #hr-ring .hr-lotus,
+  #hr-ring .hr-anchor-nodes { filter: none !important; }        /* yeni katmanlar mobilde glow yok */
+  #hr-ring .hr-sat-ring { filter: none !important; }            /* uydu çemberler: glow yok */
+  #hr-ring .hr-fili,
+  #hr-ring .hr-rune-mid,
+  #hr-ring .hr-starburst { animation: none; }                   /* arcane ek katmanlar statik */
+}
+
+/* ── Küçük telefon (≤480px): leftrail gizle, halka büyüt ──
+   ⚠️ Bu blok ≤800px'ten SONRA durmalı — ikisi de eşleşir, sonraki kazanır.
+   Yukarı taşınırsa `padding` 6px yerine 8px uygulanır (sessiz regresyon).
+
+   ⚠️ ÖLÇÜLDÜ (2026-08-02, Chromium 400×800 ve 700×800): buradaki ve ≤800px
+   bloğundaki `#hr-ring-wrap { width: ... }` kurallarının İKİSİ DE ÖLÜ —
+   sıra yüzünden değil, yukarıdaki ≤1100px bloğunda duran
+   `body.hud-ring-mode #hr-ring-wrap { width: min(84vw, 40vh, 360px) }`
+   daha yüksek specificity'de (sınıf+id) olduğu için her ikisini de eziyor.
+   Ölçülen gerçek genişlik iki viewport'ta da 320px.
+   Etki KÜÇÜK (82vw≈84vw → beklenen 328px, gerçek 320px) olduğu için
+   bilerek DEĞİŞTİRİLMEDİ: specificity ile oynamak tam da bu kusuru doğuran
+   hamledir. Halka boyutunu gerçekten değiştirmek istersen ≤1100 bloğundaki
+   o satırı düzenle — buradakini değil, burası hiçbir zaman uygulanmıyor. */
+@media (max-width: 480px) {
+  #hr-stage { padding-left: 6px; padding-right: 6px; }
+  #hr-ring-wrap { width: min(82vw, 56vh); }   /* ← ölü, yukarıdaki nota bak */
+  
+}
+
+/* ── Dekoratif: Lotus yaprakları + kardinal çıpa noktaları ── */
+#hr-ring .hr-lotus { animation: hr-rot-r calc(var(--hr-spin) * 3.2) linear infinite; }
+.hr-anchor-nodes .hr-anc-card {
+  fill: var(--hr-accent); fill-opacity: 0.55;
+  animation: hr-anchor-pulse 3.5s ease-in-out infinite;
+}
+.hr-anchor-nodes .hr-anc-diag { fill: var(--hr-accent); fill-opacity: 0.3; }
+@keyframes hr-anchor-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+/* ════════════════════════════════════════════════════════════
+   TEKNO-MİSTİK YENİLEME — Holografik Rim + Mandala (Faz 3)
+   ════════════════════════════════════════════════════════════ */
+
+/* Halkanın dış kenarında dönen iridescent holografik rim.
+   radial mask ile yalnız kenar bandı görünür → merkez temiz kalır.
+   (mevcut ::before yumuşak halo korunur, bu ::after onun üstüne sheen ekler) */
+#hr-ring-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  border-radius: 50%;
+  background: var(--holo-shift);
+  opacity: 0;
+  pointer-events: none;
+  filter: blur(14px);
+  mix-blend-mode: screen;
+  -webkit-mask: radial-gradient(circle, transparent 52%, #000 72%, transparent 100%);
+          mask: radial-gradient(circle, transparent 52%, #000 72%, transparent 100%);
+  animation: hr-holo-shift var(--spin-slow) ease-in-out infinite;
+}
+@keyframes hr-holo-shift {
+  0%, 100% { opacity: 0; transform: rotate(0deg)  scale(1); }
+  50%      { opacity: 0; transform: rotate(24deg) scale(1.025); }
+}
+
+/* Altın mandala hexagramı — çok yavaş ters dönüş (sakin, ~120s) */
+#hr-ring .hr-mandala { animation: hr-rot-r calc(var(--hr-spin) * 2.6) linear infinite; }
+
+/* ════════════════════════════════════════════════════════════
+   LAUNCHER CARD — Kompakt yüzer widget açma barı
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Launcher kapsayıcı ── */
+#hr-side {
+  background: rgba(4, 8, 22, 0.92);
+  border: 1px solid color-mix(in srgb, var(--hr-accent) 30%, transparent);
+  backdrop-filter: blur(20px) saturate(1.3);
+  box-shadow:
+    0 6px 32px rgba(0, 0, 0, 0.65),
+    0 0 0 1px color-mix(in srgb, var(--hr-accent) 6%, transparent),
+    inset 0 0 16px color-mix(in srgb, var(--hr-accent) 4%, transparent);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+@keyframes hr-dot-blink {
+  0%, 100% { opacity: 0.4; box-shadow: 0 0 4px var(--hr-accent); }
+  50%       { opacity: 1;   box-shadow: 0 0 10px var(--hr-accent); }
+}
+
+/* ── Panel başlık satırı ── */
+.hr-side-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px 0 12px;
+  height: 36px;
+  flex-shrink: 0;
+  cursor: grab;
+  border-bottom: 1px solid color-mix(in srgb, var(--hr-accent) 16%, transparent);
+  background: color-mix(in srgb, var(--hr-accent) 6%, transparent);
+}
+.hr-side-header:active { cursor: grabbing; }
+.hr-side-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.hr-side-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--hr-accent);
+  box-shadow: 0 0 6px var(--hr-accent);
+  flex-shrink: 0;
+}
+.hr-side-name {
+  font: var(--ag-kalin) var(--yazi-11)/1 var(--font-hud, var(--font-mono));
+  letter-spacing: 2.5px;
+  color: color-mix(in srgb, var(--hr-accent) 80%, white);
+  text-transform: uppercase;
+}
+.hr-collapse-btn {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--hr-accent) 22%, transparent);
+  border-radius: 4px;
+  color: var(--hr-accent);
+  font-size: 11px;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.18s, border-color 0.18s, transform 0.28s cubic-bezier(0.4,0,0.2,1);
+  padding: 0;
+}
+.hr-collapse-btn:hover {
+  background: color-mix(in srgb, var(--hr-accent) 14%, transparent);
+  border-color: var(--hr-accent);
+}
+
+/* ── Dikey, kategorili liste (2026-10-04) ──────────────────────
+   Kişisel AliceAi'nin dikey rayının (2026-09-13) ürün karşılığı; renk ve
+   ölçüler ürün token'larından. Eski hâli 7 düğmelik yatay ikon şeridiydi:
+   etiketler 7px/700 idi (ürün tabanı 11px, 700 ağırlık yasak — koyu zeminde
+   kanar) ve "hangisi ne" ancak ikonu tanıyan okuyabiliyordu.
+   · Hiyerarşi renkle değil boşluk + tipografiyle: grup başlığı küçük, soluk,
+     aralıklı; satır adı okunur boyda.
+   · AÇIK widget göstergesi MOR (ürünün "seçili" rengi, kabuk menüsüyle aynı),
+     `--hr-accent` DEĞİL: accent Yuki'nin durumuyla kayar (düşünürken altın,
+     konuşurken mor) — gösterge ona bağlansaydı Yuki her düşündüğünde "hangisi
+     açık" bilgisi kaybolurdu (kişiselde ölçülmüş kusur).
+   · Daraltınca liste GİZLENMEZ, ikon sütununa iner: daraltmak "yer aç"
+     demek, "widget'lara erişimi kapat" değil. */
+#hr-side { inline-size: var(--nav-w); }
+#hr-side.hr-collapsed { inline-size: calc(var(--hedef) + var(--b-4)); }
+#hr-side.hr-collapsed .hr-side-name { display: none; }
+/* Dar sütunda başlık yan yana sığmaz: nokta + düğme alt alta (düğme gizlenmez,
+   paneli geri açmanın tek yolu o — başlık aynı zamanda sürükleme kolu). */
+#hr-side.hr-collapsed .hr-side-header {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--b-3);
+  block-size: auto;
+  padding: var(--b-4) 0;
+}
+
+.hr-tabs-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--b-1);
+  padding: var(--b-2) 0 var(--b-4);
+  flex-shrink: 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--hr-accent) 12%, transparent);
+}
+
+/* Grup başlığı — tıklanamaz, yalnız ayraç (aria-hidden) */
+.hr-grup {
+  display: flex;
+  align-items: center;
+  gap: var(--b-3);
+  padding: var(--b-5) var(--b-5) var(--b-2);
+  pointer-events: none;
+}
+.hr-grup-ad {
+  font: var(--ag-kalin) var(--yazi-11)/1 var(--font-hud, var(--font-mono));
+  letter-spacing: 0.16em;
+  color: var(--ink-3);
+}
+.hr-grup-sayi {
+  font: var(--ag-normal) var(--yazi-11)/1 var(--font-hud, var(--font-mono));
+  color: var(--ink-3);
+}
+.hr-grup-cizgi { flex: 1; block-size: 1px; background: var(--kenar); }
+#hr-side.hr-collapsed .hr-grup { display: none; }
+
+.hr-tab-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--b-5);
+  inline-size: 100%;
+  block-size: var(--hedef-mini);
+  padding: 0 var(--b-5);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--ink-2);
+  font-family: var(--font-hud, var(--font-mono));
+  text-align: start;
+  cursor: pointer;
+  transition:
+    color var(--sure-2) var(--egri),
+    background-color var(--sure-2) var(--egri);
+}
+.hr-tb-icon {
+  inline-size: var(--b-6);
+  flex-shrink: 0;
+  text-align: center;
+  font-size: var(--yazi-14);
+  line-height: 1;
+  color: var(--hr-accent);
+  opacity: 0.85;
+  transition: color var(--sure-2) var(--egri), opacity var(--sure-2) var(--egri);
+}
+.hr-tb-label {
+  font-size: var(--yazi-12);
+  font-weight: var(--ag-kalin);
+  letter-spacing: 0.08em;
+  line-height: 1;
+  white-space: nowrap;
+  transition: transform var(--sure-2) var(--egri);
+}
+.hr-tab-btn:hover {
+  color: var(--ink-1);
+  background: color-mix(in oklab, var(--hr-accent) 9%, transparent);
+}
+.hr-tab-btn:hover .hr-tb-icon { opacity: 1; }
+/* Satır "canlı" hissi: etiket 2px kayar, satır yer değiştirmez */
+.hr-tab-btn:hover .hr-tb-label { transform: translateX(var(--b-1)); }
+/* Panel `overflow:hidden` → dış odak halkası kırpılır; içeri çizilir */
+.hr-tab-btn:focus-visible {
+  outline: var(--odak-kalinlik) solid var(--mor-ink);
+  outline-offset: calc(-1 * var(--odak-kalinlik));
+}
+#hr-side.hr-collapsed .hr-tab-btn {
+  justify-content: center;
+  padding: 0;
+  block-size: var(--hedef-dar);
+}
+#hr-side.hr-collapsed .hr-tb-label { display: none; }
+
+/* Seçili sekme (`_switchTab`, eski iç sekme düzeninden kalan durum) */
+.hr-tab-btn.active { color: var(--ink-1); }
+
+/* ── Tab gövde ── */
+
+.hr-tab-pane {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px;
+  gap: 7px;
+  animation: hr-tab-fade 0.2s var(--e-out,cubic-bezier(.25,1,.4,1));
+}
+.hr-tab-pane.active { display: flex; }
+
+@keyframes hr-tab-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ── HAFIZA sekmesi ── */
+#hr-tab-memory { padding: 0; }
+
+/* ── AKIŞ sekmesi ── */
+#hr-tab-chat { padding: 0; }
+#hr-tab-chat .hr-panel-head {
+  padding: 9px 12px;
+  font-family: var(--font-hud, 'JetBrains Mono', monospace);
+  font-size: 10.5px;
+  letter-spacing: 3px;
+  color: var(--text-bright, #e8f4fa);
+  border-bottom: 1px solid color-mix(in srgb, var(--hr-accent) 18%, transparent);
+  background: color-mix(in srgb, var(--hr-accent) 7%, transparent);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+#hr-tab-chat #hr-flow-body { flex: 1; min-height: 0; }
+
+/* ── ALARM sekmesi ── */
+.hr-reminder-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--hr-accent) 14%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--hr-accent) 5%, transparent);
+  flex-shrink: 0;
+  transition: background 0.18s, border-color 0.18s;
+  position: relative;
+  overflow: hidden;
+}
+.hr-reminder-item::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0; width: 2px;
+  background: var(--hr-accent);
+  opacity: 0.6;
+}
+.hr-reminder-item.done { opacity: 0.28; }
+.hr-reminder-item:hover { border-color: color-mix(in srgb, var(--hr-accent) 30%, transparent); }
+.hr-rem-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; color: var(--hr-accent); }
+.hr-rem-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
+.hr-rem-cancel {
+  flex-shrink: 0;
+  margin-left: auto;
+  align-self: center;
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--hr-accent) 20%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--hr-accent) 6%, transparent);
+  color: color-mix(in srgb, var(--text, #c8dde8) 60%, transparent);
+  font-size: 11px; line-height: 1;
+  cursor: pointer;
+  transition: background 0.16s, border-color 0.16s, color 0.16s;
+}
+.hr-rem-cancel:hover {
+  background: color-mix(in srgb, #ef4444 22%, transparent);
+  border-color: color-mix(in srgb, #ef4444 55%, transparent);
+  color: #fecaca;
+}
+.hr-rem-cancel:disabled { opacity: 0.4; cursor: default; }
+.hr-rem-text {
+  font-size: 11px;
+  color: var(--text, #c8dde8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+.hr-rem-time {
+  font-size: 9.5px;
+  color: var(--hr-accent);
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-hud, monospace);
+  letter-spacing: 0.5px;
+}
+
+/* ── MODLAR sekmesi ── */
+.hr-modes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  align-content: flex-start;
+}
+.hr-mode-badge {
+  display: flex;
+  flex-direction: column;
+  padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, var(--hr-accent) 20%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--hr-accent) 5%, transparent);
+  cursor: default;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+  border-radius: 6px;
+}
+.hr-mode-badge:hover {
+  border-color: color-mix(in srgb, var(--hr-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--hr-accent) 11%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--hr-accent) 15%, transparent);
+}
+.hr-mode-name { font-size: 10px; font-weight: 700; color: var(--text, #c8dde8); letter-spacing: 0.5px; }
+.hr-mode-ws { font-size: 8px; color: var(--hr-accent); margin-top: 3px; opacity: 0.75; letter-spacing: 0.3px; }
+
+/* ── GÖREV sekmesi ── */
+.hr-todo-list { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.hr-todo-list-name {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--hr-accent);
+  text-transform: uppercase;
+  padding: 5px 0 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--hr-accent) 16%, transparent);
+  margin-bottom: 2px;
+  font-family: var(--font-hud, monospace);
+}
+.hr-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.hr-todo-item:hover { background: color-mix(in srgb, var(--hr-accent) 6%, transparent); }
+.hr-todo-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  border: 1.5px solid var(--hr-accent);
+  flex-shrink: 0;
+  box-shadow: 0 0 4px color-mix(in srgb, var(--hr-accent) 40%, transparent);
+}
+.hr-todo-text {
+  font-size: 11px;
+  color: var(--text, #c8dde8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── FİNANS sekmesi ── */
+
+/* ── HQ Komutevi widget ── */
+.hr-hq-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 12px;
+}
+.hr-hq-card {
+  display: flex; flex-direction: column; gap: 3px;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid color-mix(in srgb, var(--hr-accent) 22%, transparent);
+  border-radius: 6px; padding: 8px 10px;
+}
+.hr-hq-lbl {
+  font-size: 8px; font-weight: 700; letter-spacing: 1px;
+  color: var(--muted, #4a7585); font-family: var(--font-hud, monospace);
+}
+.hr-hq-val {
+  font-size: 13px; font-weight: 600; color: var(--hr-accent);
+  font-family: var(--font-hud, monospace); letter-spacing: 0.5px;
+}
+.hr-hq-status {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 14px 10px;
+  font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--muted, #4a7585); font-family: var(--font-hud, monospace);
+}
+.hr-hq-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #00e87a;
+  box-shadow: 0 0 8px #00e87a;
+  animation: hrOrbPulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* ── Ortak boş / yükleniyor durumu ── */
+.hr-pane-empty, .hr-pane-loading {
+  font-size: 11px;
+  color: var(--muted, #4d7a8a);
+  text-align: center;
+  padding: 28px 0;
+  width: 100%;
+  font-family: var(--font-hud, monospace);
+  letter-spacing: 1px;
+}
+.hr-pane-loading::after {
+  content: '';
+  display: block;
+  margin: 8px auto 0;
+  width: 20px; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--hr-accent), transparent);
+  animation: hr-load-sweep 1.2s ease-in-out infinite;
+}
+@keyframes hr-load-sweep {
+  0%   { transform: scaleX(0.1); opacity: 0.3; }
+  50%  { transform: scaleX(1);   opacity: 1; }
+  100% { transform: scaleX(0.1); opacity: 0.3; }
+}
+@keyframes hrOrbPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px #00e87a, 0 0 14px rgba(0,232,122,0.5); }
+  50%       { opacity: 0.5; box-shadow: 0 0 4px #00e87a; }
+}
+
+/* State'e göre mandala biraz canlanır */
+#hr-stage.hr-thinking #hr-ring .hr-mandala,
+#hr-stage.hr-talking  #hr-ring .hr-mandala { opacity: 0.34; }
+
+/* Erişilebilirlik — hareket azaltma */
+@media (prefers-reduced-motion: reduce) {
+  #hr-ring-wrap::after,
+  #hr-ring .hr-mandala { animation: none !important; }
+}
+
+/* ── Karakter Seçici ──────────────────────────────────────────────── */
+
+
+.hr-cs-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  background: color-mix(in srgb, var(--cs-clr) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cs-clr) 28%, transparent);
+  border-radius: 5px;
+  padding: 5px 8px;
+  cursor: pointer;
+  color: color-mix(in srgb, var(--cs-clr) 75%, #fff);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+  position: relative;
+}
+.hr-cs-btn:hover {
+  background: color-mix(in srgb, var(--cs-clr) 18%, transparent);
+  border-color: color-mix(in srgb, var(--cs-clr) 55%, transparent);
+  color: var(--cs-clr);
+}
+.hr-cs-active {
+  background: color-mix(in srgb, var(--cs-clr) 20%, transparent) !important;
+  border-color: var(--cs-clr) !important;
+  color: var(--cs-clr) !important;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--cs-clr) 30%, transparent);
+}
+
+
+/* ════════════════════════════════════════════════════════════════════
+   FLOATING WIDGET SİSTEMİ — HALKA Modu sağ panel widget'ları
+   Her sekme (HAFIZA/ALARM/MODLAR/GÖREV/FİNANS/AKIŞ) bağımsız yüzer pencere.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Sadece halka modunda görünür */
+body:not(.hud-ring-mode) .hr-widget { display: none !important; }
+
+.hr-widget {
+  position: absolute;
+  background: rgba(4, 8, 22, 0.92);
+  border: 1px solid color-mix(in srgb, var(--hr-accent) 32%, transparent);
+  border-radius: 10px;
+  backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(96, 165, 250, 0.05),
+    inset 0 0 20px color-mix(in srgb, var(--hr-accent) 4%, transparent);
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  min-height: 120px;
+  overflow: hidden;
+  transition: box-shadow 0.18s, border-color 0.18s;
+  z-index: var(--z-hr-tepe);
+}
+
+.hr-widget.hr-w-active {
+  border-color: color-mix(in srgb, var(--hr-accent) 55%, transparent);
+  box-shadow:
+    0 8px 48px rgba(0, 0, 0, 0.7),
+    0 0 16px color-mix(in srgb, var(--hr-accent) 16%, transparent),
+    inset 0 0 24px color-mix(in srgb, var(--hr-accent) 6%, transparent);
+}
+
+.hr-widget.hr-w-hidden {
+  display: none !important;
+}
+
+.hr-widget.hr-w-dragging {
+  opacity: 0.88;
+  user-select: none;
+}
+
+/* ── Widget header (drag handle) ── */
+.hr-widget-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px 0 12px;
+  height: 34px;
+  flex-shrink: 0;
+  cursor: grab;
+  background: color-mix(in srgb, var(--hr-accent) 8%, rgba(4, 8, 22, 0.6));
+  border-bottom: 1px solid color-mix(in srgb, var(--hr-accent) 18%, transparent);
+  user-select: none;
+}
+.hr-widget-header:active { cursor: grabbing; }
+
+.hr-widget-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--hr-accent);
+  box-shadow: 0 0 5px var(--hr-accent);
+  flex-shrink: 0;
+  animation: hr-dot-blink 2.4s ease-in-out infinite;
+}
+
+.hr-widget-icon {
+  font-size: 12px;
+  color: var(--hr-accent);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.hr-widget-title {
+  flex: 1;
+  font: 700 8px/1 var(--font-hud, 'JetBrains Mono', monospace);
+  letter-spacing: 2.5px;
+  color: color-mix(in srgb, var(--hr-accent) 80%, white);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hr-widget-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.hr-widget-btn {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--hr-accent) 22%, transparent);
+  border-radius: 4px;
+  color: color-mix(in srgb, var(--hr-accent) 60%, white);
+  font-size: 10px;
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  line-height: 1;
+}
+.hr-widget-btn:hover {
+  background: color-mix(in srgb, var(--hr-accent) 16%, transparent);
+  border-color: var(--hr-accent);
+  color: var(--hr-accent);
+}
+.hr-wb-close:hover {
+  background: rgba(220, 60, 60, 0.2);
+  border-color: rgba(220, 60, 60, 0.7);
+  color: #f87171;
+}
+
+/* ── Widget body (scroll container) ── */
+.hr-widget-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--hr-accent) 35%, transparent) transparent;
+}
+.hr-widget-body::-webkit-scrollbar { width: 3px; }
+.hr-widget-body::-webkit-scrollbar-track { background: transparent; }
+.hr-widget-body::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--hr-accent) 35%, transparent);
+  border-radius: 2px;
+}
+
+/* Küçültülmüş halde body gizli + panel başlığa iner (inline height'i ez) */
+.hr-widget.hr-w-collapsed {
+  height: auto !important;
+  min-height: 0 !important;
+}
+.hr-widget.hr-w-collapsed .hr-widget-body,
+.hr-widget.hr-w-collapsed .hr-widget-resize { display: none; }
+.hr-widget.hr-w-collapsed .hr-widget-header { border-bottom: none; }
+
+/* ── Resize knob (sağ-alt köşe) ── */
+.hr-widget-resize {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 14px; height: 14px;
+  cursor: se-resize;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+.hr-widget-resize::after {
+  content: '';
+  display: block;
+  width: 8px; height: 8px;
+  border-right: 2px solid var(--hr-accent);
+  border-bottom: 2px solid var(--hr-accent);
+  margin: 3px auto;
+  border-radius: 1px;
+}
+.hr-widget:hover .hr-widget-resize { opacity: 0.75; }
+
+/* ── Tab buton açık durumu (widget görünür) — MOR, accent değil (bkz. liste notu) ── */
+.hr-tab-btn.hr-w-open {
+  color: var(--ink-1);
+  background: color-mix(in oklab, var(--mor-zemin) 70%, transparent);
+}
+.hr-tab-btn.hr-w-open .hr-tb-icon { color: var(--mor-ink); opacity: 1; }
+.hr-tab-btn.hr-w-open::before {
+  content: '';
+  position: absolute;
+  inset-block: var(--b-3);
+  inset-inline-start: 0;
+  inline-size: 3px;
+  border-radius: 0 var(--r-1) var(--r-1) 0;
+  background: var(--mor-ink);
+}
+
+/* ── Widget içi: HAFIZA kartı (kart dili aşağıda, .hk) ── */
+.hr-widget[data-hr-tab="memory"] .hr-widget-body { padding: 0; gap: 0; }
+#hr-tab-memory #hr-mem-body, .hr-widget[data-hr-tab="memory"] #hr-mem-body { flex: 1 1 auto; min-height: 0; }
+
+/* ── Widget içi: AKIŞ (mesajlar) ── */
+.hr-widget[data-hr-tab="chat"] .hr-widget-body { padding: 0; }
+.hr-widget[data-hr-tab="chat"] .hr-panel-head {
+  padding: 7px 12px;
+  font: 700 9px/1 var(--font-hud, 'JetBrains Mono', monospace);
+  letter-spacing: 2.5px;
+  color: var(--text-bright, #e8f4fa);
+  border-bottom: 1px solid color-mix(in srgb, var(--hr-accent) 18%, transparent);
+  background: color-mix(in srgb, var(--hr-accent) 7%, transparent);
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0;
+}
+.hr-widget[data-hr-tab="chat"] #hr-flow-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+/* ── Snap Zone Ghost Göstergeleri ── */
+.hr-snap-zone {
+  position: absolute;
+  pointer-events: none;
+  border: 2px dashed color-mix(in srgb, var(--hr-accent) 28%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--hr-accent) 4%, transparent);
+  z-index: var(--z-hr-cark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s var(--e-out,cubic-bezier(.25,1,.4,1)), background 0.12s var(--e-out,cubic-bezier(.25,1,.4,1)), box-shadow 0.12s var(--e-out,cubic-bezier(.25,1,.4,1));
+}
+.hr-snap-zone.hr-snap-active {
+  border-color: color-mix(in srgb, var(--hr-accent) 72%, transparent);
+  border-style: solid;
+  background: color-mix(in srgb, var(--hr-accent) 12%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--hr-accent) 30%, transparent),
+              inset 0 0 12px color-mix(in srgb, var(--hr-accent) 8%, transparent);
+}
+.hr-sz-label {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  font-family: 'JetBrains Mono', monospace;
+  color: color-mix(in srgb, var(--hr-accent) 50%, transparent);
+  text-transform: uppercase;
+  user-select: none;
+  pointer-events: none;
+}
+.hr-snap-zone.hr-snap-active .hr-sz-label {
+  color: color-mix(in srgb, var(--hr-accent) 90%, transparent);
+}
+
+/* Hexagon — merkez zone */
+.hr-snap-zone.hr-sz-hex {
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  border: none;
+  background: color-mix(in srgb, #b082ff 6%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, #b082ff 30%, transparent);
+}
+.hr-snap-zone.hr-sz-hex.hr-snap-active {
+  background: color-mix(in srgb, #b082ff 18%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, #b082ff 80%, transparent),
+              0 0 22px color-mix(in srgb, #b082ff 35%, transparent);
+}
+
+/* Diamond — alt-orta zone */
+.hr-snap-zone.hr-sz-diamond {
+  clip-path: polygon(50% 4%, 96% 50%, 50% 96%, 4% 50%);
+  border: none;
+  background: color-mix(in srgb, #f0b429 6%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, #f0b429 28%, transparent);
+}
+.hr-snap-zone.hr-sz-diamond.hr-snap-active {
+  background: color-mix(in srgb, #f0b429 18%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, #f0b429 80%, transparent),
+              0 0 22px color-mix(in srgb, #f0b429 35%, transparent);
+}
+
+/* Octagon — sağ dikey arası zone'lar (r1, r2) */
+.hr-snap-zone.hr-sz-oct {
+  clip-path: polygon(15% 0%, 85% 0%, 100% 15%, 100% 85%, 85% 100%, 15% 100%, 0% 85%, 0% 15%);
+  border: none;
+  background: color-mix(in srgb, #ff7eb3 6%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, #ff7eb3 28%, transparent);
+}
+.hr-snap-zone.hr-sz-oct.hr-snap-active {
+  background: color-mix(in srgb, #ff7eb3 18%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, #ff7eb3 80%, transparent),
+              0 0 22px color-mix(in srgb, #ff7eb3 35%, transparent);
+}
+
+/* ══ ÜST ŞERİT KONTROLLERİ — HALKA modunda da giyinik ══════════════════════
+   🔴 KÖK NEDEN (ölçüldü 2026-08-30, 1860px): sohbet.css'te 282 kural
+   `body:not(.hud-ring-mode)` guard'ının arkasında. Bu iki öğenin stilinin
+   TAMAMI orada kaldı ve hud-ring.css karşılığını hiç yazmadı:
+       #vol-slider              5 kural dışlanıyor · 0 karşılık
+       .header-actions-toggle  26 kural dışlanıyor · 0 karşılık
+   Ölçülen sonuç (aynı öğe, iki mod):
+       #vol-slider              KLASİK 72×44  →  HALKA 60×3   (çıplak input)
+       .header-actions-toggle   KLASİK  0×0   →  HALKA 13×13  (çıplak checkbox)
+   İkincisi ekranda "ne olduğu belirsiz küçük kare" olarak duruyordu; geliştirici
+   ekran görüntüsünde tam onu işaretledi.
+
+   Bu bir DÜZEN kusuru, estetik tercih değil: halkanın kendi renk dünyası
+   (--hr-accent = karakter rengi) korunuyor, yalnız kutu ve dokunma hedefi
+   geri veriliyor. Klasik moda DOKUNULMUYOR — guard kaldırılmadı, karşılık
+   yazıldı; böylece regresyon yüzeyi yalnız HALKA modu.
+
+   ⚠️ Bu iki öğe HALKA modunda hiçbir kapıdan geçmemişti: genislik-turu.py'nin
+   K2 (küçük hedef) kapısı KLASİK modda koştuğu için 0 bulgu veriyordu, aynı
+   ölçüm HALKA modunda 15 veriyor. Kapı yeşilse önce "hangi modda ölçtü" sor. */
+
+body.hud-ring-mode .header-actions-toggle {
+  display: none;                    /* geniş ekranda gerekmiyor — klasik moddaki gibi */
+  inline-size: var(--hedef);
+  min-inline-size: var(--hedef);
+  block-size: var(--hedef);
+  min-block-size: var(--hedef);
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--hr-accent, #60a5fa);
+  border-radius: var(--r-2, 10px);
+  appearance: none;
+  background: color-mix(in oklab, var(--hr-accent, #60a5fa) 12%, transparent);
+  color: var(--text-bright, #e8f4fa);
+  cursor: pointer;
+}
+
+/* "⋯" ikonu — klasik moddaki maske deseninin aynısı */
+body.hud-ring-mode .header-actions-toggle::before {
+  content: '';
+  inline-size: 20px;
+  block-size: 20px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='5' cy='12' r='1.5'/%3E%3Ccircle cx='12' cy='12' r='1.5'/%3E%3Ccircle cx='19' cy='12' r='1.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+body.hud-ring-mode .header-actions-toggle:hover,
+body.hud-ring-mode .header-actions-toggle:checked {
+  background: color-mix(in oklab, var(--hr-accent, #60a5fa) 22%, transparent);
+}
+
+body.hud-ring-mode .header-actions-toggle:focus-visible {
+  outline: var(--odak-kalinlik, 2px) solid var(--hr-accent, #60a5fa);
+  outline-offset: var(--odak-ofset, 2px);
+}
+
+/* Ses kaydırıcısı — 3px'lik çıplak input'tan 44px'lik hedefe */
+body.hud-ring-mode #vol-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  inline-size: 72px;
+  min-inline-size: var(--hedef);
+  block-size: var(--hedef);
+  border: 0;
+  background: transparent;
+  accent-color: var(--hr-accent, #60a5fa);
+  cursor: pointer;
+}
+
+body.hud-ring-mode #vol-slider::-webkit-slider-runnable-track {
+  block-size: 4px;
+  border: 1px solid color-mix(in oklab, var(--hr-accent, #60a5fa) 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--hr-accent, #60a5fa) 18%, transparent);
+}
+
+body.hud-ring-mode #vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  inline-size: 16px;
+  block-size: 16px;
+  margin-block-start: -6px;
+  border: 1px solid var(--hr-accent, #60a5fa);
+  border-radius: 999px;
+  background: var(--hr-accent, #60a5fa);
+  box-shadow: 0 0 0 2px var(--hr-deep, #020708);
+}
+
+body.hud-ring-mode #vol-slider::-moz-range-track {
+  block-size: 4px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--hr-accent, #60a5fa) 18%, transparent);
+}
+
+body.hud-ring-mode #vol-slider::-moz-range-thumb {
+  inline-size: 16px;
+  block-size: 16px;
+  border: 1px solid var(--hr-accent, #60a5fa);
+  border-radius: 999px;
+  background: var(--hr-accent, #60a5fa);
+}
+
+/* Dar kabuk: menü düğmesi görünür olur — klasik moddaki 1194. satırın eşi */
+@media (max-width: 900px) {
+  body.hud-ring-mode .header-actions-toggle {
+    display: grid;
+    place-items: center;
+    order: 2;
+  }
+  body.hud-ring-mode .header-actions-toggle:not(:checked) + .hud-controls > * { display: none; }
+}
+
+/* ══ DOKUNMA HEDEFLERİ — görsel boyut DEĞİŞMEZ ════════════════════════════
+   Ölçüm (2026-08-30, 1860px, HALKA modu): 24px altında 12 kontrol vardı.
+       .hr-wcard-toggle       ×6   9×9    ← en kötüsü
+       .hr-wheel-btn          ×2  18×18
+       .hr-widget-btn         ×2  18×18
+       #hr-rail-collapse-btn  ×1  22×22
+       #hr-collapse-btn       ×1  22×22
+   Aynı ölçüm KLASİK modda 0 veriyor — halka modu hiçbir kapıdan geçmemişti
+   (genislik-turu.py K2 kapısı çalışıyor ama tur hep KLASİK'te koştu).
+
+   WCAG 2.5.8 tabanı 24px, PRODUCT.md hedefi 44px (--hedef). Yöntem
+   temel.css'teki `.hedef-genis` deseni: ::before ile görünmez alan; ikonun
+   çizildiği kutu aynı kalır, yalnız tıklama/dokunma alanı büyür. Hiçbirinde
+   ::before/::after kullanımı yoktu (ölçüldü) — çakışma yok.
+
+   ⚠️ `.hr-wheel-btn` LİSTEDE AMA `position: relative` ALMIYOR: o zaten
+   `absolute` ve halka üstünde koordinatla duruyor; relative'e çevirmek
+   konumunu bozardı. Absolute da ::before için geçerli bir konumlanma
+   bağlamıdır, dokunma alanı yine büyür.
+
+   ── SONUÇ (08-30, ilk ölçümden SONRA düzeltildi) ─────────────────────────
+   İlk turda "6/12 tam · 4/12 hiç" diye raporlandı ve KALAN DÖRDÜ DE SAHTEYDİ.
+   Ölçüm aracının iki körlüğü vardı; ikisi de burada kayda geçiyor çünkü aynı
+   tuzağa bir daha düşülmesin:
+     ① SCROLL KÖRLÜĞÜ — `.hr-wcard-toggle` #4-#5 (AKTİF MOD · ALARMLAR)
+       `#hr-leftrail`in görünür alanının altındaydı (194px scroll var).
+       Panel aşağı kaydırılınca ALTISI DA 4/4 isabet ediyor.
+     ② OPACITY KÖRLÜĞÜ — `.hr-wheel-btn` ×2 çark KAPALIYKEN ölçüldü:
+       `opacity: 0` + `pointer-events: none`, yani görünmez ve tıklanamaz →
+       WCAG kapsamı dışı. Çark açılınca (`hr-wheel-open`) `scale(1)` ile
+       44×42 oluyor ve 4/4 isabet ediyor. Zaten hedefin üstünde.
+   📏 `getBoundingClientRect` sıfırdan büyük döndürüyor diye öğe GÖRÜNÜR
+      değildir: scroll konteynerinin dışında ya da opacity:0 olabilir.
+
+   🟡 GERÇEKTEN AÇIK KALAN TEK ŞEY: `.hr-widget-btn` #0 (HAFIZA panel başlığı).
+   Komşusuyla 22px aralıkta duruyor; 44px'lik alanı komşunun alanına giriyor
+   ve hit-test'i komşu alıyor (3 yönde). Kendi 18×18'i çalışıyor. Çözümü
+   düğmeleri AYIRMAK, yani görsel değişiklik → tasarım kararı, geliştirici'da. */
+
+.hr-widget-btn,
+#hr-collapse-btn {
+  position: relative;
+}
+
+.hr-widget-btn::before,
+#hr-collapse-btn::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: var(--hedef, 44px);
+  block-size: var(--hedef, 44px);
+  translate: -50% -50%;
+  /* Görünmez: yalnız isabet alanı. Zemin/kenar YOK — görsel değişmemeli. */
+}
+
+/* ══ ☰ ↔ DURUM ROZETİ (2026-10-04) ═══════════════════════════════
+   ☰ (#nav-ac, kabuk.css) sabit konumda içeriğin ÜSTÜNDE durur; altındaki
+   öğeler ona `--nav-bosluk` kadar yer açar. KLASİK'te bunu sohbet.css yapıyor
+   ama o kuralların seçicisi `body:not(.hud-ring-mode)` → HALKA'da başlık
+   kabuk.css'in düz 14px dolgusuyla kalıyor, ☰ "HAZIR YUKI" rozetini örtüyordu
+   (ölçüldü: 1440'ta ☰ 18–54px, rozet 26px'te başlıyordu; 420'de dikeyde de
+   7px biniyordu). Rozet kayar, ☰ yerinde kalır — öbür modlarla aynı düzen. */
+body.hud-ring-mode #header { padding-inline-start: var(--nav-bosluk); }
+
+/* ══ HALKA TEMASI ÖRNEK DAİRESİ ═══════════════════════════════
+   2026-11-14: PANEL'deki HALKA TEMASI kartı ve dar ekran hapı kaldırıldı (kişiseldeki gibi:
+   tema üst çubuktaki mod menüsünde, API `window.HalkaTema`). Örnek daire kalır — menü temayı
+   RESİMSİZ göstermek isterse `<span class="hr-tema-ornek" data-ornek="<key>">` yeter. */
+/* Örnek daire — temanın küçültülmüş merkezi */
+.hr-tema-ornek {
+  inline-size: var(--b-8);
+  block-size: var(--b-8);
+  flex-shrink: 0;
+  border-radius: var(--r-tam);
+}
+/* BUZ: parlak çekirdek + karakter renginde ince halka */
+.hr-tema-ornek[data-ornek="buz"] {
+  background:
+    radial-gradient(circle closest-side,
+      color-mix(in oklab, var(--gm-accent, var(--mor-ink-hov)) 45%, white) 0 18%,
+      transparent 26% 66%,
+      var(--gm-accent, var(--mor-ink-hov)) 70% 78%,
+      transparent 84%),
+    var(--bg);
+  box-shadow: 0 0 var(--b-4) color-mix(in oklab, var(--gm-accent, var(--mor-ink-hov)) 35%, transparent);
+}
+/* KARA MANA: siyah ufuk + altın foton halkası + yatay toplanma diski, mor boşlukta */
+.hr-tema-ornek[data-ornek="kara-mana-goz"] {
+  background:
+    radial-gradient(circle closest-side, black 0 40%, var(--altin-ink) 44% 52%, transparent 58%),
+    linear-gradient(transparent 44%, color-mix(in oklab, var(--altin) 75%, transparent) 47% 53%, transparent 56%),
+    radial-gradient(circle closest-side, color-mix(in oklab, var(--mor-yuzey) 60%, var(--bg)) 0 70%, var(--bg) 100%);
+  box-shadow: 0 0 var(--b-4) color-mix(in oklab, var(--altin) 30%, transparent);
+}
+
+/* ══ GÖZ TURU 2 (2026-10-04) ═════════════════════════════════════ */
+
+/* 11 · Merkez ad + durum: içinden halka/kafes çizgisi geçiyordu (BUZ'da
+   ikosahedron, KARA MANA'da foton halkası). Harfin ARKASINA zemin renginde
+   kalın kontur — `paint-order: stroke` önce konturu çizer, dolgu üstte
+   kalır; harf incelmez, çizgiler harfin çevresinde kesilir. */
+#hr-ring #hr-core-name,
+#hr-ring #hr-core-status {
+  paint-order: stroke fill;
+  stroke: var(--hr-deep);
+  stroke-width: 3px;   /* 6 ve 4px ölçüldü: harf kenarı çizgi film gibi kalın okunuyordu */
+  stroke-linejoin: round;
+}
+
+/* 12 · Panel ikonları SVG (hud-ring.js `RING_IKON`) — glifler (◷ ≋) bu
+   yazı tipinde yarı boyda çiziliyordu. Ürün sekme menüsünün ikon dili:
+   16'lık kutu, 1.5 çizgi, currentColor. */
+.hr-tb-icon svg,
+.hr-widget-icon svg {
+  display: block;
+  inline-size: var(--b-6);
+  block-size: var(--b-6);
+}
+.hr-widget-icon { display: inline-flex; align-items: center; }
+.hr-widget-icon svg { inline-size: var(--yazi-14); block-size: var(--yazi-14); }
+/* Grup başlıkları "çok soluk" okunuyordu (--ink-3, 11px aralıklı) → --ink-2.
+   Hiyerarşi yine boyut + harf aralığı + ayraç çizgisiyle kurulu. */
+.hr-grup-ad { color: var(--ink-2); }
+
+/* 5 + 6 · Dar ekranda başlık ve yazı kutusu TEK satır.
+   Başlık: #header-actions blok olduğu için "⋯" bir satıra, ses/HALKA bir alt
+   satıra düşüyordu (başlık 99px). Yazı kutusu: sohbet.css'in dar kural
+   seti `#input-break` ile iki satır kuruyor ("⋯" tek başına üst satırda,
+   kutu ~138px); HALKA'da gösterilecek model/dil seçicisi yok, tek satıra
+   sığıyor. Yalnız HALKA kapsamı — sohbet modunun düzenine dokunulmaz. */
+@media (max-width: 900px) {
+  body.hud-ring-mode #header { flex-wrap: nowrap; align-items: center; }
+  body.hud-ring-mode #header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--b-3);
+    min-inline-size: 0;
+  }
+  body.hud-ring-mode #header-actions-menu {
+    display: flex;
+    align-items: center;
+    gap: var(--b-3);
+  }
+}
+@media (max-width: 800px) {
+  body.hud-ring-mode #input-container { flex-wrap: nowrap; }
+  body.hud-ring-mode #input-break { display: none; }
+  /* mikrofonla aynı sıra → DOM sırasıyla mikrofonun hemen sağında */
+  body.hud-ring-mode #input-more-btn { order: 6; }
+}
+
+/* Durum satırı (◈ model · dil · küçült) HALKA'da da — kişisel Yuki'deki gibi giriş hapının altında
+   ortalı (arayüz turu, 2026-11-13). Görünürlüğü sohbet-sahne.js `gorunumUygula` yönetir; biçim
+   sohbet-sahne.css `.hizli-hap` kurallarından gelir, burada yalnız yerleşim. */
+body.hud-ring-mode #hizli-satir:not([hidden]) {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  margin-block-start: var(--b-3);
+}
+/* Satır giriş kutusunu ~34px uzatır; geniş ekranda giriş `absolute` ve sahnenin alt payı sabit 112px →
+   kutu "Sistemler aktif" satırına biniyordu (1280, ölçüldü). Satır görünürken pay 146px. Küçültülmüş
+   girişte (`.kucuk`) satır gizli → eski pay. */
+@media (min-width: 1101px) {
+  body.hud-ring-mode:has(#hizli-satir:not([hidden])):not(:has(#input-area.kucuk)) #hr-stage { padding-bottom: 146px; }
+}
+
+/* Widget başlık düğmeleri (▲ ✕) — kişisel Yuki'deki gibi GERÇEKTEN 24×24 (arayüz turu, 2026-11-13).
+   18×18 + görünmez 44px alan (yukarıdaki `::before`) komşunun alanına giriyordu: ✕ ▲'nin tıklamasını
+   yutuyordu (1280'de ölçüldü — Playwright "✕ intercepts pointer events"). HAFIZA artık daraltılmış
+   başladığı için ▲ ilk dokunulan düğme. Yatay alan aralıkla birlikte 28px: iki alan değer, binmez. */
+.hr-widget-btn { width: var(--hedef-min, 24px); height: var(--hedef-min, 24px); font-size: 11px; }
+.hr-widget-btn::before { inline-size: calc(var(--hedef-min, 24px) + 4px); }
+
+/* ══ GÖZ + SİTELER widget'ları (2026-11-14, kişiseldeki gibi) ═══════════════════
+   GÖZ gövdesi js/gorus-panel.js kartıdır (css/gorus.css biçimler); burada yalnız widget içi
+   yerleşim + bayrak kapalıyken dürüst satır. SİTELER görünümü kişisel SİTELER listesinden. */
+.hr-widget[data-hr-tab="gaze"] .hr-widget-body { padding: 8px; }
+.hr-goz-panel { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.hr-goz-panel .gp-kart { margin: 0; }
+.hr-goz-kapali {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 6px; padding: 22px 12px;
+  font-family: var(--font-hud, monospace);
+}
+.hr-goz-kapali .hr-goz-ikon { inline-size: 26px; block-size: 26px; color: var(--muted, #4d7a8a); opacity: .8; }
+.hr-goz-kapali .hr-goz-ikon svg { inline-size: 100%; block-size: 100%; }
+.hr-goz-kapali b { font-size: 12px; font-weight: 600; color: var(--hr-fg, #dbeaff); letter-spacing: .3px; }
+.hr-goz-kapali small { font-size: 11px; line-height: 1.45; color: var(--muted, #4d7a8a); overflow-wrap: anywhere; }
+
+.hr-widget[data-hr-tab="sites"] .hr-widget-body { gap: 8px; }
+.hr-site-serit {
+  display: flex; justify-content: space-between; gap: 8px;
+  font: 600 10px/1 var(--font-hud, monospace); letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--muted, #4d7a8a);
+  padding-bottom: 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--hr-accent) 18%, transparent);
+}
+.hr-site-list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.hr-site-item {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 6px; border-radius: 5px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid transparent;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+.hr-site-item:hover {
+  background: color-mix(in srgb, var(--hr-accent) 9%, rgba(255,255,255,0.02));
+  border-color: color-mix(in srgb, var(--hr-accent) 28%, transparent);
+}
+.hr-si-glyph {
+  flex: 0 0 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--hr-accent) 45%, transparent);
+  color: var(--hr-accent);
+  font-size: 11px; font-weight: 700;
+}
+.hr-si-txt {
+  flex: 1; min-width: 0; cursor: pointer;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  background: none; border: 0; padding: 0; text-align: start; color: inherit; font: inherit;
+}
+.hr-si-txt b, .hr-si-txt small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hr-si-txt b { font-size: 11px; font-weight: 600; color: var(--hr-fg, #dbeaff); }
+.hr-si-txt small { font-size: 11px; opacity: 0.55; }
+.hr-si-txt:hover b, .hr-si-txt:focus-visible b { color: var(--hr-accent); }
+.hr-si-txt:focus-visible, .hr-si-btn:focus-visible, .hr-site-ekle:focus-visible {
+  outline: 2px solid var(--hr-accent); outline-offset: 2px; border-radius: 4px;
+}
+.hr-si-btn {
+  flex: 0 0 auto; min-inline-size: 24px; min-block-size: 24px;
+  background: none; border: none; cursor: pointer;
+  color: color-mix(in srgb, var(--hr-accent) 55%, transparent);
+  font-size: 12px; line-height: 1; padding: 3px 4px; border-radius: 4px;
+  font-family: var(--font-hud, 'JetBrains Mono', monospace);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.hr-si-btn:hover { color: var(--hr-accent); background: rgba(255,255,255,0.06); }
+.hr-si-del:hover { color: #ff7b7b; }
+.hr-site-bos { padding: 18px 8px; line-height: 1.5; letter-spacing: .3px; }
+.hr-site-alt { display: flex; justify-content: flex-end; margin-top: auto; padding-top: 4px; }
+.hr-site-ekle {
+  min-block-size: 28px; padding: 0 12px; border-radius: 5px; cursor: pointer;
+  background: color-mix(in srgb, var(--hr-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hr-accent) 40%, transparent);
+  color: var(--hr-accent);
+  font: 600 11px/1 var(--font-hud, monospace); letter-spacing: .6px;
+}
+.hr-site-ekle:hover { background: color-mix(in srgb, var(--hr-accent) 18%, transparent); }
+.hr-site-not { font-size: 11px; color: var(--muted, #4d7a8a); }
+
+/* ── Telefon: widget açıkken halka üst yarıya (kişisel Yuki hud-ring.css'ten, 11-14 tam hizala) ──
+   Tek widget giriş çubuğunun üstünde açılır; halka dikey ortada kalsa alt çeyreği ve "bir şey sor"
+   satırı tabakanın altında kalırdı. Widget açıkken sahne üstten dizilir, halka 50vh − 150 px'e iner. */
+@media (max-width: 800px) {
+  body.hud-ring-mode:has(.hr-widget:not(.hr-w-hidden):not(.hr-w-mobil-gizli)) #hr-stage {
+    justify-content: flex-start; padding-top: 10px;
+  }
+  body.hud-ring-mode:has(.hr-widget:not(.hr-w-hidden):not(.hr-w-mobil-gizli)) #hr-ring-wrap {
+    width: min(82vw, calc(50vh - 150px));
+  }
+  body.hud-ring-mode:has(.hr-widget:not(.hr-w-hidden):not(.hr-w-mobil-gizli)) #hr-status {
+    padding-inline: 60px; box-sizing: border-box;
+  }
+}
+
+/* B1 (11-14, temiz kurulum denetimi): dar ekranda ⋯ araç menüsünün 12 düğmesinin 12'si basılamıyordu.
+   #input-container `isolation: isolate` ile kendi katmanını açıyor ama z-index'i yok (0 katmanı);
+   akışta ondan ÖNCE gelen #hr-stage z=1 ile menünün (#input-secondary-btns, absolute) üstüne çiziliyor,
+   dokunuşu ve "bir şey sor" yazısını o alıyordu. Çubuk sahnenin bir üstüne alınır. */
+@media (max-width: 1100px) {
+  /* Menü açıkken sahnenin ve telefondaki tek widget tabakasının (HAFIZA…, inline z ++_ringZTop) üstünde —
+     kişiselde menü tabakanın önünde açılır. Kapalıyken katman açılmaz (widget/çekmece sırası bozulmasın). */
+  body.hud-ring-mode #input-container:has(#input-secondary-btns.acik) { position: relative; z-index: var(--z-acilir, 500); }
+}
+
+/* 11-14 tam hizala: kişisel halkanın merkezinde durum yazısı yok (yalnız ad). Boşta ve anahtar
+   hazırken "HAZIR" gizlenir; ANAHTAR YOK uyarısı ve gerçek durumlar (dinliyor/düşünüyor…) kalır. */
+#hr-stage.hr-idle:not(.hr-anahtar-yok) #hr-ring #hr-core-status { display: none; }
+
+/* Telefon: odak çarkı (siteler/kademe menüsü) açıkken widget tabakası çekilir ve halka tam boya döner —
+   tabaka açıkken halka 50vh − 150 px'e iniyor, çarkın 7+ etiketi o çapta birbirine biniyordu
+   (test_halka_siteler 390, 11-14 tam hizala). Çark kapanınca tabaka geri gelir (sınıf değişmez). */
+@media (max-width: 800px) {
+  body.hud-ring-mode:has(#hr-ring-wrap.hr-wheel-open) .hr-widget { display: none !important; }
+  body.hud-ring-mode:has(#hr-ring-wrap.hr-wheel-open) #hr-stage { justify-content: center; padding-top: 0; }
+  body.hud-ring-mode:has(#hr-ring-wrap.hr-wheel-open) #hr-ring-wrap { width: min(82vw, 56vh); }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ORTAK KART DİLİ — kişisel Yuki'nin "C · Harita" kartından (11-15 tam hizala).
+   Şerit · gövde (kayar) · alt eylem. Renk oss belirteçlerinden: veri = halka vurgusu,
+   eşik = altın, metin --ink-1/2/3 (açık temada kendiliğinden döner).
+   Telefonda kart içerik boyunda: kutu kısa veride kısa kalır ("Sistemler aktif" satırını örtmez).
+   ════════════════════════════════════════════════════════════════════ */
+.hk {
+  --hk-veri: var(--hr-accent, #60a5fa); --hk-esik: var(--gold, #f0b429);
+  --hk-acik: color-mix(in srgb, var(--hk-veri) 50%, var(--ink-1, #e8fbff));
+  --hk-metin: var(--ink-2, #b9c5da); --hk-soluk: var(--ink-3, #8fa3bf); --hk-parlak: var(--ink-1, #e7ecf7);
+  --hk-cizgi: color-mix(in srgb, var(--ink-1, #fff) 8%, transparent);
+  --hk-sayi: var(--font-mono, 'Space Mono', monospace);
+  flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
+  font: 13px/1.35 var(--font, Inter, system-ui, sans-serif); color: var(--hk-metin);
+}
+.hk-serit { flex: none; display: flex; justify-content: space-between; gap: 12px; padding: 6px 12px;
+  border-bottom: 1px solid var(--hk-cizgi); font: 12px/1.3 var(--hk-sayi); color: var(--hk-veri); }
+.hk-sol, .hk-sag { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hk-sol { min-width: 0; }
+.hk-sag { color: var(--hk-esik); flex: none; max-width: 60%; }
+.hk-govde { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 6px; scrollbar-width: thin; }
+.hk-govde > * { flex: none; }
+.hk-govde.hk-devam { -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent); mask-image: linear-gradient(#000 calc(100% - 26px), transparent); }
+.hk-devam-ok { flex: none; display: none; height: 18px; pointer-events: none; text-align: center;
+  font: 11px/18px var(--hk-sayi); color: var(--hk-veri); }
+.hk-govde.hk-devam + .hk-devam-ok { display: block; }
+.hk-devam-ok::before { content: '▾'; }
+.hk-alt { flex: none; display: flex; justify-content: flex-end; align-items: center; gap: 10px;
+  padding: 2px 8px; border-top: 1px solid var(--hk-cizgi); font-size: 12px; color: var(--hk-soluk); }
+.hk-eylem { background: none; border: 0; color: var(--hk-metin); font: inherit; cursor: pointer; padding: 6px 4px;
+  min-height: 28px; border-radius: 4px; transition: color .15s; }
+.hk-eylem:hover { color: var(--hk-veri); }
+.hk-eylem:focus-visible, .hk-ani:focus-visible { outline: 2px solid var(--hk-veri); outline-offset: 1px; }
+.hk-et { font: 11px/1.3 var(--hk-sayi); letter-spacing: .06em; color: var(--hk-soluk); }
+.hk-ara { margin-top: 4px; padding-bottom: 3px; border-bottom: 1px solid color-mix(in srgb, var(--hk-veri) 28%, transparent);
+  color: var(--hk-veri); font-size: 12px; font-weight: 500; }
+.hk-not { font-size: 12px; color: var(--hk-soluk); }
+.hk-bos { display: flex; flex-direction: column; gap: 3px; padding: 14px 2px; }
+.hk-bos b { font-size: 14px; font-weight: 500; color: var(--hk-parlak); }
+.hk-bos span { font-size: 12px; color: var(--hk-soluk); }
+.hk-hata b { color: var(--hk-esik); }
+.hk-cubuk { display: grid; grid-template-columns: 76px 1fr 44px; align-items: center; gap: 6px; }
+.hk-cubuk > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hk-cubuk p { margin: 0; height: 8px; background: color-mix(in srgb, var(--ink-1, #fff) 8%, transparent); border-radius: 4px; overflow: hidden; }
+.hk-cubuk i { display: block; height: 100%; background: var(--hk-veri); border-radius: inherit; }
+.hk-cubuk i.hk-esik { background: var(--hk-esik); } .hk-cubuk i.hk-acik { background: var(--hk-acik); }
+.hk-cubuk em { font: 700 13px var(--hk-sayi); font-style: normal; color: var(--hk-parlak); text-align: right; }
+.hk-ani { all: unset; box-sizing: border-box; display: block; cursor: pointer; font-size: 13px; color: var(--hk-metin);
+  padding: 3px 0; border-bottom: 1px solid var(--hk-cizgi); }
+.hk-ani span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hk-ani:hover { color: var(--hk-parlak); }
+.hk-ani.sel span { white-space: normal; color: var(--hk-parlak); }
+.hk-ani small { display: block; margin-top: 2px; font-size: 11px; color: var(--hk-soluk); }

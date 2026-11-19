@@ -1,0 +1,93 @@
+/* Yedek › YEDEK / BULUTTA / AYARLAR sekmeleri + Kontrol et / Kuru çalıştır (js/yedek-rclone.js).
+   Kişisel Drive sayfasının üst çubuk dili: büyük harf, aralıklı mono sekmeler; seçili olanın altında çizgi. */
+
+#tab-yedek .yb-sekmeler { display: flex; align-items: stretch; align-self: stretch; gap: 4px; margin-inline-start: 8px; }
+#tab-yedek .yb-sekme {
+  position: relative; min-block-size: var(--hedef, 44px); padding: 0 14px; border: 0; background: none; cursor: pointer;
+  font: 500 11px / 1 var(--yd-mono); letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3);
+}
+#tab-yedek .yb-sekme:hover { color: var(--ink-1); }
+#tab-yedek .yb-sekme[aria-selected="true"] { color: var(--ink-1); border-radius: 0; box-shadow: none; background: none; }   /* states.css genel seçili parıltısı sıfır (map-gozlemevi.css:145 deseni) */
+#tab-yedek .yb-sekme[aria-selected="true"]::after {
+  content: ''; position: absolute; inset-inline: 10px; inset-block-end: -1px; block-size: 2px; background: var(--mor, var(--ink-1));
+}
+#tab-yedek .yb-sekme:focus-visible { outline: 2px solid var(--altin, var(--ink-1)); outline-offset: -4px; }
+#tab-yedek .yb-cubuk-eylem { display: flex; gap: 8px; margin-inline-start: auto; }
+#tab-yedek .yb-cubuk-eylem .dg[aria-busy="true"] { opacity: .7; }
+
+/* ── sekme gövdesi ── */
+#tab-yedek .yb-r-sayfa { padding: 24px 32px 40px; max-inline-size: 980px; inline-size: 100%; box-sizing: border-box; }
+#tab-yedek .yb-r-bos { padding: 12px 0; }
+#tab-yedek .yb-r-durum { display: flex; gap: 12px; align-items: flex-start; padding: 16px 18px; margin-block-end: 18px;
+  border: 1px solid var(--yd-cizgi); border-radius: 14px; }
+#tab-yedek .yb-r-durum .durum-isik { margin-block-start: 6px; flex: none; }
+#tab-yedek .yb-r-durum-bas { margin: 0 0 4px; color: var(--ink-1); font-size: var(--yazi-14); font-weight: var(--ag-orta); }
+#tab-yedek .yb-r-durum .yb-kucuk { margin: 0; }
+
+/* BULUTTA: cetvel liste — ad │ boyut │ tarih */
+#tab-yedek .yb-r-arac { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-block-end: 12px; }
+#tab-yedek .yb-r-izler { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-inline-size: 0; flex: 1 1 260px;
+  font: 400 12px / 1.4 var(--yd-mono); color: var(--ink-3); }
+#tab-yedek .yb-r-iz { border: 0; background: none; padding: 6px 4px; min-block-size: 32px; color: var(--ink-2); font: inherit; cursor: pointer; overflow-wrap: anywhere; text-align: start; }
+#tab-yedek .yb-r-iz:last-child { color: var(--ink-1); }
+#tab-yedek .yb-r-iz:hover { color: var(--ink-1); text-decoration: underline; }
+#tab-yedek .yb-r-suz { flex: 0 1 240px; min-inline-size: 0; }
+#tab-yedek .yb-r-liste { list-style: none; margin: 0; padding: 0; border-block-start: 1px solid var(--yd-cizgi); }
+#tab-yedek .yb-r-liste > li { border-block-end: 1px solid var(--yd-cizgi); }
+#tab-yedek .yb-r-oge {
+  display: grid; grid-template-columns: minmax(0, 1fr) 90px 130px; align-items: center; gap: 12px;
+  inline-size: 100%; min-block-size: 44px; padding: 0 6px; border: 0; background: none; color: var(--ink-1); text-align: start; font: inherit;
+}
+#tab-yedek button.yb-r-oge { cursor: pointer; }
+#tab-yedek button.yb-r-oge:hover { background: var(--yuzey-2, rgba(255, 255, 255, .04)); }
+#tab-yedek .yb-r-oge.klasor .yb-r-ad::before { content: '▸ '; color: var(--ink-3); }
+#tab-yedek .yb-r-ad { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#tab-yedek .yb-r-boyut, #tab-yedek .yb-r-tarih { font: 400 12px / 1 var(--yd-mono); color: var(--ink-3); text-align: end; white-space: nowrap; }
+
+/* AYARLAR */
+#tab-yedek .yb-r-ayar { display: flex; flex-direction: column; gap: 18px; max-inline-size: 720px; }
+#tab-yedek .yb-r-surum { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--ink-2); font: 400 12px / 1.4 var(--yd-mono); }
+#tab-yedek .yb-r-bolum { display: flex; flex-direction: column; gap: 12px; padding-block-start: 14px; border-block-start: 1px solid var(--yd-cizgi); }
+#tab-yedek .yb-r-bolum h4 { margin: 0; font: italic 400 20px / 1.2 var(--yd-serif); color: var(--ink-1); }
+#tab-yedek .yb-r-alan { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 280px); align-items: center; gap: 8px 24px; }
+#tab-yedek .yb-r-alan label { display: flex; flex-direction: column; gap: 2px; }
+#tab-yedek .yb-r-etiket { color: var(--ink-1); font-size: var(--yazi-14); }
+#tab-yedek .yb-r-alan .girdi { inline-size: 100%; box-sizing: border-box; }
+#tab-yedek .yb-r-esleme { margin: 0; overflow-wrap: anywhere; }
+#tab-yedek .yb-r-haric { inline-size: 100%; box-sizing: border-box; min-block-size: 96px; font: 400 12px / 1.5 var(--yd-mono); resize: vertical; }
+#tab-yedek .yb-r-mesaj { margin: 0; color: var(--yesil-ink, var(--ink-1)); font-size: var(--yazi-13); }
+#tab-yedek .yb-r-mesaj.hata { color: var(--kirmizi-ink, var(--ink-1)); }
+#tab-yedek .yb-r-kaydet { display: flex; justify-content: flex-end; }
+
+/* Sonuç penceresi (Kontrol · Kuru çalıştırma) */
+#tab-yedek .yb-drive { position: relative; }
+#tab-yedek .yb-r-perde { position: absolute; inset: 0; z-index: 20; background: rgba(0, 0, 0, .55); }
+#tab-yedek .yb-r-pencere {
+  position: absolute; z-index: 21; inset-block-start: 72px; inset-inline: 50%; transform: translateX(-50%);
+  inline-size: min(720px, calc(100% - 32px)); max-block-size: calc(100% - 96px); overflow-y: auto; box-sizing: border-box;
+  padding: 18px 22px 22px; border: 1px solid var(--kenar-guclu); border-radius: 16px; background: var(--bg, #0b0b0f);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .5);
+}
+#tab-yedek .yb-r-pencere header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#tab-yedek .yb-r-pencere h3 { margin: 0; font: italic 500 22px / 1.2 var(--yd-serif); color: var(--ink-1); }
+#tab-yedek .yb-r-ozet { margin: 12px 0; color: var(--ink-1); font-size: var(--yazi-14); }
+#tab-yedek .yb-r-ozet.iyi { color: var(--yesil-ink, var(--ink-1)); }
+#tab-yedek .yb-r-ozet.kritik { color: var(--kirmizi-ink, var(--ink-1)); }
+#tab-yedek .yb-r-klasorler { list-style: none; margin: 0; padding: 0; }
+#tab-yedek .yb-r-k { padding: 12px 0; border-block-start: 1px solid var(--yd-cizgi); }
+#tab-yedek .yb-r-k-bas { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#tab-yedek .yb-r-hedef { margin: 4px 0 0; overflow-wrap: anywhere; }
+#tab-yedek .yb-r-satirlar { margin: 8px 0 0; padding: 10px 12px; max-block-size: 220px; overflow: auto; border-radius: 10px;
+  background: var(--yuzey-2, rgba(255, 255, 255, .04)); color: var(--ink-2); font: 400 12px / 1.5 var(--yd-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+@media (max-width: 760px) {
+  #tab-yedek .yb-sekmeler { margin-inline-start: -14px; order: 3; }
+  #tab-yedek .yb-sekme { padding: 0 12px; letter-spacing: .12em; }
+  #tab-yedek .yb-cubuk-eylem { order: 4; margin-inline-start: 0; flex-basis: 100%; padding-block: 4px 6px; margin-inline-start: -36px; }
+  #tab-yedek .yb-cubuk-eylem .dg { flex: 1 1 0; padding: 0 10px; }
+  #tab-yedek .yb-r-sayfa { padding: 18px 16px 32px; }
+  #tab-yedek .yb-r-oge { grid-template-columns: minmax(0, 1fr) auto; }
+  #tab-yedek .yb-r-tarih { display: none; }
+  #tab-yedek .yb-r-alan { grid-template-columns: minmax(0, 1fr); }
+  #tab-yedek .yb-r-pencere { inset-block-start: 64px; max-block-size: calc(100% - 80px); padding: 16px; }   /* ☰ (kabuk, 8-44 px) bandının altında — goz 11-15 #3 */
+}

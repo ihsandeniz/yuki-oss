@@ -1,0 +1,156 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+venv/
+.venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Sensitive / credentials
+credentials.json
+token.json
+*.pem
+*.key
+*.p12
+*.pfx
+service_account*.json
+
+# ChatGPT resmî giriş oturumu (access/refresh token) — asla depoya girmez
+/chatgpt_plan/
+chatgpt_token.json
+chatgpt_host.json
+chatgpt_token.lock
+
+# Data & cache
+backend/data/
+backend/anim_cache/
+backend/notes.json
+backend/planner_tokens.json
+media_uploads/
+
+# Node / Electron
+node_modules/
+.next/
+dist/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.cursor/
+.vscode/
+*.swp
+
+# Logs
+*.log
+logs/
+
+# ela senkron yedekleri (yerel rollback için, repoya girmez)
+backend/app/ela.bak-*/
+
+# HQ Ayarlar/Mod runtime dosyaları (per-user, commit edilmez)
+backend/config.user.json
+backend/config.user.json.*
+backend/modes.json.backup
+backend/modes.json.tmp
+backend/modes.json.corrupt
+
+# ── 2026-07-27 git init'te eklendi ───────────────────────────────────────────
+# Taşınabilir Python runtime'ları + indirilen modeller + build çıktısı.
+# Toplam ~14 GB; hepsi tek komutla yeniden üretilir, sürüm kontrolüne girmez.
+backend/pybundle/
+backend/pybundle-win/
+backend/models-cache/
+electron/dist/
+
+# Yerel rollback yedekleri (bu oturumun .bak-HHMM dosyaları)
+*.bak-*
+
+# .env.example ARTIK İZLENİYOR (2026-09-08 · geliştirici onayı).
+# Eski gerekçe: "içeriği doğrulanamıyor, Claude okuyamıyor" — o gerekçe 09-08'de
+# geçersiz kaldı. İzin listesi `Read(**/.env.*)` genel kalıbından adlandırılmış
+# varyantlara (.env.local/.production/.bak/…) daraltıldığı için `.env.example`
+# okunabilir hâle geldi; dosyanın tamamı (142 satır) okundu ve tarandı:
+#   · boş olmayan atama YALNIZ 3 tane — LLM_PROVIDER · LLM_MODEL · MEMORY_BACKEND
+#   · anahtar alanlarının hepsi boş; sk-/AIza/gsk_/ghp_/xox/PEM kalıbı → 0 eşleşme
+# Şablon olmadan repoyu klonlayan hangi değişkenlerin var olduğunu göremiyordu.
+# 🔴 `.env`in KENDİSİ hâlâ yukarıda (satır 2) ignore'da — o asla girmez.
+
+# Çalışma zamanı kullanıcı verisi — ASLA versiyonlanmaz (gerçek sohbet/profil sızabilir).
+# DATA_DIR kök olduğunda buraya düşerler; paketli üründe userData altına gider.
+/chat_history.json
+/user_profile.json
+/notes.json
+/todos.json
+/memory.db
+/memory.db-*
+data/
+backend/app/.lean-ctx/
+/hata-gunlugu.jsonl
+# Çalışma zamanı verisi DEPO KÖKÜNE düşüyor: `config.DATA_DIR` varsayılanı
+# `_PROJECT_ROOT` (yalnız `ALICE_DATA_DIR` verilmişse başka yere gider), ve
+# `scheduler._REMINDERS_PATH = DATA_DIR / "reminders.json"`. Yani geliştirme
+# kurulumunda kullanıcının GERÇEK hatırlatıcıları `git status`'a düşüyordu —
+# 2026-09-20'de bir ölçüm turunun artığı olarak görüldü. `data/` bu dosyayı
+# kapsamıyor çünkü dosya alt dizinde değil, kökte.
+/reminders.json
+
+# Ölçüm turlarının ekran görüntüleri — script tekrar üretir, repoda durmaz
+# (aynı desen: scratchpad/vitrin-kareler/ de izlenmiyor)
+scratchpad/ayarlar-olcum/**/*.png
+# Faz ölçüm ekran görüntüleri — kanıt olarak üretildi, repoda taşınmaz (2026-08-23).
+# Bulgular commit mesajlarında ve reports/ altındaki SENTEZ'lerde yazılı.
+scratchpad/faz*/**/*.png
+scratchpad/**/*.png
+
+# Gömülü veri depoları — KULLANICI VERİSİ, repoya girmez (2026-08-23).
+# Postgres yokken devreye giren JSON katmanları: todo_store.py · fitness_store.py
+# ⚠️ todo_store.json bugüne dek listede değildi; untracked kaldığı için şans eseri
+# commit'lenmemişti. fitness_store.json eklenirken ikisi de kapatıldı.
+todo_store.json
+fitness_store.json
+*.json.tmp
+*.json.bozuk
+
+# Çalışma zamanı kimlik durumu — MAKİNEYE ÖZEL, asla commit'lenmez.
+# `login_guard_state.json` giriş deneme sayaçları, `app_lock.json` açılış
+# parolasının scrypt hash'i. İkisi de normalde ALICE_DATA_DIR (userData)
+# altında yaşar; testler ve `run.py`'nin doğrudan koşturulması onları proje
+# köküne düşürebiliyor (config.DATA_DIR fallback'i _PROJECT_ROOT).
+login_guard_state.json
+app_lock.json
+faces.json
+
+# Ölü CSS piksel kapısının ham çıktısı — 2,4 MB parmak izi, tur başına yeniden üretilir
+scratchpad/olu-css-kapi/
+
+# Test artigi: /api/duvar/ornek-yukle kok dizine yaziyor (DATA_DIR goreli
+# cozuluyor). Musteri verisi degil, ornek gorsel kopyasi — 2026-09-10 commit
+# 2bda286 ile yanlislikla eklendi, geri alindi.
+duvar/
+
+# Komuta Paneli adres geçmişi + kayıtlı siteler — KULLANICI VERİSİ.
+# DATA_DIR kök olduğunda (geliştirme) buraya düşer; paketli üründe userData altında.
+/panel_gecmis.json
+/panel_siteler.json
+
+# Süreç bekçisi ikilileri — scripts/bekci-getir.py üretir; SURUM depoda kalır
+electron/bekci-bin/linux/
+electron/bekci-bin/win/
+
+# B8 (11-14, temiz kurulum denetimi): doğrudan çalıştırınca depo köküne düşen atölye klasörü
+# `git status`'ta `?? atolye/` görünüyordu — katkıcının `git add .`'i onu alırdı.
+/atolye/

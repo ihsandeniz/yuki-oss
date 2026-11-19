@@ -1,0 +1,347 @@
+/* ══════════════════════════════════════════════════════════════════
+   GÖREV ŞERİDİ — Yuki Atölye v2, Faz 0c · js/gorev-serit.js
+   Plan teması dili: siyah zemin · mor/gümüş · soluk altın YALNIZ çizgi (dolgu yok).
+   ══════════════════════════════════════════════════════════════════ */
+#gorev-serit {
+  --gs-altin-rgb: 205, 176, 113;          /* Plan teması altını #cdb071 */
+  --gs-mor-rgb: 155, 140, 255;
+  --gs-gumus: #b9bdc8;
+  --gs-gumus-acik: #ece8de;
+  --gs-gumus-soluk: #9097a8;
+  width: min(720px, 100%);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 6px 6px 14px;
+  border: 1px solid rgba(var(--gs-altin-rgb), .36);
+  border-radius: 12px;
+  background: rgba(5, 6, 11, .82);
+  box-shadow: inset 0 0 0 1px rgba(var(--gs-mor-rgb), .06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--gs-gumus);
+  font: 500 12px/1.2 "Inter", "Segoe UI", "Noto Sans", system-ui, sans-serif;
+  letter-spacing: .02em;
+}
+#gorev-serit[hidden] { display: none; }
+
+.gs-isaret {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  background: var(--gs-gumus-soluk);
+}
+#gorev-serit[data-durum="kosuyor"] .gs-isaret {
+  background: rgb(var(--gs-mor-rgb));
+  box-shadow: 0 0 0 0 rgba(var(--gs-mor-rgb), .55);
+  animation: gs-nabiz 1.8s cubic-bezier(.2, .75, .25, 1) infinite;
+}
+#gorev-serit[data-durum="hata"] .gs-isaret { background: #ff4d5e; }
+@keyframes gs-nabiz {
+  0%   { box-shadow: 0 0 0 0 rgba(var(--gs-mor-rgb), .55); }
+  70%  { box-shadow: 0 0 0 7px rgba(var(--gs-mor-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--gs-mor-rgb), 0); }
+}
+
+.gs-kimlik { display: flex; align-items: baseline; gap: 7px; min-width: 0; flex-shrink: 1; }
+.gs-tur {
+  font: 600 10.5px/1 "Inter", system-ui, sans-serif; letter-spacing: .18em;
+  color: rgba(var(--gs-mor-rgb), .95);
+}
+.gs-ad {
+  color: var(--gs-gumus-acik); font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.gs-ad.gs-yol { direction: rtl; text-align: left; } /* yol baştan kısalır */
+.gs-adim { color: var(--gs-gumus); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gs-cubuk {
+  flex: 1 1 60px; min-width: 40px; height: 3px; border-radius: 2px;
+  background: rgba(255, 255, 255, .07); overflow: hidden;
+}
+.gs-cubuk i {
+  display: block; height: 100%; width: 0;
+  background: linear-gradient(90deg, rgba(var(--gs-mor-rgb), .55), rgba(236, 232, 222, .75));
+  transition: width .4s cubic-bezier(.2, .75, .25, 1);
+}
+.gs-durum {
+  color: var(--gs-gumus); font-size: 11.5px; letter-spacing: .08em;   /* goz 1. tur: soluk/küçüktü */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 34%;
+}
+#gorev-serit[data-durum="kosuyor"] .gs-durum { color: var(--gs-gumus); }
+/* goz 0d 1. tur: düğme yokken (telefonda durdu) durum metni %45'e sıkışıp kesiliyordu */
+#gorev-serit:has(.gs-ana[hidden]) .gs-durum { max-width: none; }
+
+.gs-dugme {
+  flex-shrink: 0;
+  min-height: 34px; padding: 0 14px;
+  border: 1px solid rgba(var(--gs-altin-rgb), .45);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--gs-gumus-acik);
+  font: 600 11px/1 "Inter", system-ui, sans-serif; letter-spacing: .14em;
+  cursor: pointer;
+  transition: border-color .2s, background .2s, color .2s;
+}
+/* hover yalnız fareli cihazda — dokunuştan sonra "yapışık hover" tint'i kalıyordu (goz 1. tur) */
+@media (hover: hover) {
+  .gs-dugme:hover { border-color: rgba(var(--gs-altin-rgb), .8); background: rgba(var(--gs-mor-rgb), .08); }
+}
+.gs-dugme:focus-visible { outline: 2px solid rgba(var(--gs-mor-rgb), .7); outline-offset: 2px; }
+.gs-dugme:disabled { opacity: .5; cursor: progress; }
+.gs-dugme[hidden] { display: none; }
+/* Onay: altın YALNIZ çizgide (Plan teması) — yazı gümüş, çerçeve güçlü altın + iç ince çizgi */
+.gs-dugme.gs-onay { border-color: rgba(var(--gs-altin-rgb), .95); color: var(--gs-gumus-acik);
+  box-shadow: inset 0 0 0 1px rgba(var(--gs-altin-rgb), .35); }
+
+/* ── Faz 0d: onay bekleyen taslak · İPTAL ─────────────────────────── */
+/* Onay bekleyen: işaret içi boş altın halka (altın yalnız çizgi), adım yerine geri sayım */
+#gorev-serit[data-durum="bekliyor"] .gs-isaret {
+  background: transparent; box-shadow: inset 0 0 0 1.5px rgba(var(--gs-altin-rgb), .9);
+}
+#gorev-serit[data-durum="bekliyor"] .gs-durum { color: var(--gs-gumus-acik); }
+#gorev-serit[data-durum="bekliyor"] .gs-cubuk { display: none; }
+.gs-dugme { order: 2; }
+.gs-iptal {
+  order: 1; flex-shrink: 0;
+  min-height: 34px; padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, .14); border-radius: 9px;
+  background: transparent; color: var(--gs-gumus);
+  font: 600 11px/1 "Inter", system-ui, sans-serif; letter-spacing: .14em;
+  cursor: pointer; transition: border-color .2s, color .2s;
+}
+.gs-iptal[hidden] { display: none; }
+/* H5: TÜMÜNÜ DURDUR — İPTAL'in nötr dili (kırmızı alarm değil; durdurmak geri alınabilir) */
+.gs-tumu {
+  order: 3; flex-shrink: 0; min-height: 34px; padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, .14); border-radius: 9px;
+  background: transparent; color: #b9bdc8;
+  font: 600 11px/1 "Inter", system-ui, sans-serif; letter-spacing: .14em;
+  cursor: pointer; transition: border-color .2s, color .2s;
+}
+.gs-tumu[hidden] { display: none; }
+.gs-tumu:disabled { opacity: .5; cursor: progress; }
+.gs-tumu:focus-visible { outline: 2px solid rgba(var(--gs-mor-rgb), .7); outline-offset: 2px; }
+@media (hover: hover) { .gs-tumu:hover { border-color: rgba(255, 255, 255, .32); color: var(--gs-gumus-acik); } }
+.gs-iptal:disabled { opacity: .5; cursor: progress; }
+.gs-iptal:focus-visible { outline: 2px solid rgba(var(--gs-mor-rgb), .7); outline-offset: 2px; }
+@media (hover: hover) { .gs-iptal:hover { border-color: rgba(255, 255, 255, .32); color: var(--gs-gumus-acik); } }
+
+/* Telefon: iki satır — üstte kimlik + durum + düğme, altta adım + çubuk. Düğme ≥44px. */
+@media (max-width: 600px) {
+  #gorev-serit {
+    flex-wrap: wrap; row-gap: 6px; column-gap: 10px;
+    padding: 8px 8px 8px 12px;
+  }
+  .gs-kimlik { flex: 1 1 auto; order: 1; }
+  .gs-durum { order: 2; max-width: 45%; }
+  .gs-dugme { order: 3; min-height: 44px; padding: 0 16px; }
+  .gs-iptal { order: 3; min-height: 44px; padding: 0 12px; }
+  /* Onay bekleyen: 1. satır kimlik + geri sayım, 2. satır durum + İPTAL + ONAYLA (3 satıra taşmasın) */
+  #gorev-serit[data-durum="bekliyor"] .gs-adim { order: 1; }
+  #gorev-serit[data-durum="bekliyor"] .gs-kimlik { flex: 1 1 calc(100% - 90px); }
+  #gorev-serit[data-durum="bekliyor"] .gs-durum { order: 2; flex: 1 1 auto; max-width: none; }
+  .gs-isaret { order: 0; }
+  /* goz H5 2. tur 🟠: "adım" 1. satıra sığınca DURDUR'un sağına geçiyor, iki DURDUR'un sağ kenarı
+     ~69 px kayıyordu. Zorunlu satır kırma (sıfır yükseklik) → 1. satır DURDUR ile, 2. satır
+     TÜMÜNÜ DURDUR ile biter: ikisi de sağ kenarda. Yalnız TÜMÜNÜ DURDUR görünürken — durdu /
+     onay bekleyen şeritte kırma adımı boş bir 3. satıra itiyordu (goz hiza 1. tur 🟠). */
+  #gorev-serit:has(.gs-tumu:not([hidden]))::after {
+    content: ""; order: 4; flex-basis: 100%; height: 0; margin-bottom: -6px;
+  }
+  .gs-adim { order: 5; }
+  .gs-cubuk { order: 6; flex-basis: 100px; }
+  /* H5: 2. satırda adım + çubuğun yanında, ≥44px */
+  .gs-tumu { order: 7; min-height: 44px; padding: 0 12px; }
+}
+
+/* ── Harness H4: ÖNERİ kartı · #gorev-oneri (şeridin üstünde) ─────────
+   Aynı dil: siyah zemin, mor etiket, altın yalnız çizgide. Öneri = henüz iş değil →
+   kenar KESİKLİ altın (onay bekleyen bir şey), ONAYLA tek dolu-çizgili düğme. */
+#gorev-oneri {
+  --go-altin-rgb: 205, 176, 113;
+  --go-mor-rgb: 155, 140, 255;
+  width: min(720px, 100%);
+  box-sizing: border-box;
+  display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; row-gap: 4px;
+  margin-bottom: 6px;
+  padding: 6px 6px 6px 14px;
+  border: 1px dashed rgba(var(--go-altin-rgb), .5);
+  border-radius: 12px;
+  background: rgba(5, 6, 11, .86);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  color: #b9bdc8;
+  font: 500 12px/1.25 "Inter", "Segoe UI", "Noto Sans", system-ui, sans-serif;
+  letter-spacing: .02em;
+  animation: go-gir .32s cubic-bezier(.2, .75, .25, 1);
+}
+#gorev-oneri[hidden] { display: none; }
+@keyframes go-gir { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.go-isaret {
+  width: 7px; height: 7px; flex-shrink: 0; transform: rotate(45deg);
+  box-shadow: inset 0 0 0 1.5px rgba(var(--go-altin-rgb), .9);
+}
+.go-etiket {
+  flex-shrink: 0; white-space: nowrap;
+  font: 600 11px/1 "Inter", system-ui, sans-serif; letter-spacing: .15em;   /* goz 1. tur: 10,5px okunaksızdı */
+  color: rgba(var(--go-mor-rgb), .95);
+}
+.go-ad { color: #ece8de; font-weight: 600; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
+.go-sayac { color: #9097a8; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.go-sayac:empty { display: none; }
+/* goz 1. tur: tek satırda ad + metin 1280'de bile kesiliyordu → metin kendi satırında, tam genişlik */
+.go-metin { order: 9; flex: 1 1 100%; min-width: 0; color: #b9bdc8; padding-left: 17px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#gorev-oneri.go-dis .go-dugmeler::before {
+  content: attr(data-dis-etiket); align-self: center; margin-right: 4px;
+  color: #9097a8; font-size: 11px; letter-spacing: .06em; white-space: nowrap;
+}
+.go-dugmeler { display: flex; gap: 6px; flex-shrink: 0; }
+.go-dugme {
+  min-height: 34px; padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, .14); border-radius: 9px;
+  background: transparent; color: #b9bdc8;
+  font: 600 11px/1 "Inter", system-ui, sans-serif; letter-spacing: .14em;
+  cursor: pointer; transition: border-color .2s, background .2s, color .2s;
+}
+.go-dugme.go-onayla { border-color: rgba(var(--go-altin-rgb), .55); color: #ece8de; }
+/* H5: telefonda 1. dokunuştan sonra — şeridin "ONAYLA?" diliyle aynı (altın yalnız çizgide) */
+.go-dugme.go-onayla.go-onay { border-color: rgba(var(--go-altin-rgb), .95);
+  box-shadow: inset 0 0 0 1px rgba(var(--go-altin-rgb), .35); font-variant-numeric: tabular-nums; }
+.go-dugme[hidden] { display: none; }
+.go-dugme:disabled { opacity: .5; cursor: progress; }
+.go-dugme:focus-visible { outline: 2px solid rgba(var(--go-mor-rgb), .7); outline-offset: 2px; }
+@media (hover: hover) {
+  .go-dugme:hover { border-color: rgba(255, 255, 255, .32); color: #ece8de; }
+  .go-dugme.go-onayla:hover { border-color: rgba(var(--go-altin-rgb), .9); background: rgba(var(--go-mor-rgb), .08); }
+}
+/* Telefon: 1. satır etiket + ad + sayaç · 2. satır ne yapılacak (2 satıra kadar) ·
+   3. satır üç eşit düğme, her biri ≥44px. */
+/* Kart açıkken Halka'nın alt süs yazısı ("… bir şey sor", durum satırı) kartın arkasında
+   kesik görünüyordu (goz 1. tur, 1280) — kart o yerin işini görür. */
+body.gorev-oneri-acik #hr-prompt { visibility: hidden; }
+@media (max-width: 600px) {
+  #gorev-oneri { row-gap: 6px; column-gap: 8px; padding: 8px 8px 8px 12px; }
+  .go-metin { order: 0; padding-left: 0; white-space: normal; display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .go-dugmeler { order: 10; flex: 1 1 100%; }
+  .go-dugme { flex: 1 1 0; min-height: 44px; padding: 0 8px; }
+  #gorev-oneri.go-dis .go-dugmeler::before { flex: 1 1 100%; margin: 0 0 2px; order: 9; }
+  #gorev-oneri.go-dis .go-dugmeler { flex-wrap: wrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #gorev-serit[data-durum="kosuyor"] .gs-isaret { animation: none; }
+  #gorev-oneri { animation: none; }
+  .gs-cubuk i { transition: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   YENİ GÖREV formu — Faz 0d · #gorev-form (body'ye eklenir)
+   Masaüstünde giriş konsolunun üstünde ortalı kart; telefonda alttan kenarlı sayfa.
+   Katman 10005: menü düğmesi (≤10002) perdenin altında, profil modali (10010) üstte.
+   ══════════════════════════════════════════════════════════════════ */
+#gorev-form {
+  --gs-altin-rgb: 205, 176, 113;
+  --gs-mor-rgb: 155, 140, 255;
+  --gs-gumus: #b9bdc8;
+  --gs-gumus-acik: #ece8de;
+  --gs-gumus-soluk: #9097a8;
+  position: fixed; inset: 0; z-index: 10005;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 16px 16px max(120px, calc(env(safe-area-inset-bottom) + 120px));
+  box-sizing: border-box;
+  font: 500 13px/1.4 "Inter", "Segoe UI", "Noto Sans", system-ui, sans-serif;
+  color: var(--gs-gumus);
+}
+#gorev-form[hidden] { display: none; }
+.gf-perde { position: absolute; inset: 0; background: rgba(2, 3, 7, .72); }
+.gf-kart {
+  position: relative; width: min(520px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto;
+  box-sizing: border-box; margin: 0;
+  padding: 18px 20px 20px;
+  border: 1px solid rgba(var(--gs-altin-rgb), .36); border-radius: 14px;
+  background: #05060b;                 /* goz 1. tur: yarı saydam kart arkadaki şeridi gösteriyordu */
+  box-shadow: inset 0 0 0 1px rgba(var(--gs-mor-rgb), .06), 0 24px 60px rgba(0, 0, 0, .55);
+  animation: gf-gir .22s cubic-bezier(.2, .75, .25, 1);
+}
+@keyframes gf-gir { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.gf-ust { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.gf-baslik { font: 600 11.5px/1 "Inter", system-ui, sans-serif; letter-spacing: .2em; color: rgba(var(--gs-mor-rgb), .95); }
+.gf-kapat {
+  width: 36px; height: 36px; display: grid; place-items: center; flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, .1); border-radius: 9px; background: transparent;
+  color: var(--gs-gumus); cursor: pointer;
+}
+.gf-kapat svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.gf-turler { border: 0; margin: 0 0 6px; padding: 0; }
+.gf-turler legend, .gf-alan > span, .gf-bilgi dt, .gf-ozet dt {
+  font: 600 11.5px/1 "Inter", system-ui, sans-serif; letter-spacing: .14em; color: #a9aebb;   /* goz 1. tur */
+  padding: 0; margin-bottom: 8px;
+}
+.gf-secenekler { display: flex; gap: 8px; flex-wrap: wrap; }
+.gf-secenek { position: relative; }
+.gf-secenek input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.gf-secenek span {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, .12); border-radius: 9px;
+  font: 600 11px/1 "Inter", system-ui, sans-serif; letter-spacing: .16em; color: var(--gs-gumus);
+}
+.gf-secenek input:checked + span { border-color: rgba(var(--gs-altin-rgb), .8); color: var(--gs-gumus-acik);
+  background: rgba(var(--gs-mor-rgb), .08); }
+.gf-secenek input:focus-visible + span { outline: 2px solid rgba(var(--gs-mor-rgb), .7); outline-offset: 2px; }
+.gf-tur-aciklama { margin: 8px 0 14px; color: var(--gs-gumus); font-size: 12.5px; min-height: 1em; }
+.gf-alan { display: block; margin-bottom: 14px; }
+.gf-alan > span { display: block; }
+.gf-alan input, .gf-alan textarea {
+  display: block; width: 100%; box-sizing: border-box;
+  padding: 10px 12px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 9px;
+  background: rgba(255, 255, 255, .03); color: var(--gs-gumus-acik);
+  font: 500 14px/1.4 "Inter", system-ui, sans-serif; resize: vertical;
+}
+.gf-alan textarea { min-height: 76px; }
+.gf-alan input::placeholder, .gf-alan textarea::placeholder { color: var(--gs-gumus-soluk); opacity: .8; }
+.gf-alan input:focus, .gf-alan textarea:focus { outline: none; border-color: rgba(var(--gs-altin-rgb), .6);
+  box-shadow: 0 0 0 3px rgba(var(--gs-mor-rgb), .12); }
+.gf-bilgi, .gf-ozet { margin: 0 0 12px; display: grid; gap: 10px; }
+.gf-bilgi > div, .gf-ozet > div { display: grid; grid-template-columns: 64px 1fr; align-items: baseline; gap: 10px; }
+.gf-bilgi dt, .gf-ozet dt { margin: 0; }
+.gf-bilgi dd, .gf-ozet dd { margin: 0; color: var(--gs-gumus-acik); font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere; }
+.gf-yol, .gf-o-yol { font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace; font-size: 12.5px; }
+.gf-ozet { padding: 12px 0; border-top: 1px solid rgba(var(--gs-altin-rgb), .22);
+  border-bottom: 1px solid rgba(var(--gs-altin-rgb), .22); }
+.gf-sayac { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 12px;
+  font: 600 11px/1 "Inter", system-ui, sans-serif; letter-spacing: .18em; color: var(--gs-gumus-acik); }
+.gf-kalan { font: 600 20px/1 "Inter", system-ui, sans-serif; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+.gf-not { margin: 0 0 12px; color: var(--gs-gumus); font-size: 12.5px; }
+.gf-komut { display: block; margin-top: 8px; padding: 8px 10px; border: 1px solid rgba(var(--gs-altin-rgb), .3);
+  border-radius: 8px; background: rgba(255, 255, 255, .03); color: var(--gs-gumus-acik);
+  font: 500 12.5px/1.4 "JetBrains Mono", "Fira Code", ui-monospace, monospace; overflow-wrap: anywhere;
+  user-select: all; }
+.gf-hata { margin: 0 0 10px; min-height: 0; color: #ff8a95; font-size: 12.5px; }
+.gf-hata:empty { display: none; }
+.gf-eylem { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+.gf-ana, .gf-ikincil {
+  min-height: 44px; padding: 0 20px; border-radius: 10px; cursor: pointer;
+  font: 600 11.5px/1 "Inter", system-ui, sans-serif; letter-spacing: .16em; background: transparent;
+  transition: border-color .2s, background .2s;
+}
+.gf-ana { border: 1px solid rgba(var(--gs-altin-rgb), .7); color: var(--gs-gumus-acik);
+  box-shadow: inset 0 0 0 1px rgba(var(--gs-altin-rgb), .2); }
+.gf-ikincil { border: 1px solid rgba(255, 255, 255, .14); color: var(--gs-gumus); }
+.gf-ana[hidden], .gf-ikincil[hidden] { display: none; }
+.gf-ana:disabled { opacity: .5; cursor: progress; }
+.gf-ana:focus-visible, .gf-ikincil:focus-visible, .gf-kapat:focus-visible {
+  outline: 2px solid rgba(var(--gs-mor-rgb), .7); outline-offset: 2px; }
+@media (hover: hover) {
+  .gf-ana:hover { border-color: rgba(var(--gs-altin-rgb), .95); background: rgba(var(--gs-mor-rgb), .08); }
+  .gf-ikincil:hover, .gf-kapat:hover { border-color: rgba(255, 255, 255, .3); color: var(--gs-gumus-acik); }
+}
+@media (max-width: 600px) {
+  #gorev-form { padding: 16px 16px max(16px, env(safe-area-inset-bottom)); }
+  .gf-kart { padding: 16px 16px 18px; border-radius: 14px; }
+  .gf-eylem > * { flex: 1 1 0; }
+  .gf-secenek span { min-height: 44px; }
+  .gf-kapat { width: 44px; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .gf-kart { animation: none; } }

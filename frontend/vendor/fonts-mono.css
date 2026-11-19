@@ -1,0 +1,56 @@
+/* JetBrains Mono — paketli mono ailesi (2026-09-18, A10)
+ *
+ * 🔴 NEDEN VAR: `tokens.css::--font-mono` ve `planner.css::--font` ikisi de
+ * 'JetBrains Mono' istiyordu ama font HİÇBİR YERDE paketlenmemişti. Sonuç
+ * ölçüldü: geliştirme makinesinde font sistemde kurulu olduğu için ürün
+ * JetBrains Mono ile görünüyordu, MÜŞTERİDE ise Noto Sans Mono'ya düşüyordu.
+ * Yani ürün iki makinede iki farklı fontla görünüyordu ve bunu kimse göremezdi
+ * — geliştirici hiçbir zaman müşterinin gördüğü ekranı görmüyordu.
+ *
+ * 🔑 AYRI DOSYA, `vendor/fonts.css`'e EKLENMEDİ: o dosya Google Fonts'un
+ * ÜRETİLMİŞ çıktısıdır (Inter/Outfit/Space Mono, 40 @font-face, hash'li dosya
+ * adları). Elle düzenlenirse bir sonraki yeniden üretimde bu blok sessizce
+ * kaybolur. Ayrıca `planner.html` `fonts.css`'i yüklemiyor; mono'yu oraya
+ * ulaştırmanın tek yan etkisiz yolu ayrı dosya (fonts.css'i eklemek PLAN
+ * ekranına Inter/Outfit'i de getirir ve görünümünü değiştirirdi).
+ *
+ * Dosyalar `frontend/fonts/` altında — `frontend/assets` DIŞINDA (bilerek):
+ * assets içindeki her şey 24,8 MB'lık medya yüküne düşer ve yalnız `media_id`
+ * değişince iner. Buradakiler sıradan delta ile gider.
+ *
+ * Üretim (yeniden gerekirse): Latin + Latin-Ext subset, 430 glif, 4 ağırlık,
+ * toplam ~133 KB.
+ *   pyftsubset /usr/share/fonts/TTF/JetBrainsMono-<Stil>.ttf \
+ *     --output-file=fonts/JetBrainsMono-<agirlik>-latin-ext.woff2 \
+ *     --flavor=woff2 --layout-features=kern,liga,calt --unicodes=<latin+ext>
+ * Lisans: SIL Open Font License 1.1 (yeniden dağıtım serbest).
+ */
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/ui/fonts/JetBrainsMono-400-latin-ext.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/ui/fonts/JetBrainsMono-500-latin-ext.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/ui/fonts/JetBrainsMono-600-latin-ext.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/ui/fonts/JetBrainsMono-700-latin-ext.woff2) format('woff2');
+}

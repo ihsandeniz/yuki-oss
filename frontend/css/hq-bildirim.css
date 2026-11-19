@@ -1,0 +1,115 @@
+/* ═══════════════════════════════════════════════════════════════════
+   HQ › BİLDİRİM · GELEN KUTUSU (2026-09-27 — kişisel 431c1ef tasarımı, ürüne yeniden yazıldı)
+   Solda "Yuki ne dedi" + kanal izi (EKRAN / TELEFON / SES), sağda alarmlar + "sana nasıl ulaşırım".
+   Renk: cyan = veri (saat, ulaşan kanal) · yeşil ışık = kanal açık · kırmızı = KAÇIRDIN · gerisi nötr.
+
+   🔴 Kişisel CSS'i kopyalanmadı: `--c-*` / `--sp-*` / `--fs-*` / `--border-*` adları üründe YOK
+   (hq-monitor.css + hq-hafiza.css dersi). Yalnız ürün token'ları.
+   🔴 Panel kabuğu (`.oda`, hq.css `display:flex !important`) dokunulmadı — ızgara
+   `.oda-govde.bd-govde` üzerinde; oda başlığı ve kaydırma davranışı ortak kalır.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.oda-govde.bd-govde {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  column-gap: var(--b-8, 40px);
+  row-gap: var(--b-6, 24px);
+  align-items: start;
+  align-content: start;
+}
+.bd-gelen, .bd-yan { min-width: 0; }
+
+/* ── Sol: günlük ── */
+.bd-bas { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--kenar); }
+.bd-baslik { margin: 0; font: var(--ag-kalin) var(--yazi-19)/1.2 var(--font); color: var(--ink-1); }
+.bd-ozet { margin: 0; font: 500 var(--yazi-13)/1.4 var(--font); color: var(--ink-2); }   /* panelin asıl haberi — damga puntosunda kayboluyordu (goz 09-27) */
+.bd-ozet.uyari { color: var(--kirmizi-ink); }
+
+.bd-kayit { display: grid; gap: 6px; padding: 14px 0; border-bottom: 1px solid var(--kenar); }
+/* Kaçan mesaj: sol şerit + etiket. Yalnız renk değil — "Kaçırdın" yazısı da taşır (renk körlüğü). */
+/* şerit oluğa taşar (negatif pay) — içerik öbür satırlarla aynı hizada kalır (goz 09-27) */
+.bd-kayit.kacti { margin-left: -14px; padding-left: 12px; border-left: 2px solid var(--kirmizi-ink); }
+.bd-kayit-ust { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.bd-kaynak { font: 11px var(--font-hud); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+.bd-zaman { order: 2; margin-left: auto; font: 11px var(--font-hud); letter-spacing: .04em; color: var(--ink-2); }
+.bd-kacti { order: 1;   /* kaynağın yanında; zaman sütunu sağda hizalı kalır */
+   font: 700 11px var(--font-hud); letter-spacing: .12em; text-transform: uppercase; color: var(--kirmizi-ink); }
+.bd-metin { margin: 0; font: var(--yazi-14)/1.55 var(--font); color: var(--ink-1); white-space: pre-line; overflow-wrap: anywhere; }
+.bd-izler { display: flex; flex-wrap: wrap; gap: 4px; }
+.bd-iz {
+  padding: 2px 6px; border: 1px solid var(--kenar); border-radius: var(--r-1);
+  font: 11px var(--font-hud); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
+}
+/* ulaşmayan kanal üstü çizili değil soluk — "yok" ile "ulaşmadı" aynı şey, ikinci bir işaret gürültü */
+.bd-iz.on { border-color: color-mix(in srgb, var(--cyan) 45%, transparent); color: var(--cyan); }
+
+.bd-liste .bos { margin-top: var(--b-6, 24px); }
+.bd-daha {
+  display: block; margin: var(--b-5, 16px) auto 0; min-height: 36px; padding: 0 18px;
+  border: 1px solid var(--kenar-guclu); border-radius: var(--r-tam); background: none; cursor: pointer;
+  font: 11px var(--font-hud); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2);
+}
+.bd-daha:hover { color: var(--ink-1); border-color: var(--ink-3); }
+.bd-daha[hidden] { display: none; }
+
+/* ── Sağ: kutular ── */
+.bd-kutu + .bd-kutu { margin-top: var(--b-7, 32px); }
+.bd-kutu-bas {
+  display: flex; justify-content: space-between; align-items: center; margin: 0 0 12px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--kenar);
+  font: 400 11px var(--font-hud); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2);
+}
+.bd-kutu-bas b { font-weight: 400; color: var(--cyan); }
+.bd-not { margin: 6px 0 0; font: var(--yazi-12)/1.5 var(--font); color: var(--ink-2); }
+.bd-not:empty { display: none; }
+.bd-not.alan-hata { display: block; color: var(--kirmizi-ink); }
+
+.bd-kur { display: flex; gap: 8px; }
+.bd-kur .girdi { flex: 1; min-width: 0; }
+.bd-kur .dg { flex-shrink: 0; }
+
+/* Alarm satırı: büyük saat · mesaj + ne zaman · iptal */
+.bd-alarmlar { margin-top: 10px; }
+.bd-alarm { display: grid; grid-template-columns: minmax(64px, max-content) minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--kenar); }
+.bd-alarm-saat { font: 700 18px var(--font-hud); color: var(--cyan); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bd-alarm-saat small { display: block; margin-top: 2px; font: 400 11px var(--font-hud); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.bd-alarm-govde { min-width: 0; }
+.bd-alarm-metin { margin: 0; font: var(--yazi-14)/1.4 var(--font); color: var(--ink-1); overflow-wrap: anywhere; }
+.bd-alarm-alt { margin: 2px 0 0; font: var(--yazi-12)/1.4 var(--font); color: var(--ink-2); }
+.bd-iptal {
+  min-height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: var(--r-tam); background: none; cursor: pointer;
+  font: 11px var(--font-hud); letter-spacing: .08em; color: var(--ink-2); white-space: nowrap;
+}
+.bd-iptal:hover { color: var(--kirmizi-ink); }
+.bd-iptal.kurulu { color: var(--kirmizi-ink); border-color: var(--kirmizi-ink); }
+/* Onay metni KISA ve yerinde: uzun "Emin misin? Tekrar bas" sütunu sıkıştırıyordu, alt satıra indirmek de
+   ikinci basışı boşluğa düşürüyordu (goz 09-27 tur 1-2). Düğme ilk basılan yerde kalır. */
+.bd-bos { margin: 8px 0 0; font: var(--yazi-13)/1.5 var(--font); color: var(--ink-2); }
+
+/* Kanal ışıkları */
+/* subgrid: ad sütunu en uzun ada göre, açıklamalar alt alta hizalı (sabit genişlik telefonda boşluk bırakıyordu) */
+.bd-kanallar { display: grid; grid-template-columns: 10px max-content minmax(0, 1fr); gap: 12px 10px; }
+.bd-kanal { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: center; gap: 10px; }
+.bd-isik { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink-3); }
+.bd-kanal.acik .bd-isik { background: var(--yesil-ink); box-shadow: 0 0 8px color-mix(in srgb, var(--yesil-ink) 70%, transparent); }
+.bd-kanal-ad { font: 700 11px var(--font-hud); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-1); }
+.bd-kanal-alt { font: var(--yazi-12)/1.4 var(--font); color: var(--ink-2); overflow-wrap: anywhere; }
+.bd-kanal-eylem { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.bd-kanal-eylem .dg[hidden] { display: none; }
+
+/* Masada sağ sütun yapışkan — günlük kayarken alarmlar ve kanallar kayboluyordu (goz 09-27) */
+@media (min-width: 901px) {
+  .bd-yan { position: sticky; top: 0; }
+}
+@media (max-width: 900px) {
+  /* Telefonda alarmlar + kanallar üstte (kurmak/bağlamak için), günlük altta */
+  .oda-govde.bd-govde { grid-template-columns: minmax(0, 1fr); row-gap: var(--b-7, 32px); }
+  .bd-yan { order: -1; }
+}
+/* Dokunmatikte hover yok: İPTAL çerçeveli (silme işi yapıyor, görünür olsun), hedefler 44px */
+@media (hover: none) {
+  .bd-iptal { min-height: 44px; padding: 0 12px; border-color: var(--kenar-guclu); }
+  .bd-iptal.kurulu { border-color: var(--kirmizi-ink); }
+  .bd-daha { min-height: 44px; }
+}

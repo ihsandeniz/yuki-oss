@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Yuki — Masaüstü (tam boy)</title>
+<!-- Masaüstü Yuki · kip tam: kullanıcının kendi VRM'i (VRM 1.0 + saç yayları, /_yuki/model.vrm) baştan
+     ayağa, saydam tuvalde. Beden klipleri (VRMA) isteğe bağlı, bu kopyada gelmez; yüz davranışı: göz kırpma, tık → gülümser + el sallar, 60 sn etkileşimsiz → uyku (göz yarı kapalı,
+     10 fps). Kare hızını burası belirler (rAF yok): uyanık 24 · uyku 10 · gizliyken 0.
+     Tıklama bölgesi: çizilen siluetten saniyede bir şerit kutuları (window.yukiBolge) → host input bölgesi.
+     F1: host imleci okur → yukiBak(x, y) baş + gözler oraya döner · dokunma tepkisini host seçer
+     (davranis.py) → yukiYuz · yukiGizli (SIGUSR1) · yukiBoyut (monitör değişince) · baş dairesi yukiBolge.bas. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "../../frontend/vendor/three-0.160.0/three.module.min.js",
+    "three/addons/": "../../frontend/vendor/three-0.160.0/addons/",
+    "@pixiv/three-vrm": "../../frontend/vendor/three-vrm-3.1.6/three-vrm.module.min.js"
+  }
+}
+</script>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  canvas { width: 100%; height: 100%; display: block; }
+</style>
+</head>
+<body>
+<canvas id="yuki" aria-hidden="true"></canvas>
+<script src="baglanti.js"></script>  <!-- F2: backend olayları → yukiBag -->
+<script src="komut.js"></script>    <!-- host → sayfa komut akışı, JSC'siz -->
+<script type="module">
+import { hareketKur, gecisAgirlik } from './hareket.js';   // doğallık katmanı: nefes, ağırlık, bakış yayı, kırpma
+import { sayacKur, araligiKaydet, isKaydet } from './takilma.js';   // takılma sayacı: host okur, log'a yazar
+import { POZLAR, pozCoz, pozEgri, kokKonum, KOL_KEMIK } from './poz.js';   // etkileşim pozları: otur · uzan
+const p = new URLSearchParams(location.search);
+const MODEL = '/_yuki/model.vrm';   // kullanıcının kendi VRM'i (host `--model`; depoda model yok)
+let W = Number(p.get('w')) || innerWidth, H = Number(p.get('h')) || innerHeight;
+const FPS_UYANIK = Number(p.get('fps') || 24), FPS_UYKU = 10;
+const UYKU_SN = Number(p.get('uyku') || 60);
+const BANT = 24, PAY = 6;             // tıklama şeridi sayısı · siluetin çevresine CSS px pay
+const ANAHTAR = p.get('anahtar');     // host'un yerel sunucusuna durum POST'u; kuru kipte yok → host okur
+const D = window.yukiDurum = { hazir: false, hata: null, kare: 0, fps: FPS_UYANIK, uyku: false, gecmis: [],
+                               klipler: [], klip_bilgi: {}, acilis_ms: null, takilma: sayacKur() };
+// --hareket a (sakin, varsayılan) | b (canlı) · prefers-reduced-motion: süs hareketleri küçülür (hareket.js)
+const AZALT = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+const HR = hareketKur(p.get('hareket') === 'b' ? 'b' : 'a', AZALT);
+D.hareket = HR.ayar.ad; D.hareket_azalt = AZALT;
+
+// Duygu → VRM ifadesi + beden klibi. Yüz değerleri OYUN kipinin DUYGU tablosundan (modes/yuki-3d.js);
+// shy/tired'ın VRM karşılığı yok → karışım + göz kapağı. Klip yoksa yalnız yüz değişir.
+const DUYGU = {
+  neutral:   { ifade: {} },
+  happy:     { ifade: { happy: 0.85 },                 klip: 'selam' },
+  wave:      { ifade: { happy: 0.6 },                  klip: 'selam' },
+  sad:       { ifade: { sad: 0.8 },                    klip: 'uzgun' },
+  angry:     { ifade: { angry: 0.8 },                  klip: 'kizgin' },
+  surprised: { ifade: { surprised: 0.9 },              klip: 'saskin' },
+  shy:       { ifade: { relaxed: 0.6, happy: 0.35 },   klip: 'utangac' },
+  happy_uzun:{ ifade: { happy: 1.0 },                  klip: 'sevinc' },   // uzun basılı tut (F1)
+  tired:     { ifade: { relaxed: 0.5 }, kapak: 0.5 },
+};
+const IFADE = ['happy', 'sad', 'angry', 'relaxed', 'surprised'];
+const KLIPLER = ['idle', 'selam', 'utangac', 'saskin', 'kizgin', 'uzgun', 'tesekkur', 'reverans', 'sevinc'];
+// Beden klipleri yalnız kemik dönüşü + kalça konumu verir; baş/boyun idle döngüsünde maskeli (bakış bizde).
+const MASKE_DONGU = new Set(['neck', 'head', 'leftEye', 'rightEye', 'jaw']);
+const OFSETLI = ['spine', 'chest', 'leftShoulder', 'rightShoulder', 'neck', 'head',
+                 'leftUpperArm', 'rightUpperArm', 'leftLowerArm', 'rightLowerArm'];   // guncelle() bunlara ofset ekler
+// bakış (F1): imleç noktası baş derinliğindeki düzleme izdüşer, BAK_ON m öne alınır; baş + boyun en çok
+// BAK_YAW / BAK_PITCH döner (boyun %40, baş %60). Gözler VRM lookAt ile aynı noktaya.
+const BAK_ON = 0.6, BAK_YAW = 0.6, BAK_PITCH = 0.35;
+
+let T, vrm, sahne, kamera, cizer, mixer, gecen = 0;
+const eylem = {};
+let aktifUst = null, duygu = 'neutral', duyguBitis = 0, zaman = 0;
+let gecis = null;          // {e, t, faz: gir|kal|cik, w, sinir} — beden klibinin ağırlığı elle (yumuşak eğri)
+const cikanlar = [];       // yarıda kesilen klipler: kendi ağırlıklarından sönerek çıkar
+let bos = 0, son = performance.now(), kapak = 0;
+let bakHedef = null, bakW = 0, bakYaw = 0, bakPitch = 0, bakObj = null, V1, V2, V3;
+const ifadeW = { happy: 0, sad: 0, angry: 0, relaxed: 0, surprised: 0 };
+// Etkileşim pozu: poz = {ad, coz, t, faz: gir|kal|cik}. Kadraj sabit ölçekli: piksel/metre ayaktaki kadrajdan
+// (ppm), kamera açısı ve uzaklığı hiç değişmez — poz penceresi yalnız kadrajın başka bir kesitidir (fov kesite göre).
+const POZ_SN = 0.6;
+let poz = null, kadraj = null, kokQ0 = null, kalcaPivot = null, belir = null;
+// Geçişte solma: poz penceresi tek seferde boy değiştiriyor; ayaktaki beden poz kesitine sığmadığından geçişte baş ya
+// da ayaklar kesik görünüyordu (ölçüldü: kayıt aracı "görünür kesik kare" sayar). Giriş: beden hareketin ikinci
+// yarısında (sığmaya başlayınca) belirir. Çıkış: poz bozulmadan söner; ayakta beden host ayakta boyunu kurunca
+// (yukiBoyut) belirir — host gelmezse 1 sn sonra yine belirir (görünmez kalmasın). Yalnız CSS opaklığı:
+// tıklama bölgesi (readPixels) etkilenmez.
+const BELIR_SN = 0.3, BEKLE_SN = 1.0;
+const yumus = x => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
+function opaklik(o) { if (cizer) cizer.domElement.style.opacity = o >= 0.999 ? '' : o.toFixed(3); D.opaklik = +o.toFixed(3); }
+const pozCozum = {}, dinlenme = {}, ebeveyn = {}, pozKesit = {};   // pozKesit: ad → {coz, w, h, cx, cy}
+
+function adim() {
+  const simdi = performance.now(), onceki = son, gercek = (simdi - son) / 1000, dt = Math.min(0.2, gercek);
+  // boşta sayacı GERÇEK süreyle: dt animasyon için 0,2 sn'ye kenetli; WebKit zamanlayıcıyı kısınca (yük, gizli
+  // pencere) kenetli dt ile 1 sn'lik uyku eşiği 5 sn'de doluyordu → testte tek seferlik kırmızı
+  son = simdi; bos += gercek;
+  araligiKaydet(D.takilma, simdi - onceki, D.fps, Date.now());   // önceki karenin fps'iyle (uyku geçişi bu karede)
+  if (!D.uyku && bos >= UYKU_SN) uyu(true);
+  guncelle(dt);
+  ciz();
+  isKaydet(D.takilma, performance.now() - simdi);
+  zaman = setTimeout(adim, 1000 / D.fps);
+}
+
+function guncelle(dt) {
+  const t = gecen += dt;
+  const B = n => vrm.humanoid.getNormalizedBoneNode(n);
+  // ofset eklenen kemikler önce dinlenme pozuna: klip yazmıyorsa (idle'da baş/boyun maskeli) ofset her karede
+  // üst üste biniyordu — 2400 karede baş arkaya devrildi (ölçüldü kare 2). Klip yazıyorsa mixer ezer.
+  for (const n of OFSETLI) B(n)?.quaternion.identity();
+  const idleW = agirliklar(dt);
+  mixer.update(dt);
+  const pozW = pozUygula(dt, B);
+  const bas = B('head'), boyun = B('neck'), omurga = B('spine'), gogus = B('chest');
+  const H = HR.adim(dt, { hedef: bakisHedefi(bas), uyku: D.uyku });
+  // nefes: asimetrik dalga, göğüs + omurga kalkar, omuzlar hafif yükselir (tek eksen değil)
+  gogus?.rotateX(-HR.ayar.nefesGogus * H.nefes - H.irk);
+  omurga?.rotateX(-HR.ayar.nefesOmurga * H.nefes);
+  B('leftShoulder')?.rotateZ(HR.ayar.nefesOmuz * H.nefes); B('rightShoulder')?.rotateZ(-HR.ayar.nefesOmuz * H.nefes);
+  // ağırlık aktarma: omurga yana yatar, göğüs ve baş ters yönde dengeler (göz hizası korunur); gövde bakışa katılır
+  omurga?.rotateZ(H.agirlik); gogus?.rotateZ(-0.45 * H.agirlik);
+  omurga?.rotateY(0.5 * H.govdeYaw); gogus?.rotateY(0.5 * H.govdeYaw);
+  // kollar boşta gevşek: üst kol gövdeye yaklaşır, dirsek hafif bükülür (yalnız boşta klibinin payı kadar)
+  const kg = HR.ayar.kolGevse * idleW * (1 - pozW), dr = HR.ayar.dirsek * idleW * (1 - pozW);
+  B('leftUpperArm')?.rotateZ(-kg); B('rightUpperArm')?.rotateZ(kg);
+  B('leftLowerArm')?.rotateY(dr); B('rightLowerArm')?.rotateY(-dr);
+  // baş: uykuda öne düşer; uyanıkken yavaş gürültülü salınım + bakış yayı (boyun %40, baş %60)
+  if (bas) {
+    if (D.uyku) { bas.rotateX(0.22); bas.rotateZ(-0.08); }
+    else { bas.rotateX(H.sal[0] - 0.5 * H.irk); bas.rotateY(H.sal[1]); bas.rotateZ(H.sal[2] - 0.35 * H.agirlik + H.egme); }
+    bas.rotateY(0.6 * H.basYaw); bas.rotateX(0.6 * H.basPitch);
+  }
+  if (boyun) { boyun.rotateY(0.4 * H.basYaw); boyun.rotateX(0.4 * H.basPitch); }
+  bakW = H.gozW; bakYaw = H.basYaw; bakPitch = H.basPitch;
+  gozlerUygula(H);
+  // yüz
+  if (duygu !== 'neutral' && simdi() >= duyguBitis) duygu = 'neutral';
+  const dg = DUYGU[duygu] || DUYGU.neutral, k = Math.min(1, dt * HR.ayar.ifadeHiz);
+  const hedefKapak = D.uyku ? 0.62 : (dg.kapak || 0);
+  kapak += (hedefKapak - kapak) * k;
+  const em = vrm.expressionManager;
+  if (em) {
+    em.setValue('blink', Math.max(H.kirp, kapak));
+    for (const ad of IFADE) {
+      const h = duygu === 'neutral' ? (ad === 'happy' && !D.uyku ? 0.12 : ad === 'relaxed' ? 0.2 : 0) : (dg.ifade[ad] || 0);
+      ifadeW[ad] += (h - ifadeW[ad]) * k;
+      em.setValue(ad, ifadeW[ad]);
+    }
+  }
+  if (window.yukiEk) window.yukiEk(dt, B, em);   // F2 kancası: düşünme/konuşma baş + ağız (baglanti.js)
+  vrm.update(dt);
+}
+const simdi = () => gecen;
+
+// Poz katmanı: mixer'ın yazdığı kemik dönüşünden pozun hedefine ağırlıkla (slerp). Kalça da pozdan: boşta klibinin
+// ağırlık aktarması kalçayı döndürüyor, oturuşta bu oturma noktasını kenarda kaydırırdı. Kök kalça çevresinde döner.
+// Üst klip (el sallama) oynarken `kol` pozunda kollar klibe bırakılır. Döner: pozun o anki ağırlığı.
+function pozUygula(dt, B) {
+  if (!poz) {
+    if (belir !== null) { belir += dt; opaklik(belir < 0 ? 0 : yumus(belir / BELIR_SN)); if (belir >= BELIR_SN) belir = null; }
+    return 0;
+  }
+  poz.t += dt;
+  let w = 1;
+  if (poz.faz === 'gir') {
+    w = pozEgri(poz.t, POZ_SN); opaklik(yumus((poz.t - 0.6 * POZ_SN) / (0.4 * POZ_SN)));   // sığınca belirir
+    if (poz.t >= POZ_SN) poz.faz = 'kal';
+  } else if (poz.faz === 'cik') {
+    w = poz.w0; opaklik(poz.o0 * (1 - yumus(poz.t / (0.5 * POZ_SN))));         // poz yerinde söner
+    if (poz.t >= POZ_SN) { poz = null; kokUygula(kokQ0); D.poz = null; D.gecmis.push('poz-bitti'); belir = -BEKLE_SN; opaklik(0); return 0; }
+  }
+  const spec = POZLAR[poz.ad], ust = gecis ? gecis.w : 0;
+  for (const b in poz.coz.yerel) {
+    const n = B(b); if (!n) continue;
+    n.quaternion.slerp(poz.coz.yerel[b], spec.kol && KOL_KEMIK.has(b) ? w * (1 - ust) : w);
+  }
+  kokUygula(kokQ0.clone().slerp(poz.coz.kok, w));
+  D.poz_w = +w.toFixed(3);
+  return w;
+}
+function kokUygula(q) {
+  vrm.scene.quaternion.copy(q);
+  vrm.scene.position.copy(kokKonum(T, kalcaPivot, kokQ0, q));
+}
+
+// Kamera: aynı uzaklık, aynı yön (izleyene düz bakar); (cx, cy) dünya noktası pencerenin ortasında, h piksel = h/ppm metre.
+function kameraKur(w, h, cx, cy) {
+  kamera.fov = 2 * Math.atan(h / kadraj.ppm / 2 / kadraj.uzak) * 180 / Math.PI;
+  kamera.aspect = w / h;
+  kamera.position.set(cx, cy, kadraj.uzak); kamera.lookAt(cx, cy, 0);
+  kamera.updateProjectionMatrix();
+  kadraj.merkez = [cx, cy];
+}
+
+// Poz kadrajı: pozu tam ağırlıkta (animasyonsuz) kurup derili köşelerin dünya kutusunu ölçer, ayaktaki ölçekle pencere
+// boyunu ve temas noktasının pencere pikselini döner. Host pencereyi bu boya getirip temas noktasını çapaya oturtur.
+// temas: otur → kalçanın altı (oturma yüzeyi: kalçanın arkasındaki en alt köşe), alt → bedenin en alt noktası (çubuğun üstü).
+function pozKadraj(ad) {
+  const spec = POZLAR[ad]; if (!spec || !vrm) return null;
+  const coz = pozCozum[ad] || (pozCozum[ad] = pozCoz(T, spec, dinlenme, ebeveyn));
+  const kemikler = Object.keys(dinlenme), B = n => vrm.humanoid.getNormalizedBoneNode(n);
+  const sakla = kemikler.map(b => B(b).quaternion.clone()), sq = vrm.scene.quaternion.clone(), sp = vrm.scene.position.clone();
+  for (const b of kemikler) B(b).quaternion.copy(coz.yerel[b] || new T.Quaternion());
+  kokUygula(coz.kok);
+  vrm.humanoid.update(); vrm.scene.updateMatrixWorld(true);
+  const v = new T.Vector3(), yerel = new T.Vector3(), kutu = new T.Box3();
+  const kalca = B('hips').getWorldPosition(new T.Vector3()), kalcaY = vrm.scene.worldToLocal(kalca.clone());
+  let temasY = Infinity;
+  vrm.scene.traverse(o => {
+    if (!o.isSkinnedMesh) return;
+    const n = o.geometry.attributes.position.count;
+    for (let i = 0; i < n; i++) {     // her köşe
+      o.getVertexPosition(i, v); v.applyMatrix4(o.matrixWorld);
+      kutu.expandByPoint(v);
+      if (spec.temas === 'alt') { temasY = Math.min(temasY, v.y); continue; }
+      yerel.copy(v); vrm.scene.worldToLocal(yerel);
+      if (yerel.z < kalcaY.z + 0.04 && Math.abs(yerel.x - kalcaY.x) < 0.17 && yerel.y > kalcaY.y - 0.3) temasY = Math.min(temasY, v.y);
+    }
+  });
+  for (let i = 0; i < kemikler.length; i++) B(kemikler[i]).quaternion.copy(sakla[i]);
+  vrm.scene.quaternion.copy(sq); vrm.scene.position.copy(sp);
+  vrm.humanoid.update(); vrm.scene.updateMatrixWorld(true);
+  const pay = 0.05, ust = spec.kol ? 0.16 : 0.05;                 // otur: el sallarken el başın üstüne çıkar
+  let x0 = kutu.min.x - pay, x1 = kutu.max.x + pay; const y0 = kutu.min.y - 1.6 * pay, y1 = kutu.max.y + ust;   // altta saç/ayak salınımı payı
+  if (spec.kol) { const enAz = kadraj.gorunur * 0.5; if (x1 - x0 < enAz) { const e = (enAz - (x1 - x0)) / 2; x0 -= e; x1 += e; } }  // el sallayan kol sığsın
+  const w = Math.ceil((x1 - x0) * kadraj.ppm), h = Math.ceil((y1 - y0) * kadraj.ppm);
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  // temas pikseli: yeni kesitin kamerasıyla izdüşüm (perspektif payı dahil)
+  const k = kamera.clone(); const eski = kadraj.merkez;
+  kameraKur(w, h, cx, cy); const kk = kamera.clone();
+  kamera.copy(k); kadraj.merkez = eski;
+  const px = p => { const q = p.clone().project(kk); return [Math.round((q.x + 1) / 2 * w), Math.round((1 - q.y) / 2 * h)]; };
+  const temas = px(new T.Vector3(kalca.x, temasY, kalca.z));
+  const sol = px(new T.Vector3(kutu.min.x, temasY, 0)), sag = px(new T.Vector3(kutu.max.x, temasY, 0));
+  pozKesit[ad] = { coz, w, h, cx, cy };
+  return { ad, w, h, temas, govde: [sol[0], sag[0]], ust_px: px(new T.Vector3(kalca.x, kutu.max.y, 0))[1] };
+}
+// Bakış hedefi: bakHedef (pencere CSS px, pencere dışı olabilir) → dünya noktası + baş için kenetli [yaw, pitch].
+// Yumuşatma burada değil hareket.js'te: gözler hızlı yay, baş gecikmeli yavaş yay (hız hedef değişince sıçramaz).
+function bakisHedefi(bas) {
+  let yaw = 0, pitch = 0;
+  if (!bakHedef || !bas) return null;
+  {
+    const bp = bas.getWorldPosition(V1);
+    const yon = V2.set(bakHedef.x / W * 2 - 1, 1 - bakHedef.y / H * 2, 0.5).unproject(kamera).sub(kamera.position).normalize();
+    const nokta = V3.copy(kamera.position).addScaledVector(yon, (bp.z - kamera.position.z) / yon.z);
+    nokta.z += BAK_ON;
+    bakObj.userData.hedef = nokta.clone();
+    // model uzayında (sahne -0,22 döndürülü): baştan hedefe yön
+    const yerel = vrm.scene.worldToLocal(nokta.clone()).sub(vrm.scene.worldToLocal(bp.clone()));
+    yaw = Math.max(-BAK_YAW, Math.min(BAK_YAW, Math.atan2(yerel.x, yerel.z)));
+    pitch = Math.max(-BAK_PITCH, Math.min(BAK_PITCH, -Math.atan2(yerel.y, Math.hypot(yerel.x, yerel.z))));
+  }
+  return [yaw, pitch];
+}
+
+// Gözler: kamera (izleyen) ile imleç noktası arası, göz yayının ağırlığıyla; boştayken küçük sakkadlar.
+function gozlerUygula(H) {
+  bakObj.position.copy(kamera.position);
+  if (bakObj.userData.hedef) bakObj.position.lerp(bakObj.userData.hedef, H.gozW);
+  const uz = bakObj.position.distanceTo(kamera.position) || kamera.position.z;
+  bakObj.position.x += H.sakkad[0] * uz; bakObj.position.y += H.sakkad[1] * uz;
+  bakObj.updateMatrixWorld();
+}
+
+function ciz() {
+  cizer.render(sahne, kamera);
+  D.kare++;
+  // tıklama bölgesi saniyede bir (aynı görev içinde: tampon render'dan hemen sonra okunabilir)
+  if (D.kare % Math.max(1, D.fps) === 1) { const t0 = performance.now(); bolgeOlc(); isKaydet(D.takilma, 0, performance.now() - t0); }
+}
+
+function bolgeOlc() {
+  const gl = cizer.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+  const px = new Uint8Array(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  const olc = W / w, kutular = [];
+  for (let b = 0; b < BANT; b++) {
+    const y0 = Math.floor(h * b / BANT), y1 = Math.floor(h * (b + 1) / BANT);
+    let x0 = w, x1 = -1;
+    for (let y = y0; y < y1; y++) {
+      const sat = (h - 1 - y) * w * 4;           // readPixels alttan başlar
+      for (let x = 0; x < w; x += 2) if (px[sat + x * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; }
+    }
+    if (x1 < 0) continue;
+    const kx = Math.max(0, Math.floor(x0 * olc) - PAY), ky = Math.max(0, Math.floor(y0 * olc) - PAY);
+    kutular.push([kx, ky, Math.min(W, Math.ceil((x1 + 1) * olc) + PAY) - kx, Math.min(H, Math.ceil(y1 * olc) + PAY) - ky]);
+  }
+  const eski = window.yukiBolge;
+  const json = JSON.stringify(kutular);
+  if (!eski || eski.json !== json) window.yukiBolge = { surum: (eski ? eski.surum : 0) + 1, kutular, json };
+  window.yukiBolge.bas = basDairesi();
+  window.yukiBolge.uyku = D.uyku;
+  durumGonder();
+}
+
+// Sayfa → host (saniyede bir, bolgeOlc'tan). Host eskiden bunu evaluate_javascript ile okuyordu: her sonuç arayüz
+// sürecinde JSC nesnesi → ~39 sn'de JSC kilitlenmesi, Yuki son karede donuyordu (gdb). Yanıt beklenmez, hata yutulur.
+function durumGonder() {
+  if (!ANAHTAR) return;
+  const b = window.yukiBolge;
+  fetch('/_yuki/durum', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Yuki-Anahtar': ANAHTAR },
+    body: JSON.stringify({ surum: b.surum, kutular: b.kutular, bas: b.bas, uyku: D.uyku, takilma: D.takilma,
+                          komut: window.yukiKomut ? [window.yukiKomut.sayi, window.yukiKomut.hata] : null,
+                          poz_kadraj: window.yukiPozKadraj || null,      // etkileşim pozları
+                          bag: window.yukiBag && window.yukiBag.durum ? window.yukiBag.durum() : null }) })
+    .catch(() => {});
+}
+
+// Başın pencere içi dairesi [cx, cy, r] (CSS px): baş kemiği 8 cm yukarısı merkez, 12 cm yarıçap.
+function basDairesi() {
+  const b = vrm.humanoid.getNormalizedBoneNode('head'); if (!b) return null;
+  const m = b.getWorldPosition(V1).add(V2.set(0, 0.08, 0));
+  const kenar = V3.copy(m).add(V2.set(0.12, 0, 0));
+  m.project(kamera); kenar.project(kamera);
+  const px = v => [(v.x + 1) / 2 * W, (1 - v.y) / 2 * H];
+  const [cx, cy] = px(m), [kx] = px(kenar);
+  return [Math.round(cx), Math.round(cy), Math.max(12, Math.round(Math.abs(kx - cx)))];
+}
+
+function uyu(evet) {
+  D.uyku = evet; D.fps = evet ? FPS_UYKU : FPS_UYANIK;
+  if (eylem.idle) eylem.idle.timeScale = evet ? 0.45 : 1;
+  D.gecmis.push(evet ? 'uyku' : 'uyan');
+}
+
+// Beden klibi: boşta klibi hiç durmaz/sıfırlanmaz (dönüşte poz sıçraması yoktu değil, idle.reset() baştan
+// başlatıyordu); üst klibin ağırlığı yumuşak eğriyle girer, yüz tepkisi bitince (+ klipPay) yumuşakça çıkar.
+// Uzun klipler (utangaç/kızgın 8,3 sn) yüz sakinleşmişken bedeni oynatmaya devam ediyordu.
+function klipOynat(ad, sureSn = 4) {
+  const e = eylem[ad]; if (!e) return false;
+  if (gecis && gecis.e !== e) cikanlar.push({ e: gecis.e, w0: gecis.w, t: 0 });
+  else if (gecis) cikanlar.push({ e: gecis.e, w0: 0, t: 0 });
+  // play() burada DEĞİL, sonraki karenin başında (agirliklar): three.js klip başlarken boşta klibinin yazmadığı
+  // kemiklerin (baş/boyun) o anki pozunu "orijinal" diye saklar; kareler arasında o poz önceki karenin bakış/salınım
+  // ofsetlerini taşıyordu → klip boyunca ofset iki kez uygulandı, tıkta başta sıçrama (ölçüldü kare 168)
+  gecis = { e, t: 0, faz: 'gir', w: 0, basla: true, sinir: Math.min(e.getClip().duration, sureSn + HR.ayar.klipPay) };
+  aktifUst = e;
+  return true;
+}
+
+// Kare başı ağırlıklar: üst klip + sönen klipler + boşta = 1. Dönen değer boşta klibinin ağırlığı.
+function agirliklar(dt) {
+  const A = HR.ayar;
+  let toplam = 0;
+  if (gecis && gecis.basla) {          // OFSETLI kemikler bu noktada dinlenme pozunda (guncelle başı)
+    gecis.basla = false; gecis.e.reset(); gecis.e.enabled = true; gecis.e.setEffectiveWeight(0); gecis.e.play();
+  }
+  if (gecis) {
+    const g = gecis; g.t += dt;
+    if (g.faz === 'gir') { g.w = gecisAgirlik(g.t, A.gecisSn); if (g.t >= A.gecisSn) g.faz = 'kal'; }
+    if (g.faz === 'kal' && g.e.time >= g.sinir - A.donusSn) { g.faz = 'cik'; g.t0 = g.t; g.w0 = g.w; }
+    if (g.faz === 'cik') g.w = g.w0 * (1 - gecisAgirlik(g.t - g.t0, A.donusSn));
+    if (g.faz === 'cik' && g.w <= 0.001) { g.e.stop(); gecis = null; aktifUst = null; }
+    else { g.e.setEffectiveWeight(g.w); toplam += g.w; }
+  }
+  for (let i = cikanlar.length - 1; i >= 0; i--) {
+    const c = cikanlar[i]; c.t += dt;
+    const w = c.w0 * (1 - gecisAgirlik(c.t, A.gecisSn));
+    if (w <= 0.001) { if (!gecis || gecis.e !== c.e) c.e.stop(); cikanlar.splice(i, 1); }
+    else { if (!gecis || gecis.e !== c.e) c.e.setEffectiveWeight(w); toplam += w; }
+  }
+  const idleW = Math.max(0, 1 - toplam);
+  if (eylem.idle) eylem.idle.setEffectiveWeight(idleW);
+  return idleW;
+}
+
+// Dışarıdan (host / ileride backend `emotion` köprüsü) çağrılır.
+window.yukiYuz = function (ad, sure = 4000) {
+  if (!vrm) return false;
+  bos = 0; if (D.uyku) uyu(false);
+  duygu = DUYGU[ad] ? ad : 'neutral';
+  duyguBitis = simdi() + sure / 1000;
+  const dg = DUYGU[duygu];
+  HR.irkil();                                   // hazırlık: kısa dikleşme, klip yumuşak eğriyle girer
+  if (dg.klip) klipOynat(dg.klip, sure / 1000);
+  D.gecmis.push(duygu + (dg.klip && eylem[dg.klip] ? '+' + dg.klip : ''));
+  return true;
+};
+window.yukiTikla = () => window.yukiYuz('happy', 3000);
+// F1: host'tan. Bakış noktası (null = izleyene dön) · uyandır (tepki değişmeden) · gizle/göster · yeni boyut.
+window.yukiBak = function (x, y) { bakHedef = x == null ? null : { x, y }; return true; };
+window.yukiUyandir = function () { bos = 0; if (D.uyku) uyu(false); return true; };
+window.yukiGizli = function (evet) {
+  D.gizli = !!evet; clearTimeout(zaman);
+  if (!D.gizli && vrm) { son = performance.now(); zaman = setTimeout(adim, 0); }
+  return D.gizli;
+};
+window.yukiBoyut = function (w, h) {        // ayakta kadraj (monitör değişince ya da pozdan dönünce)
+  W = w; H = h; D.boyut = [W, H];
+  if (cizer && kadraj) { cizer.setSize(W, H, false); kadraj.ppm = H / kadraj.gorunur; kameraKur(W, H, 0, kadraj.merkezY); }
+  if (belir !== null && belir < 0) belir = 0;                       // pozdan dönüş: ayakta kesit kuruldu → belir
+  else if (vrm && !poz) pozKadrajlari();                             // monitör değişti: ölçek değişti
+  return [W, H];
+};
+// Etkileşim pozu. Akış: host yukiPozHazirla(ad) → {w, h, temas} → pencereyi w×h yapar, temas noktasını
+// çapaya oturtur → yukiPozBasla(ad) (kesit + yumuşak giriş). Bitiş: yukiPozBitir() → POZ_SN sonra host ayakta boyuna döner.
+window.yukiPozHazirla = ad => { try { return pozKadraj(ad); } catch (e) { D.hata_poz = String(e); return null; } };
+// İki pozun kadrajı sabit (yalnız ayaktaki ölçeğe bağlı): sayfa kendisi hesaplar, saniyelik durum POST'uyla host'a gider
+// (durumGonder). Host poza girerken sayfaya soru SORMAZ: evaluate_javascript sonucu arayüz sürecinde JSC'yi dolduruyor,
+// ~39 sn'de donma yapıyordu. Ayaktaki boy değişince (monitör) yeniden hesaplanır.
+function pozKadrajlari() {
+  const o = {};
+  for (const ad of Object.keys(POZLAR)) { const k = window.yukiPozHazirla(ad); if (k) o[ad] = k; }
+  window.yukiPozKadraj = D.poz_kadraj = o;
+  return o;
+}
+window.yukiPozBasla = function (ad) {
+  const k = pozKesit[ad] || (pozKadraj(ad), pozKesit[ad]); if (!k) return false;
+  W = k.w; H = k.h; D.boyut = [W, H];
+  cizer.setSize(W, H, false); kameraKur(W, H, k.cx, k.cy);
+  poz = { ad, coz: k.coz, t: 0, faz: 'gir' }; D.poz = ad; D.gecmis.push('poz-' + ad); belir = null; opaklik(0);
+  bos = 0; if (D.uyku) uyu(false);
+  return true;
+};
+window.yukiPozBitir = function () {
+  if (!poz) return false;
+  if (poz.faz !== 'cik') {
+    poz.w0 = poz.faz === 'gir' ? pozEgri(poz.t, POZ_SN) : 1;
+    poz.o0 = D.opaklik == null ? 1 : D.opaklik; poz.faz = 'cik'; poz.t = 0;
+  }
+  return true;
+};
+// Kendi kendine el sallama (F1, host'un planlayıcısı): yukiYuz('wave')'den farkı uyku sayacını SIFIRLAMAZ (yoksa
+// 45–110 sn'de bir sallayan Yuki 60 sn'lik uykuya hiç geçemezdi). Başka tepki sürüyorsa ya da uzanırken (destek
+// kolu) reddeder. Yüz hafif gülümser, beden selam klibi.
+window.yukiKendiSelam = function () {
+  if (!vrm || gecis || (poz && poz.ad === 'uzan')) return false;   // gizlilik: host planlayıcısı bakar
+  // uykudaysa uyanıp sallar (host 3–6 dk'da bir ister); 20 sn uyanık kalır, sonra yine uyur (uyku sayacı sıfırlanmaz)
+  if (D.uyku) { uyu(false); bos = Math.max(0, UYKU_SN - 20); D.gecmis.push('selam-uyan'); }
+  duygu = 'wave'; duyguBitis = simdi() + 2.5;
+  klipOynat('selam', 2.5);
+  D.gecmis.push('kendi-selam');
+  return true;
+};
+// Ölçüm: pozdayken kalça ve iki baldırın pencere pikseli + bacaklar arası en kısa mesafe (iç içe geçme denetimi).
+window.yukiPozOlc = function () {
+  const B = n => vrm.humanoid.getNormalizedBoneNode(n), P = n => B(n).getWorldPosition(new T.Vector3());
+  const px = p => { const q = p.clone().project(kamera); return [+((q.x + 1) / 2 * W).toFixed(2), +((1 - q.y) / 2 * H).toFixed(2)]; };
+  const parca = (a, b, c, d) => {                 // iki doğru parçası arası en kısa mesafe (örnekleyerek)
+    let m = Infinity; const p = new T.Vector3(), q = new T.Vector3();
+    for (let i = 0; i <= 10; i++) for (let j = 0; j <= 10; j++) m = Math.min(m, p.lerpVectors(a, b, i / 10).distanceTo(q.lerpVectors(c, d, j / 10)));
+    return +m.toFixed(3);
+  };
+  return { poz: D.poz, w: D.poz_w, kalca: px(P('hips')), boyut: [W, H],
+    baldir_arasi: parca(P('leftLowerLeg'), P('leftFoot'), P('rightLowerLeg'), P('rightFoot')),
+    uyluk_baldir: parca(P('leftUpperLeg'), P('leftLowerLeg'), P('rightLowerLeg'), P('rightFoot')),
+    sag_el: px(P('rightHand')), sol_el: px(P('leftHand')), bas: px(P('head')) };
+};
+// Kare görüntüsü ekranda görünen boyda: tuval 2× çiziliyor (süper örnekleme), tarayıcı onu W×H'ye küçültüp
+// gösteriyor; ölçüm/test kareleri de aynı küçültmeden geçsin (pikseller pencere pikseli olsun).
+function kareUrl() {
+  const c = cizer.domElement;
+  if (c.width === W && c.height === H) return c.toDataURL('image/png');
+  const k = document.createElement('canvas'); k.width = W; k.height = H;
+  const x = k.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(c, 0, 0, W, H);
+  return k.toDataURL('image/png');
+}
+// Ölçüm (yalnız test): uzuvların iç içe geçmesi. Her derili köşe baskın ağırlıklı kemiğinin uzuv parçasına
+// (humanoid atası) atanır; parçanın yarıçapı kendi köşelerinin kemik çizgisine uzaklığının %70'liği. Başka bir uzvun
+// kapsülünün 0,8 yarıçapı içine giren köşe "iç içe" sayılır (temas değil, içe girme). Yalnız uzuv–uzuv: bacak–bacak, kol–kol,
+// kol–bacak (kullanıcı 10-26: "kolları iç içe, bacakları iç içe"); gövde komşulukları (omuz, kalça) doğal temas, sayılmaz.
+// Canlı döngü bunu ÇAĞIRMAZ (host sayfadan sonuç okumaz).
+window.yukiIcIce = function () {
+  const N = n => vrm.humanoid.getNormalizedBoneNode(n), R = n => vrm.humanoid.getRawBoneNode(n);
+  const P = n => N(n) && N(n).getWorldPosition(new T.Vector3());
+  const PAR = { leftUpperLeg: 'leftLowerLeg', leftLowerLeg: 'leftFoot', rightUpperLeg: 'rightLowerLeg', rightLowerLeg: 'rightFoot',
+    leftUpperArm: 'leftLowerArm', leftLowerArm: 'leftHand', rightUpperArm: 'rightLowerArm', rightLowerArm: 'rightHand',
+    leftHand: 'leftMiddleProximal', rightHand: 'rightMiddleProximal' };
+  const UZUV = b => b.replace(/(Upper|Lower)(Leg|Arm)|Hand/, m => m.includes('Leg') ? 'Leg' : 'Arm');
+  vrm.scene.updateMatrixWorld(true);
+  const seg = {};
+  for (const [a, b] of Object.entries(PAR)) { const p = P(a), q = P(b) || (p && p.clone()); if (p) seg[a] = [p, q]; }
+  const ham = new Map();
+  for (const b of Object.keys(seg)) { const r = R(b); if (r) ham.set(r, b); }
+  const uzak = (v, [a, b]) => { const ab = b.clone().sub(a), t = Math.max(0, Math.min(1, v.clone().sub(a).dot(ab) / (ab.lengthSq() || 1)));
+    return v.distanceTo(a.clone().addScaledVector(ab, t)); };
+  const kose = [], v = new T.Vector3();
+  vrm.scene.traverse(o => {
+    if (!o.isSkinnedMesh) return;
+    const si = o.geometry.attributes.skinIndex, sw = o.geometry.attributes.skinWeight, n = o.geometry.attributes.position.count;
+    const ad = o.skeleton.bones.map(k => { let a = k; while (a && !ham.has(a)) a = a.parent; return a ? ham.get(a) : null; });
+    for (let i = 0; i < n; i++) {
+      let en = 0, bi = -1; for (let j = 0; j < 4; j++) { const w = sw.getComponent(i, j); if (w > en) { en = w; bi = si.getComponent(i, j); } }
+      const b = bi >= 0 ? ad[bi] : null; if (!b) continue;
+      o.getVertexPosition(i, v); kose.push([b, v.clone().applyMatrix4(o.matrixWorld)]);
+    }
+  });
+  const yaricap = {};
+  for (const b of Object.keys(seg)) {
+    const d = kose.filter(k => k[0] === b).map(k => uzak(k[1], seg[b])).sort((x, y) => x - y);
+    yaricap[b] = d.length ? d[Math.floor(d.length * 0.7)] : 0;
+  }
+  const cift = {}; let toplam = 0;
+  for (const [b, p] of kose) for (const s of Object.keys(seg)) {
+    if (UZUV(s) === UZUV(b) || !yaricap[s]) continue;
+    if (uzak(p, seg[s]) < 0.8 * yaricap[s]) { const k = b + '>' + s; cift[k] = (cift[k] || 0) + 1; toplam++; }
+  }
+  return { toplam, cift, yaricap: Object.fromEntries(Object.entries(yaricap).map(([k, x]) => [k, +x.toFixed(3)])) };
+};
+// Ölçüm (kuru test): bakış ofseti oturana kadar n kare çiz, başın dünya ön yönü + yaw/pitch döner.
+window.yukiBakOlc = function (n = 48) {
+  for (let i = 0; i < n; i++) guncelle(1 / FPS_UYANIK);
+  const q = vrm.humanoid.getNormalizedBoneNode('head').getWorldQuaternion(new T.Quaternion());
+  const on = new T.Vector3(0, 0, 1).applyQuaternion(q);
+  return { on: [+on.x.toFixed(3), +on.y.toFixed(3), +on.z.toFixed(3)], yaw: +bakYaw.toFixed(3), pitch: +bakPitch.toFixed(3), w: +bakW.toFixed(2) };
+};
+
+// Ölçüm: belirli bir klibin belirli anını çizip PNG döner (kuru kipte ekran dışı kare).
+window.yukiKare = function (klip = null, sn = 0) {
+  if (!vrm) return null;
+  if (klip && eylem[klip]) {     // geçişsiz: yalnız o klip, tam ağırlık, `sn`. saniyesi
+    mixer.stopAllAction(); gecis = null; cikanlar.length = 0;
+    eylem[klip].reset().setEffectiveWeight(1).play(); guncelle(sn);
+  } else guncelle(1 / 60);
+  cizer.render(sahne, kamera);
+  const url = kareUrl();
+  if (klip && eylem[klip]) { eylem[klip].stop(); if (eylem.idle) eylem.idle.reset().play(); aktifUst = null; }
+  return url;
+};
+// Ölçüm (doğallık turu): döngü durdurulmuşken (yukiGizli(true)) tek kare ilerlet + çiz; hareket telemetrisi
+// ve istenirse PNG döner. Kayıt aracı (reports/…/dogal/araclar/kaydet.py) aynı senaryoyu sabit dt ile oynatır.
+window.yukiAdim = function (dt = 1 / FPS_UYANIK, png = false) {
+  if (!vrm) return null;
+  guncelle(dt); cizer.render(sahne, kamera);
+  const B = n => vrm.humanoid.getNormalizedBoneNode(n), dq = new T.Quaternion(), e = new T.Euler();
+  const ac = n => { const b = B(n); if (!b) return null; e.setFromQuaternion(b.getWorldQuaternion(dq), 'YXZ');
+                    return [+e.x.toFixed(4), +e.y.toFixed(4), +e.z.toFixed(4)]; };
+  const hp = B('hips') ? B('hips').getWorldPosition(new T.Vector3()) : null;
+  const em = vrm.expressionManager, la = vrm.lookAt;
+  const out = { t: +gecen.toFixed(3), bas: ac('head'), gogus: ac('chest'), kalca: ac('hips'), omurga: ac('spine'),
+    kalca_x: hp ? +hp.x.toFixed(4) : null, goz: la ? [+(la.yaw || 0).toFixed(2), +(la.pitch || 0).toFixed(2)] : null,
+    kirp: em ? +em.getValue('blink').toFixed(3) : null, poz: D.poz || null, poz_w: D.poz ? D.poz_w : 0, opak: D.opaklik == null ? 1 : D.opaklik,
+    klip: Object.fromEntries(Object.entries(eylem).filter(([, a]) => a.isRunning() && a.getEffectiveWeight() > 0.01)
+                             .map(([k, a]) => [k, +a.getEffectiveWeight().toFixed(2)])) };
+  if (png) out.png = kareUrl();
+  return out;
+};
+window.yukiYayBilgi = () => {
+  const m = vrm && vrm.springBoneManager;
+  return m ? { eklem: m.joints ? m.joints.size : null, carpisan: m.colliderGroups ? m.colliderGroups.length : null } : null;
+};
+// Ölçüm: N kare çiz, kare başına süre (ms) — boşta maliyeti 24 fps'e oranlamak için.
+window.yukiTezgah = function (n = 120) {
+  const gl = cizer.getContext(), t0 = performance.now();
+  for (let i = 0; i < n; i++) { guncelle(1 / FPS_UYANIK); cizer.render(sahne, kamera); }
+  gl.finish();
+  // baş eğimi (rad): ofset birikirse büyür — test < 0,35 ister
+  const q = vrm.humanoid.getNormalizedBoneNode('head').quaternion;
+  return { kare: n, ms_kare: +((performance.now() - t0) / n).toFixed(2), bas_aci_rad: +(2 * Math.acos(Math.min(1, Math.abs(q.w)))).toFixed(3) };
+};
+
+document.addEventListener('visibilitychange', () => {
+  if (!vrm || D.gizli) return;
+  clearTimeout(zaman);
+  if (!document.hidden) { son = performance.now(); zaman = setTimeout(adim, 0); }
+});
+
+async function kur() {
+  const t0 = performance.now();
+  if (!window.WebGL2RenderingContext) throw new Error('WebGL2 yok');
+  T = await import('three');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const { VRMLoaderPlugin, VRMUtils } = await import('@pixiv/three-vrm');
+  // VRMA klipleri bu kopyada gelmez (dağıtım lisansı yok); modül yoksa beden klibi olmadan, kemik katmanıyla çalışır
+  let VRMAnimationLoaderPlugin = null, createVRMAnimationClip = null;
+  try { ({ VRMAnimationLoaderPlugin, createVRMAnimationClip } = await import('@pixiv/three-vrm-animation')); }
+  catch (e) { console.warn('[masaustu] VRMA modülü yok, klipsiz çalışılır'); }
+
+  const cv = document.getElementById('yuki');
+  cizer = new T.WebGLRenderer({ canvas: cv, alpha: true, premultipliedAlpha: true, antialias: true });
+  // Netlik: beden ekranda küçük (yüz ≈45 px), MSAA
+  // (4 örnek) kenarı yumuşatıyor ama saç/kumaş dokusu 1× örneklemede benekli titriyordu. İçeride 2× çizip tarayıcıya
+  // küçülttürmek (süper örnekleme) iç dokuyu da yumuşatır. ?oran= ile değişir (1 = eski davranış), en çok 3.
+  // Yazılım çizicide (SwiftShader/llvmpipe: işlemcide) 2× dört kat yük → 1×. WebKit adı maskeler; canlıda GPU (ölçüldü).
+  { const gl = cizer.getContext(), at = gl.getContextAttributes(), dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    const yazilim = /swiftshader|llvmpipe|softpipe|software/i.test(String(gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : gl.RENDERER)));
+    cizer.setPixelRatio(Math.min(Math.max(+p.get('oran') || (yazilim ? 1 : 2), devicePixelRatio || 1, 1), 3));
+    D.gl = { antialias: at.antialias, ornek: gl.getParameter(gl.SAMPLES), dpr: devicePixelRatio || 1, oran: cizer.getPixelRatio(),
+             yazilim, aniso_en: cizer.capabilities.getMaxAnisotropy() }; }
+  cizer.setSize(W, H, false);        // boyut parametreden: map edilmemiş pencerede innerWidth 0
+  cizer.setClearColor(0x000000, 0);
+  cizer.outputColorSpace = T.SRGBColorSpace;
+
+  sahne = new T.Scene();
+  // MToon kendi gölgelemesini yapar; ışık fazlaysa beyaz elbise/saç yıkanıyor (kare 1: 2,4 + 1,6), azsa ten griye dönüyor (kare 2: 1,0 + 0,5)
+  const gunes = new T.DirectionalLight(0xffffff, 1.6); gunes.position.set(0.6, 2.2, 2.4); sahne.add(gunes);
+  sahne.add(new T.HemisphereLight(0xeef0ff, 0x8a8fa8, 0.9));
+
+  const yukle = new GLTFLoader();
+  yukle.register(pr => new VRMLoaderPlugin(pr));
+  if (VRMAnimationLoaderPlugin) yukle.register(pr => new VRMAnimationLoaderPlugin(pr));
+  const gltf = await yukle.loadAsync(MODEL);
+  vrm = gltf.userData.vrm;
+  VRMUtils.removeUnnecessaryVertices(gltf.scene);
+  if (vrm.meta?.metaVersion === '0') VRMUtils.rotateVRM0(vrm);
+  vrm.scene.traverse(o => { if (o.isMesh) o.frustumCulled = false; });
+  // dokular eğik yüzeyde (saç, etek) bulanık/benekli küçülmesin: anizotropik süzme
+  const aniso = Math.min(8, cizer.capabilities.getMaxAnisotropy());
+  vrm.scene.traverse(o => { for (const m of [].concat(o.material || [])) for (const v of Object.values(m))
+    if (v && v.isTexture && v.anisotropy !== aniso) { v.anisotropy = aniso; v.needsUpdate = true; } });
+  D.gl.aniso = aniso;
+  vrm.scene.rotation.y = -0.22;      // sağ altta durur → yüzü hafifçe ekranın ortasına döner
+  sahne.add(vrm.scene);
+
+  // kadraj: ayaktan saç tepesine boy (dinlenme pozunda kutu), alta %2, üste %7 pay (el sallarken el başı geçer)
+  const kutu = new T.Box3().setFromObject(vrm.scene);
+  const boy = kutu.max.y - kutu.min.y, altY = kutu.min.y;
+  const fov = 18, gorunur = boy * 1.09;
+  kamera = new T.PerspectiveCamera(fov, W / H, 0.1, 50);
+  const uzak = (gorunur / 2) / Math.tan(fov * Math.PI / 360);
+  const merkezY = altY - boy * 0.02 + gorunur / 2;
+  kadraj = { ppm: H / gorunur, uzak, gorunur, merkezY };
+  kameraKur(W, H, 0, merkezY);
+  // poz çözücüsü için dinlenme (T-poz) konumları vrm.scene yerel uzayında + humanoid ebeveyn zinciri
+  vrm.scene.updateMatrixWorld(true);
+  const dugumKemik = new Map();
+  for (const b of Object.keys(vrm.humanoid.humanBones)) { const n = vrm.humanoid.getNormalizedBoneNode(b); if (n) dugumKemik.set(n, b); }
+  for (const [n, b] of dugumKemik) {
+    dinlenme[b] = vrm.scene.worldToLocal(n.getWorldPosition(new T.Vector3()));
+    let a = n.parent; while (a && !dugumKemik.has(a)) a = a.parent;
+    ebeveyn[b] = a ? dugumKemik.get(a) : null;
+  }
+  kokQ0 = vrm.scene.quaternion.clone(); kalcaPivot = dinlenme.hips.clone();
+  V1 = new T.Vector3(); V2 = new T.Vector3(); V3 = new T.Vector3();
+  bakObj = new T.Object3D(); bakObj.position.copy(kamera.position); sahne.add(bakObj);
+  vrm.lookAt.target = bakObj;        // gözler izleyene bakar; imleç yakınsa ona (bakis())
+  D.boy_m = +boy.toFixed(3);
+  window.yukiMotor = { kip: 'tam', vrm };   // F2 kancası
+
+  mixer = new T.AnimationMixer(vrm.scene);
+  // klip bitişi agirliklar()'da (yüz tepkisiyle birlikte yumuşak dönüş); 'finished' olayına gerek kalmadı
+  async function klipYukle(ad) {
+    if (!createVRMAnimationClip) return;
+    const g = await yukle.loadAsync('/_yuki/klip/' + ad + '.vrma');
+    const anim = g.userData.vrmAnimations && g.userData.vrmAnimations[0]; if (!anim) return;
+    const clip = createVRMAnimationClip(anim, vrm);
+    const kemik = {};
+    for (const b of Object.keys(vrm.humanoid.humanBones)) { const n = vrm.humanoid.getNormalizedBoneNode(b); if (n) kemik[n.name] = b; }
+    // yalnız kemik DÖNÜŞLERİ: ifade/bakış izleri atılır (yüz bizde), kalça KONUMU da atılır — klip kayıtlarının
+    // dinlenme kalçası farklı (yükleyici "rest hips y ≈ 0" uyarısı veriyor), konum izi Yuki'yi %16 aşağı çekip
+    // ayaklarını kadraj dışına itiyordu (ölçüldü, ilk kare). OYUN kipi de konumu atar (modes/yuki-3d.js § VRMA).
+    clip.tracks = clip.tracks.filter(tr => {
+      const [dugum, oz] = tr.name.split('.'), b = kemik[dugum];
+      return b && oz === 'quaternion' && !(ad === 'idle' && MASKE_DONGU.has(b));
+    });
+    const e = mixer.clipAction(clip);
+    if (ad === 'idle') e.setLoop(T.LoopRepeat, Infinity);
+    else { e.setLoop(T.LoopOnce, 1); e.clampWhenFinished = true; }
+    eylem[ad] = e; D.klipler.push(ad); D.klip_bilgi[ad] = { sn: +clip.duration.toFixed(2), iz: clip.tracks.length };
+  }
+  try { await klipYukle('idle'); } catch (e) { console.warn('[masaustu] idle klibi yok', e); }   // ilk kare T-pozunda çıkmasın: klip varsa idle gelmeden çizim yok
+  if (eylem.idle) eylem.idle.play();
+  guncelle(0); ciz();
+  D.acilis_ms = Math.round(performance.now() - t0);
+  pozKadrajlari();
+  D.hazir = true;
+  son = performance.now();           // ilk aralık model yükleme süresini takılma saymasın
+  zaman = setTimeout(adim, 0);
+  // kalan klipler arkadan; gelmeyen klip yalnız o tepkiyi kaybettirir
+  await Promise.all(KLIPLER.filter(a => a !== 'idle').map(a => klipYukle(a).catch(e => console.warn('[masaustu] klip', a, e))));
+  D.klipler_ms = Math.round(performance.now() - t0);
+}
+
+try { await kur(); }
+catch (e) { D.hata = String(e && e.message || e); console.error('[masaustu] Yuki (tam boy) kurulamadı:', D.hata); }
+</script>
+</body>
+</html>

@@ -1,0 +1,583 @@
+/* ════════════════════════════════════════════════════════════════════
+   ajan.css — AJAN sekmesi (Ultra)
+
+   Kişisel Ajan Komuta'nın Grimoire kart dili, ÜRÜN token'larıyla:
+     deste = başlık şeridi + kart şeridi · kart = oyun kartı oranı (5:7)
+     yeşil = canlı (çalışan ajan) — semantik durum rengi (göz tur 1; belge §1:
+             mor "canlı hissi" için kullanılmaz)
+     mor   = yalnız seçili + etkileşim (odak halkası, birincil düğme)
+     nötr  = bekleyen · soluk = bitmiş · kırmızı = yalnız hata/eşik aşımı
+     altın = KULLANILMIYOR (ekranda ≤2 altın kuralı; bu sekmede rozet yok)
+   Renk/boşluk/radius/z-index yalnız tokens.css'ten. Açık tema token'larla gelir.
+   ════════════════════════════════════════════════════════════════════ */
+
+.kabuk-icerik > #tab-ajan {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  border-radius: inherit;
+  overscroll-behavior: contain;
+}
+.kabuk-icerik > #tab-ajan[data-aktif] { view-transition-name: sekme; }
+
+#ajan-content { position: relative; min-height: 100%; }
+
+.aj-sar {
+  display: grid;
+  gap: var(--b-7);
+  padding: var(--b-6) var(--b-7) var(--b-9);
+  max-width: 1680px;
+  margin-inline: auto;
+}
+
+/* ── başlık — ☰ sol üstte içeriğin üstünde durur: pay bırak ─────────── */
+.aj-bas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--b-5);
+  /* Sekme başlığı (11-13): öbür sekmelerle aynı köşe (sayfada --sb-sol, --sb-ust). Sekme kabı 12px'ten,
+     .aj-sar iç payı b-7 / b-6 → başlık bloğu o kadar geri çekilir. Görünüm baslik-gozlemevi.css'te. */
+  padding-inline-start: calc(var(--sb-sol, 64px) - 12px - var(--b-7));
+  margin-block-start: calc(var(--sb-ust, 17px) - 12px - var(--b-6));
+  min-height: var(--hedef);
+}
+.aj-bas-metin { align-self: flex-start; }
+.aj-alt { margin: var(--b-1) 0 0; font-size: var(--yazi-13); color: var(--ink-3); }
+.aj-ozet { display: flex; flex-wrap: wrap; gap: var(--b-3); }
+.aj-hap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--b-3);
+  min-height: 28px;
+  padding: 0 var(--b-5);
+  border-radius: var(--r-tam);
+  background: var(--yuzey-2);
+  color: var(--ink-2);
+  font-size: var(--yazi-12);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.aj-hap.canli { background: var(--yesil-zemin); color: var(--yesil-ink); }
+
+/* ── desteler ─────────────────────────────────────────────────────── */
+.aj-desteler {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
+  gap: var(--b-7) var(--b-8);
+  align-items: start;
+}
+/* Arka Plan İşleri destesi kalkınca (F2c) EKİP tek başına yarım satırda kalıyordu:
+   RUTİN onun yanına geldi; CODEX kurulu değilse deste hiç çizilmediği için tam satır. */
+.aj-deste-ekip   { order: 1; }
+.aj-deste-rutin  { order: 2; }
+.aj-deste-claude { order: 3; grid-column: 1 / -1; }
+.aj-deste-codex  { order: 4; grid-column: 1 / -1; }
+.aj-deste-sistem { order: 5; grid-column: 1 / -1; }
+.aj-deste[hidden] { display: none; }
+
+.aj-deste { min-width: 0; }
+.aj-deste-bas {
+  display: flex;
+  align-items: center;
+  gap: var(--b-4);
+  min-height: 32px;
+  margin-bottom: var(--b-5);
+  padding-bottom: var(--b-4);
+  border-bottom: 1px solid var(--kenar);
+  color: var(--ink-3);
+}
+.aj-deste-bas svg { flex: 0 0 auto; color: var(--ink-2); }
+.aj-deste-bas h3 {
+  margin: 0;
+  font-size: var(--yazi-14);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-1);
+}
+.aj-deste-bas em {
+  font-style: normal;
+  font-size: var(--yazi-12);
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aj-deste-not {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: end;
+  font-size: var(--yazi-12);
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aj-sayi {
+  flex: 0 0 auto;
+  min-width: 26px;
+  padding: 2px var(--b-3);
+  border-radius: var(--r-tam);
+  background: var(--yuzey-2);
+  color: var(--ink-2);
+  font-size: var(--yazi-11);
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.aj-serit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--b-5);
+}
+.aj-bos {
+  margin: 0;
+  padding: var(--b-5) 0;
+  max-width: 60ch;
+  font-size: var(--yazi-13);
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+.aj-hata-metin { color: var(--kirmizi-ink); }
+
+/* ── kart ──────────────────────────────────────────────────────────── */
+.aj-kart {
+  --k-renk: var(--ink-3);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--b-2);
+  width: 158px;
+  min-height: 221px;
+  padding: var(--b-5) var(--b-5) var(--b-4);
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-3);
+  background: var(--yuzey-2);
+  color: var(--ink-1);
+  cursor: pointer;
+  user-select: none;
+  -webkit-touch-callout: none;
+  transition: background-color var(--sure-2) var(--egri),
+              border-color var(--sure-2) var(--egri),
+              transform var(--sure-2) var(--egri);
+}
+/* İç çerçeve — oyun kartı hissi. Kutu değil, dekoratif çizgi (kart içinde kart yok). */
+.aj-kart::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid var(--kenar);
+  border-radius: calc(var(--r-3) - 5px);
+  opacity: 0.6;
+  pointer-events: none;
+}
+/* Açık temada ince iç çizgi dış kenarla çift çerçeve gibi okunuyordu (göz tur 1, 14). */
+[data-tema="acik"] .aj-kart::before { display: none; }
+.aj-kart:hover,
+.aj-kart.vurgu { background: var(--yuzey-3); transform: translateY(-2px); }
+.aj-kart:active { transform: scale(0.98); }
+.aj-kart:focus-visible { outline: var(--odak-kalinlik) solid var(--mor-ink); outline-offset: var(--odak-offset); border-radius: var(--r-3); }
+
+.aj-kart.kucuk { width: 136px; min-height: 186px; }
+
+.aj-k-ust {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--b-3);
+  min-height: 22px;
+}
+.aj-k-no {
+  font-size: var(--yazi-11);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.aj-k-durum {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--b-2);
+  max-width: 100px;
+  padding: 2px var(--b-3);
+  border-radius: var(--r-tam);
+  background: var(--yuzey-3);
+  color: var(--ink-2);
+  font-size: var(--yazi-11);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aj-nabiz {
+  display: none;
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-tam);
+  background: currentColor;
+}
+.aj-k-sigil {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 74px;
+  margin-block: var(--b-2);
+  color: var(--k-renk);
+}
+.kucuk .aj-k-sigil { height: 52px; }
+.aj-k-sigil svg, .aj-oz-sigil svg { width: 100%; height: 100%; max-width: 74px; overflow: visible; }
+.s-halka { fill: none; stroke: currentColor; stroke-width: 1; opacity: 0.35; }
+.s-yildiz { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.s-ic { fill: none; stroke: currentColor; stroke-width: 1; opacity: 0.7; }
+.s-goz { fill: currentColor; }
+.aj-k-sigil path:not(.s-yildiz):not(.s-ic) { stroke: currentColor; stroke-width: 1.4; opacity: 0.6; }
+
+.aj-k-ad {
+  position: relative;
+  font-size: var(--yazi-14);
+  font-weight: 600;
+  line-height: 1.3;
+  /* İki satır: "uzun-klasor-adi · 2" tireden kırılır, uzun tek kelime harften. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.aj-k-kimlik {
+  position: relative;
+  min-height: 1.2em;
+  font-size: var(--yazi-11);
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+.aj-k-metin {
+  position: relative;
+  margin: var(--b-2) 0 0;
+  font-size: var(--yazi-12);
+  line-height: 1.45;
+  color: var(--ink-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.kucuk .aj-k-metin { -webkit-line-clamp: 1; }
+.aj-k-metin.bos { display: none; }
+
+/* ölçü çubuğu (kişiseldeki "mana" çubuğunun karşılığı) */
+.aj-olcu { position: relative; margin-top: auto; padding-top: var(--b-3); }
+.aj-olcu-bas {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--b-3);
+  font-size: var(--yazi-11);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.aj-olcu-bas b { font-weight: 600; color: var(--ink-1); }
+.aj-olcu-ray {
+  height: 4px;
+  margin-top: var(--b-2);
+  border-radius: var(--r-tam);
+  background: var(--yuzey-3);
+  overflow: hidden;
+}
+.aj-olcu-ray i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ink-2);          /* ölçü süs değil — nötr; eşik aşımında kırmızı */
+  transition: width var(--sure-3) var(--egri);
+}
+.aj-olcu.kritik .aj-olcu-ray i { background: var(--kirmizi-ink); }
+/* ölçü/süreç kartının köşesi: durum hapı yerine değer */
+.aj-k-deger {
+  font-size: var(--yazi-13);
+  font-weight: 600;
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+}
+.aj-kart.d-hata .aj-k-deger { color: var(--kirmizi-ink); }
+
+/* ── durumlar ─────────────────────────────────────────────────────── */
+.aj-kart.d-canli {
+  --k-renk: var(--yesil-ink);
+  border-color: color-mix(in oklab, var(--yesil-ink) 55%, var(--kenar));
+}
+.aj-kart.d-canli .aj-k-durum { background: var(--yesil-zemin); color: var(--yesil-ink); }
+.aj-kart.d-canli .aj-nabiz { display: inline-block; animation: aj-nabiz 1.6s var(--egri) infinite; }
+.aj-hap.canli .aj-nabiz { display: inline-block; animation: aj-nabiz 1.6s var(--egri) infinite; }
+
+.aj-kart.d-bekliyor { --k-renk: var(--ink-2); }
+/* Zemin her temada görünür olmalı (açıkta --yuzey-3 kartla aynı beyazdı → boşluklu ama zeminsiz). */
+.aj-kart.d-bekliyor .aj-k-durum { background: var(--kenar); color: var(--ink-1); }
+.aj-kart.d-olcu { --k-renk: var(--ink-2); }
+
+.aj-kart.d-bitti { --k-renk: var(--ink-3); }
+.aj-kart.d-bitti .aj-k-durum { background: transparent; color: var(--ink-3); padding-inline: 0; }
+.aj-kart.d-bitti .aj-k-ad,
+.aj-kart.d-bitti .aj-k-metin { color: var(--ink-3); }
+
+.aj-kart.d-hata { --k-renk: var(--kirmizi-ink); }
+.aj-kart.d-hata .aj-k-durum { background: var(--kirmizi-zemin); color: var(--kirmizi-ink); }
+
+@keyframes aj-nabiz {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.7); }
+}
+
+/* yükleniyor — iskelet, ortada dönen çark yok */
+.aj-iskelet {
+  width: 158px;
+  height: 221px;
+  border-radius: var(--r-3);
+  background: linear-gradient(100deg, var(--yuzey-2) 30%, var(--yuzey-3) 50%, var(--yuzey-2) 70%);
+  background-size: 300% 100%;
+  animation: aj-iskelet 1.4s linear infinite;
+}
+@keyframes aj-iskelet { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+/* ── önizleme (hover / uzun bas) ─────────────────────────────────── */
+.aj-onizleme {
+  position: fixed;
+  z-index: var(--z-ipucu);
+  width: min(300px, calc(100vw - 24px));
+  padding: var(--b-5);
+  border: 1px solid var(--kenar-guclu);
+  border-radius: var(--r-3);
+  background: var(--yuzey-3);
+  box-shadow: var(--golge-2);
+  pointer-events: none;
+}
+.aj-onizleme[hidden] { display: none; }
+.aj-oz-bas, .aj-kitap-bas {
+  display: flex;
+  align-items: center;
+  gap: var(--b-5);
+  margin-bottom: var(--b-4);
+}
+.aj-oz-sigil { flex: 0 0 auto; width: 44px; height: 44px; color: var(--ink-2); }
+.d-canli .aj-oz-sigil { color: var(--yesil-ink); }
+.d-hata .aj-oz-sigil { color: var(--kirmizi-ink); }
+.aj-oz-bas h4, .aj-kitap-ad h4 {
+  margin: 0 0 var(--b-2);
+  font-size: var(--yazi-16);
+  font-weight: 600;
+  color: var(--ink-1);
+  overflow-wrap: anywhere;
+}
+.aj-rozet {
+  display: inline-block;
+  padding: 1px var(--b-3);
+  border-radius: var(--r-tam);
+  background: var(--yuzey-2);
+  color: var(--ink-2);
+  font-size: var(--yazi-11);
+  font-weight: 500;
+}
+.d-canli .aj-rozet { background: var(--yesil-zemin); color: var(--yesil-ink); }
+.d-hata .aj-rozet { background: var(--kirmizi-zemin); color: var(--kirmizi-ink); }
+
+.aj-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--b-5);
+  padding: var(--b-3) 0;
+  border-bottom: 1px solid var(--kenar);
+  font-size: var(--yazi-12);
+}
+.aj-kv:last-child { border-bottom: 0; }
+.aj-kv span { flex: 0 0 auto; color: var(--ink-3); }
+.aj-kv b {
+  min-width: 0;
+  font-weight: 500;
+  color: var(--ink-1);
+  text-align: end;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.aj-oz-ipucu { margin: var(--b-4) 0 0; font-size: var(--yazi-11); color: var(--ink-3); }
+
+/* ── kitap (kart açık) ────────────────────────────────────────────── */
+.aj-perde {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-perde);
+  background: var(--perde);
+}
+/* ☰ (#nav-ac, kökte z perde+2) kart açıkken karartmanın üstünde kalıyordu.
+   z-index ile çözülmez: #tab-ajan `view-transition-name` taşıdığı için kendi
+   yığın bağlamı — perde (300) onun İÇİNDE, ☰ kökte (ölçüldü). Kart açıkken ☰
+   gizlenir (odak da almaz); kapanınca kabuk.css'teki hâline döner. */
+body.aj-kitap-acik #nav-ac { visibility: hidden; }
+.aj-perde[hidden], .aj-kitap[hidden] { display: none; }
+.aj-kitap {
+  position: fixed;
+  z-index: var(--z-modal);
+  top: var(--b-6);
+  right: var(--b-6);
+  bottom: var(--b-6);
+  width: min(420px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--kenar);
+  border-radius: var(--r-4);
+  background: var(--yuzey-2);
+  box-shadow: var(--golge-3);
+  overflow: hidden;
+  animation: aj-kitap-gir var(--sure-4) var(--egri-giris);
+}
+@keyframes aj-kitap-gir { from { opacity: 0; transform: translateX(16px); } }
+.aj-kitap-bas {
+  margin: 0;
+  padding: var(--b-6) var(--b-6) var(--b-5);
+  border-bottom: 1px solid var(--kenar);
+}
+.aj-kitap-ad { flex: 1 1 auto; min-width: 0; }
+.aj-kitap-kapat {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: var(--hedef);
+  height: var(--hedef);
+  border: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.aj-kitap-kapat:hover { background: var(--yuzey-3); color: var(--ink-1); }
+.aj-kitap-govde {
+  flex: 1 1 auto;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: var(--b-6);
+  padding: var(--b-5) var(--b-6) var(--b-7);
+}
+
+.aj-not {
+  margin: 0;
+  padding: var(--b-5);
+  border-radius: var(--r-2);
+  background: var(--yuzey-1);
+  font-size: var(--yazi-13);
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.aj-not b { display: block; margin-bottom: var(--b-2); color: var(--ink-1); font-weight: 600; }
+.aj-not p { margin: 0; }
+
+/* iş kartının kabuk komutu — satır değil, sola yaslı okunur blok */
+.aj-komut-satir { display: grid; gap: var(--b-2); }
+.aj-komut-satir span { font-size: var(--yazi-12); color: var(--ink-3); }
+.aj-komut-satir code {
+  display: block;
+  padding: var(--b-4) var(--b-5);
+  border-radius: var(--r-2);
+  background: var(--yuzey-1);
+  color: var(--ink-1);
+  font-family: var(--font-mono);
+  font-size: var(--yazi-12);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* düğmeler — 3 tip: birincil · ikincil · sessiz (+ yıkıcı yalnız onay adımında kırmızı) */
+.aj-btn {
+  min-height: var(--hedef);
+  padding: 0 var(--b-6);
+  border: 1px solid transparent;
+  border-radius: var(--r-2);
+  font: inherit;
+  font-size: var(--yazi-13);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background-color var(--sure-2) var(--egri), color var(--sure-2) var(--egri);
+}
+.aj-btn:active { transform: scale(0.98); }
+.aj-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.aj-btn.birincil { background: var(--mor-yuzey); color: #fff; }
+.aj-btn.birincil:hover:not(:disabled) { background: var(--mor-yuzey-hov); }
+.aj-btn.ikincil { background: var(--yuzey-2); border-color: var(--kenar-guclu); color: var(--ink-1); }
+.aj-btn.ikincil:hover:not(:disabled) { background: var(--yuzey-3); }
+.aj-btn.sessiz-yikici { background: transparent; color: var(--kirmizi-ink); padding-inline: var(--b-4); }
+.aj-btn.sessiz-yikici:hover:not(:disabled) { background: var(--kirmizi-zemin); }
+.aj-btn.emin { background: var(--kirmizi-yuzey); color: var(--kirmizi-ustu); }
+.aj-eylem { display: flex; flex-wrap: wrap; gap: var(--b-4); }
+
+.aj-cikti-baslik { font-size: var(--yazi-12); font-weight: 600; color: var(--ink-1); margin-bottom: calc(-1 * var(--b-4)); }
+.aj-cikti {
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  padding: var(--b-5);
+  border-radius: var(--r-2);
+  background: var(--yuzey-1);
+  color: var(--ink-2);
+  font-size: var(--yazi-12);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.aj-cikti[hidden] { display: none; }
+.aj-gecmis { list-style: none; margin: 0; padding: 0; }
+.aj-gecmis li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--b-5);
+  padding: var(--b-3) 0;
+  border-bottom: 1px solid var(--kenar);
+  font-size: var(--yazi-12);
+  color: var(--ink-2);
+}
+.aj-gecmis li b { flex: 0 0 auto; font-weight: 500; color: var(--ink-3); }
+
+/* ── dar ekran: desteler yatay şerit, kitap alttan açılır ──────────── */
+@media (max-width: 640px) {
+  .aj-sar { padding: var(--b-5) var(--b-5) var(--b-9); gap: var(--b-6); }
+  .aj-bas { padding-inline-start: calc(var(--sb-sol, 64px) - 12px - var(--b-5)); margin-block-start: calc(var(--sb-ust, 17px) - 12px - var(--b-5)); align-items: center; }
+  .aj-alt { display: none; }
+  .aj-desteler { grid-template-columns: minmax(0, 1fr); gap: var(--b-6); }
+  .aj-deste-bas em { display: none; }
+  .aj-serit {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: var(--b-3);
+    margin-inline: calc(-1 * var(--b-5));
+    padding-inline: var(--b-5);
+    scroll-padding-inline: var(--b-5);   /* snap ilk kartı kutunun kenarına (x=12) çekiyordu; başlıkla aynı sol hiza */
+    scrollbar-width: none;
+  }
+  .aj-serit::-webkit-scrollbar { display: none; }
+  .aj-kart, .aj-iskelet { flex: 0 0 auto; scroll-snap-align: start; }
+  .aj-kart { width: 142px; min-height: 200px; }
+  .aj-kart.kucuk { width: 124px; min-height: 172px; }
+  .aj-kitap {
+    top: auto;
+    left: var(--b-3);
+    right: var(--b-3);
+    bottom: var(--b-3);
+    width: auto;
+    max-height: 84vh;
+    animation-name: aj-kitap-alt;
+  }
+  @keyframes aj-kitap-alt { from { opacity: 0; transform: translateY(24px); } }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aj-kart, .aj-btn, .aj-olcu-ray i { transition: none; }
+  .aj-kart:hover, .aj-kart.vurgu { transform: none; }
+  .aj-nabiz, .aj-iskelet, .aj-kitap { animation: none !important; }
+}

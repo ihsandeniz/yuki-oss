@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="tr" data-tema="koyu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Google hesabını bağlama · Yuki</title>
+<!-- Tasarım token'ları TEK kaynaktan gelir (kopyalanmaz — kopyalanan palet ayrışır).
+     ⚠️ `?v=` damgası index.html/planner.html ile AYNI olmak zorunda; kapısı
+     backend/tests/test_surum_zinciri.py::test_iki_sayfa_ortak_varliklarda_ayni_surumu_ister -->
+<link rel="stylesheet" href="/ui/css/tokens.css?v=8">
+<style>
+  /* Bu sayfa SİSTEM TARAYICISINDA açılır (electron/dis-baglanti.js her window.open'ı
+     openExternal'a devreder) — uygulamanın tema sınıfı burada YOKTUR. O yüzden
+     <html data-tema="koyu"> elle veriliyor, tokens.css'in koyu kümesi geçerli olsun. */
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg, #0a090e);
+    color: var(--ink-1, #f5f5f8);
+    font-family: var(--font, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sayfa { max-width: 820px; margin: 0 auto; padding: 40px 20px 96px; }
+
+  header.bas { border-bottom: 1px solid var(--kenar, #38373f); padding-bottom: 22px; margin-bottom: 34px; }
+  h1 { font-size: 28px; line-height: 1.25; margin: 0 0 10px; letter-spacing: -0.01em; }
+  .alt { color: var(--ink-2, #bebcc4); margin: 0; }
+  .rozetler { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .rozet {
+    font-size: 13px; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--kenar, #38373f); color: var(--ink-2, #bebcc4);
+    background: var(--yuzey-1, #141319);
+  }
+
+  h2 { font-size: 20px; margin: 44px 0 12px; letter-spacing: -0.01em; }
+  h3 { font-size: 16px; margin: 26px 0 8px; }
+  p { margin: 0 0 14px; }
+  a { color: var(--mor-ink, #ac8ff8); }
+  a:hover { color: var(--mor-ink-hov, #c4aefb); }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 7px; }
+
+  /* Adım kartı — numara solda, içerik sağda. */
+  .adim {
+    display: grid; grid-template-columns: 40px 1fr; gap: 16px;
+    padding: 22px 0; border-top: 1px solid var(--kenar, #38373f);
+  }
+  .adim:first-of-type { border-top: none; }
+  .no {
+    width: 34px; height: 34px; border-radius: 999px;
+    display: grid; place-items: center;
+    background: var(--mor-yuzey, #643fab); color: #fff;
+    font-weight: 650; font-size: 15px; font-variant-numeric: tabular-nums;
+  }
+  .adim h2 { margin: 2px 0 10px; font-size: 19px; }
+  .adim > div > :last-child { margin-bottom: 0; }
+
+  /* Arayüzde AYNEN göreceği metin. Google konsolu çoğu hesapta İngilizce açılır;
+     tıklanacak yazıyı Türkçeye çevirmek kullanıcıyı aratır — birebir yazılır. */
+  .ui {
+    font-family: var(--font-mono, ui-monospace, "SFMono-Regular", Menlo, monospace);
+    font-size: 0.88em; padding: 2px 7px; border-radius: var(--r-1, 4px);
+    background: var(--yuzey-2, #1f1e26); border: 1px solid var(--kenar, #38373f);
+    white-space: nowrap;
+  }
+  .yol { color: var(--ink-3, #98979f); }
+
+  .kutu {
+    border: 1px solid var(--kenar, #38373f); border-left-width: 3px;
+    background: var(--yuzey-1, #141319);
+    border-radius: var(--r-2, 8px);
+    padding: 16px 18px; margin: 18px 0;
+  }
+  .kutu :last-child { margin-bottom: 0; }
+  .kutu .baslik { font-weight: 650; margin-bottom: 6px; display: block; }
+  .kutu.onemli { border-left-color: var(--kirmizi-ink, #f2777a); }
+  .kutu.bilgi  { border-left-color: var(--mor-ink, #ac8ff8); }
+  .kutu.iyi    { border-left-color: var(--yesil-ink, #6fd08c); }
+
+  figure { margin: 18px 0; }
+  figure img {
+    width: 100%; height: auto; display: block;
+    border: 1px solid var(--kenar, #38373f); border-radius: var(--r-2, 8px);
+    background: var(--yuzey-1, #141319);
+  }
+  figcaption { color: var(--ink-3, #98979f); font-size: 13px; margin-top: 8px; }
+
+  .tablo-sar { overflow-x: auto; margin: 16px 0; }
+  table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 15px; }
+  th, td { text-align: left; padding: 11px 13px; border-bottom: 1px solid var(--kenar, #38373f); vertical-align: top; }
+  th { color: var(--ink-2, #bebcc4); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td:first-child { white-space: nowrap; }
+
+  footer.dip { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--kenar, #38373f); color: var(--ink-3, #98979f); font-size: 14px; }
+
+  @media (max-width: 560px) {
+    .sayfa { padding: 28px 16px 64px; }
+    h1 { font-size: 23px; }
+    .adim { grid-template-columns: 30px 1fr; gap: 12px; }
+    .no { width: 28px; height: 28px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="sayfa">
+
+<header class="bas">
+  <h1>Google hesabını Yuki'ye bağlama</h1>
+  <p class="alt">
+    Takvimini okuyup etkinlik ekleyebilmesi ve Drive'a dosya yazabilmesi için
+    Yuki'nin senin iznine ihtiyacı var. Bu izni <b>kendi Google projen</b> üzerinden
+    verirsin — yani hesabın aracı bir sunucudan geçmez, yalnız senin bilgisayarında kalır.
+  </p>
+  <div class="rozetler">
+    <span class="rozet">⏱ Yaklaşık 10 dakika</span>
+    <span class="rozet">🔁 Bir kez yapılır</span>
+    <span class="rozet">💳 Ücretsiz — kart istemez</span>
+  </div>
+</header>
+
+<div class="kutu bilgi">
+  <span class="baslik">Neden kendi Google projem?</span>
+  <p>
+    Yuki'nin arkasında bizim bir sunucumuz yok. Eğer hazır bir bağlantı verseydik
+    takvim ve dosya izinlerin <b>bizim</b> uygulamamıza tanınmış olurdu. Bu yolda izinler
+    doğrudan senin oluşturduğun uygulamaya verilir: istediğin an
+    <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google hesap ayarlarından</a>
+    tek tıkla geri alabilirsin.
+  </p>
+</div>
+
+<div class="kutu">
+  <span class="baslik">Yuki hangi izinleri ister?</span>
+  <ul>
+    <li><b>Takvim etkinlikleri</b> — etkinliklerini okur ve ekler.
+      Takvimlerini silme/oluşturma yetkisi <b>istemez</b>.</li>
+    <li><b>Drive — yalnız kendi dosyaları</b> (<span class="ui">drive.file</span>).
+      Yuki <b>sadece kendi oluşturduğu</b> ya da senin bizzat seçtiğin dosyaları görür.
+      Drive'ının geri kalanı ona kapalıdır.</li>
+  </ul>
+</div>
+
+<h2>Adım adım</h2>
+
+<div class="adim">
+  <div class="no">1</div>
+  <div>
+    <h2>Google Cloud'da bir proje aç</h2>
+    <p>
+      <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">console.cloud.google.com/projectcreate</a>
+      adresine git ve Google hesabınla giriş yap.
+    </p>
+    <ul>
+      <li><span class="ui">Project name</span> alanına anlayacağın bir ad yaz — örneğin <b>Yuki</b>.</li>
+      <li><span class="ui">CREATE</span> / <span class="ui">Oluştur</span> düğmesine bas.</li>
+      <li>Proje hazır olunca sağ üstteki bildirimden ya da üstteki proje seçiciden <b>o projeyi seç</b>.</li>
+    </ul>
+    <div class="kutu">
+      <p>
+        Buradan sonraki tüm adımlar <b>aynı proje seçiliyken</b> yapılmalı. Üst çubuktaki
+        proje adının <b>Yuki</b> (ya da verdiğin ad) olduğunu her adımda bir kez kontrol et —
+        yanlış projede açılan izin, doğru projede yokmuş gibi davranır.
+      </p>
+    </div>
+    <!-- 🔴 İkisi de 2026-09-14'te geliştiricinin ilk gerçek turunda ölçüldü: yeni proje
+         formu "Billing account is required" ile durdu (hesapta organizasyon var),
+         mevcut projede ise 2, 3 ve 4. adımlar zaten yapılmıştı. Rehber ikisini de
+         bilmiyordu ve kullanıcıyı çıkışsız bir ekranda bırakıyordu. -->
+    <div class="kutu iyi">
+      <span class="baslik">Zaten bir Google Cloud projen varsa yenisini açma</span>
+      <p>
+        <a href="https://console.cloud.google.com/cloud-resource-manager" target="_blank" rel="noopener">Projelerin listesi</a>
+        boş değilse oradan birini seçip <b>2. adımdan devam et</b>. Var olan bir projede
+        servisler açık ve izin ekranı tanımlı olabilir — o adımlar kendiliğinden atlanır,
+        yalnız 5. adımdaki istemciyi oluşturman yeter. Aynı projede birden çok istemci
+        durabilir; başka bir uygulaman varsa onun kimliğine dokunmaz.
+      </p>
+    </div>
+    <div class="kutu onemli">
+      <span class="baslik">“Billing account is required” diyorsa</span>
+      <p>
+        Google hesabına bağlı bir <b>organizasyon</b> varsa (iş/okul hesabı ya da sonradan
+        açılmış bir Cloud Identity), yeni proje formu faturalandırma hesabı ister ve
+        <span class="ui">CREATE</span> düğmesi geçmez. İki çıkış yolu var:
+        <b>zaten var olan bir projeni kullan</b> (yukarıdaki kutu) ya da formdaki
+        <span class="ui">Billing account</span> listesinden hesabını seç. Takvim ve Drive
+        erişimi <b>yine ücretsizdir</b> — faturalandırma hesabı yalnız projeye bağlanır,
+        bu iki servis için ücret işlemez.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="adim">
+  <div class="no">2</div>
+  <div>
+    <h2>İki servisi aç: Takvim ve Drive</h2>
+    <p>Proje yeni olduğu için hiçbir Google servisi açık gelmez; ikisini elle açacaksın.</p>
+    <ol>
+      <li>
+        <a href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" rel="noopener">Google Calendar API</a>
+        sayfasını aç → <span class="ui">ENABLE</span> / <span class="ui">Etkinleştir</span>.
+      </li>
+      <li>
+        <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener">Google Drive API</a>
+        sayfasını aç → <span class="ui">ENABLE</span> / <span class="ui">Etkinleştir</span>.
+      </li>
+    </ol>
+    <p class="yol">
+      Bağlantılar seni doğrudan doğru sayfaya götürür. Elle arayacaksan:
+      <span class="ui">APIs &amp; Services</span> → <span class="ui">Library</span> → arama kutusuna servis adını yaz.
+    </p>
+  </div>
+</div>
+
+<div class="adim">
+  <div class="no">3</div>
+  <div>
+    <h2>İzin ekranını (onay ekranı) tanımla</h2>
+    <p>
+      Bu, bağlanırken karşına çıkacak “şu uygulama şunlara erişmek istiyor” ekranıdır.
+      Sol menüde <span class="ui">Google Auth Platform</span> başlığı altında durur; eski
+      adı <span class="ui">OAuth consent screen</span>'dir.
+    </p>
+    <ul>
+      <li><b>User type / Audience:</b> <span class="ui">External</span> seç.
+        <span class="ui">Internal</span> yalnız kurumsal Google Workspace hesaplarında
+        seçilebilir; kişisel Gmail hesabında görünmez ya da seçilemez.</li>
+      <li><b>App name:</b> <b>Yuki</b> — onay ekranında bu adı göreceksin.</li>
+      <li><b>User support email</b> ve <b>Developer contact:</b> kendi e-posta adresin.</li>
+      <li>Diğer alanlar (logo, alan adı, gizlilik politikası) <b>boş kalabilir</b> —
+        uygulamayı yayınlamıyorsun, yalnız kendin kullanıyorsun.</li>
+    </ul>
+    <p>
+      İzinleri (scope) buradan elle eklemene <b>gerek yok</b>: Yuki gerekli izinleri
+      bağlanma anında kendisi ister.
+    </p>
+  </div>
+</div>
+
+<div class="adim">
+  <div class="no">4</div>
+  <div>
+    <h2>Yayın durumunu “In production” yap — bu adımı atlama</h2>
+    <div class="kutu onemli">
+      <span class="baslik">🔴 Atlanırsa bağlantı 7 gün sonra kendiliğinden kopar</span>
+      <p>
+        Yeni bir izin ekranı <span class="ui">Testing</span> durumunda başlar. Google, test
+        durumundaki uygulamalara verilen izni <b>7 gün sonra otomatik iptal eder</b>. Yuki o
+        gün “bağlı değilsin” demeye başlar ve sebebi hiçbir yerde yazmaz — üstelik bu, sen
+        hiçbir şey yapmadan olur.
+      </p>
+    </div>
+    <p>
+      Sol menüde <span class="ui">Audience</span> (eski adı <span class="ui">OAuth consent screen</span>) →
+      <span class="ui">Publishing status</span> bölümü →
+      <span class="ui">PUBLISH APP</span> düğmesi → çıkan uyarıyı <span class="ui">CONFIRM</span> ile onayla.
+      Durumun <b><span class="ui">In production</span></b> olduğunu gör.
+    </p>
+    <div class="kutu">
+      <p>
+        <b>“Verification” (doğrulama) gerekmez.</b> Google doğrulama isteyebilir; başvurmana
+        gerek yok — uygulamanın sahibi sensin ve onu yalnız kendi hesabınla kullanıyorsun.
+        Doğrulanmamış olmanın tek görünür sonucu, bir sonraki adımdaki
+        <span class="ui">Advanced</span> uyarısını bir kez geçmen.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="adim">
+  <div class="no">5</div>
+  <div>
+    <h2>Masaüstü istemcisi oluştur ve kimliği kopyala</h2>
+    <p>
+      Sol menüde <span class="ui">Clients</span> (eski adı <span class="ui">Credentials</span>) →
+      <span class="ui">CREATE CLIENT</span> / <span class="ui">+ CREATE CREDENTIALS</span> →
+      <span class="ui">OAuth client ID</span>.
+    </p>
+    <ul>
+      <li><b>Application type:</b> <b><span class="ui">Desktop app</span></b> seç.
+        <span class="ui">Web application</span> seçme — o tür sabit bir adres kaydetmeni ister,
+        Yuki ise bilgisayarında değişebilen bir portta çalışır.</li>
+      <li><b>Name:</b> <b>Yuki</b> (ya da istediğin ad).</li>
+      <li><span class="ui">CREATE</span> → çıkan pencerede iki değer görünür:
+        <b>Client ID</b> (<span class="ui">…apps.googleusercontent.com</span> ile biter) ve
+        <b>Client secret</b> (<span class="ui">GOCSPX-…</span> ile başlar).</li>
+    </ul>
+    <div class="kutu bilgi">
+      <p>
+        Pencereyi kapatırsan <b>Client secret</b>'ı sonradan yine görebilirsin:
+        <span class="ui">Clients</span> listesinden istemcinin adına tıkla. Yine de ikisini
+        şimdi kopyalayıp bir sonraki adıma geçmek en kolayı.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="adim">
+  <div class="no">6</div>
+  <div>
+    <h2>İki değeri Yuki'ye yapıştır</h2>
+    <p>
+      Yuki'de <b>⚙ AYAR → KURULUM → Google</b> panelini aç. Panel üç adım gösterir; az önce
+      kopyaladığın iki değeri <b>2. adımdaki</b> alanlara yapıştır ve <b>Kaydet</b>'e bas.
+      Kaydedince 1. ve 2. adım işaretlenir, <b>Google ile bağla</b> düğmesi açılır.
+    </p>
+    <figure>
+      <img src="panel-kimlik.png" alt="Yuki'de AYAR → Google paneli: İstemci kimliği ve İstemci gizli anahtarı alanları, Kaydet ve Rehberi aç düğmeleri.">
+      <figcaption>⚙ AYAR → KURULUM → Google — kimlik henüz girilmemiş hâli.</figcaption>
+    </figure>
+    <p>
+      Kimlik <b>bu bilgisayarda</b> saklanır, hiçbir yere gönderilmez. Yanlış yapıştırdıysan
+      panel bunu söyler: kimliğin sonu <span class="ui">.apps.googleusercontent.com</span>
+      değilse “Google istemci kimliğine benzemiyor” uyarısı çıkar.
+    </p>
+  </div>
+</div>
+
+<div class="adim">
+  <div class="no">7</div>
+  <div>
+    <h2>Hesabını bağla</h2>
+    <p>
+      Aynı panelde <b>Google hesabını bağla</b> düğmesine bas. Onay ekranı
+      <b>kendi tarayıcında</b> açılır (Yuki'nin içinde değil — parola yöneticin ve açık
+      oturumların orada olsun diye).
+    </p>
+    <ol>
+      <li>Bağlamak istediğin Google hesabını seç.</li>
+      <li>
+        <b>“Google hasn't verified this app”</b> uyarısı çıkarsa:
+        <span class="ui">Advanced</span> → <span class="ui">Go to Yuki (unsafe)</span>.
+        Bu uyarının sebebi 4. adımda yazılı — uygulama <b>senin</b> uygulaman, doğrulama
+        sürecinden geçmedi.
+      </li>
+      <li>
+        <b>İki iznin de işaretli kaldığından emin ol</b> (takvim ve Drive), sonra
+        <span class="ui">Continue</span> / <span class="ui">Devam</span>.
+        Birini kaldırırsan bağlantı kurulur ama o özellik sessizce çalışmaz.
+      </li>
+      <li>Bağlantı kurulunca açılan sayfa <b>hangi izinlerin verildiğini yazar</b>.
+        “Takvim izni verilmedi” gibi bir uyarı görürsen bu adıma dönüp
+        <span class="ui">Yeniden bağlan</span> de — kutuların biri işaretsiz kalmıştır.
+        Uyarı yoksa sekmeyi kapatıp Yuki'ye dön.</li>
+    </ol>
+    <!-- 🔴 2026-09-14, ilk gerçek tur: onay ekranındaki iki kutudan biri işaretsiz
+         kaldı ve Google yalnız `drive.file` verdi. Rehberin uyarısı zaten vardı ama
+         kutular ayrı ayrı ve küçük geliyor — bu yüzden kapı artık metinde değil
+         KODDA: callback sayfası eksik izni adıyla söylüyor (`_callback_metni`). -->
+    <div class="kutu onemli">
+      <span class="baslik">Onay ekranındaki kutular ayrı ayrı işaretlenir</span>
+      <p>
+        Google takvim ve Drive iznini <b>iki ayrı satırda</b> sorar ve biri işaretsiz
+        kalırsa yine de “bağlandın” der. O hâlde Yuki bağlı görünür ama eksik izne bağlı
+        özellik hiç çalışmaz — sebebi de hiçbir yerde yazmaz. Yuki bunu bağlantı biter
+        bitmez söyler; uyarıyı görürsen <span class="ui">Yeniden bağlan</span> yeter,
+        baştan kurulum gerekmez.
+      </p>
+    </div>
+    <figure>
+      <img src="panel-bagli.png" alt="Yuki'de Google paneli: 'Google hesabın bağlı' yazısı, Yeniden bağlan ve Bağlantıyı kes düğmeleri.">
+      <figcaption>Bitti — panel artık “Google hesabın <b>bağlı</b>” diyor.</figcaption>
+    </figure>
+    <div class="kutu iyi">
+      <p>
+        Deneme: Yuki'ye <b>“bu hafta takvimimde ne var?”</b> diye sor. Etkinliklerini
+        sayıyorsa bağlantı gerçekten çalışıyor demektir.
+      </p>
+    </div>
+  </div>
+</div>
+
+<h2>Bir şey ters giderse</h2>
+
+<div class="tablo-sar">
+<table>
+  <thead>
+    <tr><th>Gördüğün</th><th>Sebebi ve çözümü</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="ui">invalid_client</span></td>
+      <td>İstemci kimliği ya da gizli anahtar hatalı/eksik kopyalanmış. 5. adımdaki iki değeri
+        yeniden kopyala; panelde <b>Değiştir</b> deyip baştan yapıştır. Başında/sonunda boşluk kalmasın.</td>
+    </tr>
+    <tr>
+      <td><span class="ui">redirect_uri_mismatch</span></td>
+      <td>İstemci <b>Desktop app</b> yerine <b>Web application</b> olarak açılmış. Bu tür sabit
+        adres ister. <span class="ui">Clients</span> ekranından <b>Desktop app</b> türünde yeni bir
+        istemci oluştur ve yeni kimliği panele gir.</td>
+    </tr>
+    <tr>
+      <td><span class="ui">access_denied</span> / “app is currently being tested”</td>
+      <td>İzin ekranı hâlâ <span class="ui">Testing</span> durumunda ve hesabın test kullanıcısı
+        değil. 4. adıma dön: <span class="ui">PUBLISH APP</span> → <span class="ui">In production</span>.</td>
+    </tr>
+    <tr>
+      <td>Panel “Bağlantı koptu — Google artık izin vermiyor” diyor</td>
+      <td>Google bu bağlantının iznini artık kabul etmiyor. Üç olası sebep:
+        ① izin Google hesabından kaldırıldı
+        (<a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Üçüncü taraf erişimi</a>),
+        ② hesap parolası değişti ya da Google güvenlik nedeniyle oturumları kapattı,
+        ③ izin ekranı hâlâ <span class="ui">Testing</span> durumunda — Google o durumda izni 7 günde
+        iptal eder; bağlandıktan tam bir hafta sonra koptuysa sebep büyük ihtimalle budur, 4. adıma dön
+        ve yayın durumunu <span class="ui">In production</span> yap. Hangisi olursa olsun panelden
+        <b>Yeniden bağlan</b> çoğu zaman yeter.</td>
+    </tr>
+    <tr>
+      <td>“Bu bağlantı Drive iznini kapsamıyor”</td>
+      <td>Bağlantı, Drive izni eklenmeden önce kurulmuş ya da onay ekranında Drive işareti
+        kaldırılmış. <b>Yeniden bağlan</b> deyip <b>iki izni de işaretli bırak</b>.</td>
+    </tr>
+    <tr>
+      <td>Panel “istemci kimliği geçersiz” ya da “kayıtlı kimlik geçersiz” diyor</td>
+      <td>Kimlik kayıtlı ama Google onu tanımıyor: istemci Google Cloud'da silinmiş, gizli anahtarı
+        yenilenmiş ya da eksik kopyalanmış olabilir. Paneldeki <b>Kimliği değiştir</b> → 5. adımdaki
+        değerleri yeniden gir. Yalnız gizli anahtarı düzelttiysen bağlantın kendiliğinden yeniden denenir.</td>
+    </tr>
+    <tr>
+      <td><b>Google ile bağla</b>'ya basınca tarayıcı açılmıyor</td>
+      <td>Varsayılan tarayıcın tanımlı olmayabilir. Bir tarayıcı açıp varsayılan yap, sonra
+        yeniden dene.</td>
+    </tr>
+    <tr>
+      <td>Başka bir Google hesabına geçmek istiyorum</td>
+      <td>Önce <b>Bağlantıyı kes</b>, sonra <b>Google ile bağla</b> ve onay ekranında
+        diğer hesabı seç. Aynı istemci kimliği kullanılabilir, yeniden oluşturmana gerek yok.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<figure>
+  <img src="panel-eksik-izin.png" alt="Yuki'de Google paneli: bağlı ama 'Bu bağlantı Drive iznini kapsamıyor' uyarısı görünüyor.">
+  <figcaption>Eksik izin uyarısı böyle görünür — <b>Yeniden bağlan</b> bunu kapatır.</figcaption>
+</figure>
+
+<h2>Gizlilik — ne nerede duruyor?</h2>
+<ul>
+  <li><b>İstemci kimliğin ve gizli anahtarın</b> yalnız bu bilgisayarda, Yuki'nin ayar
+    dosyasında durur. Bize ya da başka bir sunucuya gönderilmez.</li>
+  <li><b>Google oturumun</b> (erişim izni) da bu bilgisayarda, yalnız senin kullanıcı hesabının
+    okuyabileceği bir dosyada saklanır.</li>
+  <li><b>Bağlantıyı kes</b> dediğinde Yuki önce Google'dan izni geri almasını ister, sonra oturumu
+    bilgisayarından siler. Google'a o an ulaşılamazsa panel bunu açıkça söyler; o durumda izni
+    <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google hesabım → Üçüncü taraf erişimi</a>
+    listesinden kendin kaldırabilirsin.</li>
+  <li>Google Cloud projesi <b>ücretsizdir</b> — takvim ve Drive erişimi için ücret alınmaz,
+    kart bilgisi istenmez.</li>
+</ul>
+
+<footer class="dip">
+  Bu rehber Yuki'nin içinden açıldı: ⚙ AYAR → KURULUM → Google → <b>Resimli rehberi aç</b>.
+  Google, konsolundaki başlıkların adını zaman zaman değiştiriyor; bir başlığı bulamazsan
+  konsolun üstündeki arama kutusuna aradığın adı (örneğin <span class="ui">OAuth</span>) yazman en hızlısı.
+</footer>
+
+</div>
+</body>
+</html>

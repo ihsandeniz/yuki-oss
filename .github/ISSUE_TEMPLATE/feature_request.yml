@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest an idea
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: "Out of scope by design: running shell commands, remote mouse/keyboard control, non-commercial voice models, security/pentest tools (see CONTRIBUTING.md)."
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Proposed solution
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
