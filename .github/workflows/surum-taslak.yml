@@ -1,6 +1,6 @@
 name: Sürüm taslağı (AppImage + Windows kurulum + install.sh)
 
-# TASLAK — ihsan onayı olmadan etiket atılmaz. Etiket (v*) itilince üç çıktı derlenir ve
+# TASLAK — bakımcı onayı olmadan etiket atılmaz. Etiket (v*) itilince üç çıktı derlenir ve
 # GitHub'da YAYINLANMAMIŞ (draft) bir Release'e eklenir; yayınlamak elle "Publish" ister.
 # Elle tetiklemede (workflow_dispatch) Release açılmaz, çıktılar yalnız iş artifact'ı olur.
 on:
