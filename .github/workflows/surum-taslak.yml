@@ -20,6 +20,8 @@ jobs:
         with: { node-version: 20 }
       - run: bash scripts/linux-derle.sh
       - run: python3 scripts/test_appimage_paket.py --paket
+      - uses: actions/setup-python@v5   # ubuntu-22.04 python3=3.10; install.sh ≥3.12 ister
+        with: { python-version: '3.12' }
       - run: python3 scripts/test_install_betigi.py
       - name: Kaynak arşivi + install.sh + SHA256
         run: |
